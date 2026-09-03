@@ -1,15 +1,18 @@
 const TAB_LIST = [
   {
+    text: '相遇',
     pagePath: '/pages/index/index',
     iconPath: '/assets/tab-encounter.png',
     selectedIconPath: '/assets/tab-encounter-active.png',
   },
   {
+    text: '图鉴',
     pagePath: '/pages/collection/collection',
     iconPath: '/assets/tab-album.png',
     selectedIconPath: '/assets/tab-album-active.png',
   },
   {
+    text: '我的',
     pagePath: '/pages/my/my',
     iconPath: '/assets/tab-profile.png',
     selectedIconPath: '/assets/tab-profile-active.png',

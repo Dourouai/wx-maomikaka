@@ -77,7 +77,8 @@ Page({
         levelShortLabel: level.shortLabel,
         overallScore: bestEncounter ? bestEncounter.overallScore : 0,
         scorePending: bestEncounter ? bestEncounter.scorePending : true,
-        displayName: cat.name,
+        // 名字以第一次成功识别生成的档案名为主，避免同一只猫每次相遇都被重新命名。
+        displayName: entry.displayName || (latest && latest.catName) || cat.name,
         metaText: `遇见 ${entry.photoCount || catRecords.length} 次`,
       };
     });

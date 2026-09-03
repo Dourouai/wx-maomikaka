@@ -53,11 +53,18 @@ Page({
       : records[0];
     const firstRecord = records[records.length - 1];
     const lastRecord = records[0];
+    const displayCatData = {
+      ...catData,
+      name: entry.displayName || (lastRecord && lastRecord.catName) || catData.name,
+      story: entry.displayDescription
+        || (lastRecord && lastRecord.catDescription)
+        || catData.story,
+    };
     const bestEncounter = catScoring.getBestEncounter(records);
     const bestLevel = catScoring.getLevelMeta(bestEncounter ? bestEncounter.levelCode : 'C');
 
     this.setData({
-      catData,
+      catData: displayCatData,
       records,
       featuredRecordId: featuredRecord ? featuredRecord.recordId : '',
       featuredPhoto: featuredRecord

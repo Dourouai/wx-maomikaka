@@ -2,6 +2,7 @@
 // 猫咪咔咔 - 本地存储封装
 // ============================================================
 const { ALL_CATS } = require('./catData');
+const { MEMBER_LEVEL_VERSION } = require('./memberLevel');
 
 const KEY_COLLECTION = 'maomikaka_collection';
 const KEY_RECORDS = 'maomikaka_records';
@@ -24,6 +25,29 @@ function _set(key, value) {
   }
 }
 
+function _createStats() {
+  return {
+    totalPhotos: 0,
+    unlockedCount: 0,
+    lastPhotoTime: null,
+    // 猫爪是用户成长值，会员等级由 memberLevel.js 根据它计算。
+    pawGrowth: 0,
+    memberLevelVersion: MEMBER_LEVEL_VERSION,
+  };
+}
+
+function _calculateRecordedPawGrowth() {
+  const records = _get(KEY_RECORDS);
+  if (!Array.isArray(records)) return 0;
+
+  return records.reduce((total, record) => {
+    const reward = Number(record && record.pawReward);
+    return Number.isFinite(reward) && reward > 0
+      ? total + Math.round(reward)
+      : total;
+  }, 0);
+}
+
 function _createCollection() {
   return ALL_CATS.reduce((collection, cat) => {
     collection[cat.id] = {
@@ -32,6 +56,9 @@ function _createCollection() {
       unlockedAt: null,
       photoCount: 0,
       featuredRecordId: null,
+      displayName: null,
+      displayDescription: null,
+      copyVersion: null,
       records: [],
     };
     return collection;
@@ -50,6 +77,9 @@ function _ensureCollectionShape(collection) {
         unlockedAt: null,
         photoCount: 0,
         featuredRecordId: null,
+        displayName: null,
+        displayDescription: null,
+        copyVersion: null,
         records: [],
       };
       changed = true;
@@ -63,6 +93,18 @@ function _ensureCollectionShape(collection) {
     }
     if (typeof entry.photoCount !== 'number') {
       entry.photoCount = entry.records.length;
+      changed = true;
+    }
+    if (entry.displayName === undefined) {
+      entry.displayName = null;
+      changed = true;
+    }
+    if (entry.displayDescription === undefined) {
+      entry.displayDescription = null;
+      changed = true;
+    }
+    if (entry.copyVersion === undefined) {
+      entry.copyVersion = null;
       changed = true;
     }
   });
@@ -84,11 +126,7 @@ function initStorage() {
 
   const stats = _get(KEY_STATS);
   if (!stats || typeof stats !== 'object') {
-    _set(KEY_STATS, {
-      totalPhotos: 0,
-      unlockedCount: 0,
-      lastPhotoTime: null,
-    });
+    _set(KEY_STATS, _createStats());
   }
 }
 
@@ -133,6 +171,17 @@ function saveRecord(recordData) {
   const now = Date.now();
   const catId = data.catId || (data.catData && data.catData.id);
   const photoPath = data.photoPath || data.photo || '';
+  const catName = data.catName
+    || data.generatedName
+    || (data.catData && data.catData.name)
+    || null;
+  const catDescription = data.catDescription
+    || data.generatedDescription
+    || (data.catData && (data.catData.story || data.catData.description))
+    || null;
+  const pawReward = Number.isFinite(Number(data.pawReward))
+    ? Math.max(0, Math.round(Number(data.pawReward)))
+    : 0;
   const records = getAllRecords();
   const collection = getCollection();
   const stats = getUserStats();
@@ -144,6 +193,9 @@ function saveRecord(recordData) {
   const record = {
     recordId: `rec_${now}_${Math.random().toString(36).slice(2, 7)}`,
     catId,
+    catName,
+    catDescription,
+    copyVersion: data.copyVersion || null,
     photoPath,
     // 保留 photo 字段，方便旧页面或历史数据读取。
     photo: photoPath,
@@ -160,13 +212,23 @@ function saveRecord(recordData) {
     levelLabel: data.levelLabel || null,
     levelShortLabel: data.levelShortLabel || null,
     charmScore: typeof data.charmScore === 'number' ? data.charmScore : null,
+    clevernessScore: typeof data.clevernessScore === 'number' ? data.clevernessScore : null,
+    auraScore: typeof data.auraScore === 'number' ? data.auraScore : null,
+    // 旧版本字段保留，方便历史本地记录按兼容规则读取；新记录不再填充这两个字段。
     rarityScore: typeof data.rarityScore === 'number' ? data.rarityScore : null,
     fateScore: typeof data.fateScore === 'number' ? data.fateScore : null,
     overallScore: typeof data.overallScore === 'number' ? data.overallScore : null,
-    pawReward: typeof data.pawReward === 'number' ? data.pawReward : null,
+    pawReward,
     pointReward: typeof data.pointReward === 'number' ? data.pointReward : null,
     scorePending: data.scorePending === true,
     scoreSource: data.scoreSource || null,
+    scoreVersion: data.scoreVersion || null,
+    scoreEvidence: data.scoreEvidence && typeof data.scoreEvidence === 'object'
+      ? data.scoreEvidence
+      : null,
+    scoreCoverage: data.scoreCoverage && typeof data.scoreCoverage === 'object'
+      ? data.scoreCoverage
+      : null,
     detectedBreed: data.breedLabel || data.detectedBreed || data.breed || null,
     breedConfidence: typeof data.breedConfidence === 'number' ? data.breedConfidence : null,
     detectedTraits: Array.isArray(data.detectedTraits) ? data.detectedTraits.slice(0, 3) : [],
@@ -188,11 +250,15 @@ function saveRecord(recordData) {
   entry.records = Array.isArray(entry.records) ? entry.records : [];
   entry.records.unshift(record.recordId);
   entry.featuredRecordId = entry.featuredRecordId || record.recordId;
+  entry.displayName = entry.displayName || catName;
+  entry.displayDescription = entry.displayDescription || catDescription;
+  entry.copyVersion = entry.copyVersion || record.copyVersion;
   _set(KEY_COLLECTION, collection);
 
   stats.totalPhotos = (stats.totalPhotos || 0) + 1;
   stats.unlockedCount = (stats.unlockedCount || 0) + (isNew ? 1 : 0);
   stats.lastPhotoTime = now;
+  stats.pawGrowth = (stats.pawGrowth || 0) + pawReward;
   _set(KEY_STATS, stats);
 
   return {
@@ -218,11 +284,39 @@ function getRecordsForCat(catId) {
 }
 
 function getUserStats() {
-  return _get(KEY_STATS) || {
-    totalPhotos: 0,
-    unlockedCount: 0,
-    lastPhotoTime: null,
-  };
+  const current = _get(KEY_STATS);
+  const stats = current && typeof current === 'object' ? current : _createStats();
+  let changed = !current || typeof current !== 'object';
+
+  if (typeof stats.totalPhotos !== 'number') {
+    stats.totalPhotos = 0;
+    changed = true;
+  }
+  if (typeof stats.unlockedCount !== 'number') {
+    stats.unlockedCount = 0;
+    changed = true;
+  }
+  if (stats.lastPhotoTime === undefined) {
+    stats.lastPhotoTime = null;
+    changed = true;
+  }
+  if (stats.memberLevelVersion !== MEMBER_LEVEL_VERSION) {
+    stats.memberLevelVersion = MEMBER_LEVEL_VERSION;
+    changed = true;
+  }
+  if (!Number.isFinite(Number(stats.pawGrowth))) {
+    stats.pawGrowth = _calculateRecordedPawGrowth();
+    changed = true;
+  } else {
+    const normalizedGrowth = Math.max(0, Math.floor(Number(stats.pawGrowth)));
+    if (normalizedGrowth !== stats.pawGrowth) {
+      stats.pawGrowth = normalizedGrowth;
+      changed = true;
+    }
+  }
+
+  if (changed) _set(KEY_STATS, stats);
+  return stats;
 }
 
 /**
@@ -244,6 +338,8 @@ function getUnlockedMap() {
 
     result[catId] = {
       count: entry.photoCount || records.length,
+      displayName: entry.displayName || (latest && latest.catName) || null,
+      displayDescription: entry.displayDescription || (latest && latest.catDescription) || null,
       lastPhotoPath: getRecordDisplayPath(latest),
       featuredPhotoPath: getRecordDisplayPath(featured),
       isNew: false,

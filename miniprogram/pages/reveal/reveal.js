@@ -32,8 +32,8 @@ Page({
     overallScore: 0,
     scoreItems: [],
     charmScore: 0,
-    rarityScore: 0,
-    fateScore: 0,
+    clevernessScore: 0,
+    auraScore: 0,
     pawReward: 0,
     pointReward: 0,
     scorePending: true,
@@ -89,7 +89,8 @@ Page({
 
     const catData = result.catData || result;
     const breedLabel = result.breedLabel || catData.breed || '未知品种';
-    const encounterScore = catScoring.scoreEncounter(result.scores || result);
+    // 传入完整识别结果，保留 scoreEvidence / scoreCoverage，避免部分证据被误当成正式评分。
+    const encounterScore = catScoring.scoreEncounter(result);
 
     try {
       this.setData({
@@ -142,8 +143,8 @@ Page({
         overallScore: encounterScore.overallScore,
         scoreItems: encounterScore.scoreItems,
         charmScore: encounterScore.charmScore,
-        rarityScore: encounterScore.rarityScore,
-        fateScore: encounterScore.fateScore,
+        clevernessScore: encounterScore.clevernessScore,
+        auraScore: encounterScore.auraScore,
         pawReward: encounterScore.pawReward,
         pointReward: encounterScore.pointReward,
         scorePending: encounterScore.scorePending,

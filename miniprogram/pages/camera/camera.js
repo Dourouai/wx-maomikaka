@@ -11,7 +11,20 @@ Page({
   },
 
   onReady() {
+    // camera 组件已挂载后再创建上下文；真正拍摄时由微信处理相机权限。
     this.cameraContext = wx.createCameraContext();
+  },
+
+  _showPrivacyConfigIssue(detail) {
+    console.warn('[Camera] 隐私指引未声明相机能力:', detail);
+    this.setData({
+      cameraError: true,
+      cameraIssueKind: 'privacy',
+      cameraIssueEyebrow: '相机隐私设置',
+      cameraIssueTitle: '相机暂时无法打开',
+      cameraIssueSubtitle: '请在小程序后台补充相机隐私指引，完成后重新进入拍摄页。',
+      cameraIssueAction: '重新检查',
+    });
   },
 
   // 拍摄页面内的当前画面，不再跳转到微信原生相机页。
@@ -19,7 +32,7 @@ Page({
     if (this.data.isTakingPhoto) return;
 
     if (this.data.cameraError) {
-      this.openCameraSettings();
+      this.handleCameraIssue();
       return;
     }
 
@@ -54,6 +67,14 @@ Page({
 
   onCameraError(event) {
     console.error('[Camera] 相机不可用:', event && event.detail);
+
+    const detail = event && event.detail;
+    const detailText = typeof detail === 'string' ? detail : JSON.stringify(detail || '');
+    if (/api scope is not declared|privacy agreement|errno.?112/i.test(detailText)) {
+      this._showPrivacyConfigIssue(detail);
+      return;
+    }
+
     this.setData({
       cameraError: true,
       cameraIssueKind: 'permission',
@@ -84,6 +105,13 @@ Page({
   },
 
   handleCameraIssue() {
+    if (this.data.cameraIssueKind === 'privacy') {
+      this.setData({ cameraError: false }, () => {
+        this.cameraContext = wx.createCameraContext();
+      });
+      return;
+    }
+
     if (this.data.cameraIssueKind === 'photo') {
       this.setData({ cameraError: false });
       return;

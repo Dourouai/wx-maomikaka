@@ -10,7 +10,7 @@
 
 记录 HY3 相关模型的服务端接入方案，作为服务端接口、微信小程序调用和猫咪主体卡片流程的实施依据。
 
-当前按 CloudBase 官方 `wx-server-sdk` 方案拆分为视觉理解和主体图处理两层；本版本不调用文本生成模型，不生成故事、标签或装饰文案，猫咪是否存在和品种标签由视觉模型负责。
+当前按 CloudBase 官方 `wx-server-sdk` 方案拆分为视觉理解和主体图处理两层；本版本不调用 Hy3 文本模型，先由 GLM 视觉模型在严格长度和事实边界内返回品种、猫咪昵称和简短描述。
 
 ## 2. 当前模型清单
 
@@ -21,7 +21,7 @@
 | 业务名称 | 模型名称 / ID | 供应商 | 类别 | 当前状态 | 计划用途 |
 |---|---|---|---|---|---|
 | HY3 | `Hy3`（API 实际 ID 待确认） | 腾讯混元 | 文本生成 / 推理 / Agent | 待接入 | 生成卡片文案、猫咪故事、标签和图像提示词 |
-| GLM 视觉识别 | `glm-5.3-flash` | TokenHub | 多模态理解 | 云函数已接入，待配置 Key | 判断是否为猫、猫数量、品种和相遇评分 |
+| GLM 视觉识别 | `glm-5.3-flash` | TokenHub | 多模态理解 | 云函数已接入，待配置 Key | 判断是否为猫、猫数量、品种、短昵称、短描述和相遇评分 |
 
 Hy3 的公开模型资料见 [Tencent-Hunyuan/Hy3](https://github.com/Tencent-Hunyuan/Hy3)。
 
@@ -43,19 +43,21 @@ Hy3 的公开模型资料见 [Tencent-Hunyuan/Hy3](https://github.com/Tencent-Hu
 
 ### 3.1 视觉模型：GLM-5.3-Flash
 
-视觉模型负责读取用户拍摄的照片，输出结构化事实层：
+视觉模型负责读取用户拍摄的照片，输出结构化识别结果和一段受约束的展示文案：
 
 - `isCat`：是否发现猫咪；
 - `catCount`：画面中的猫咪数量，第一版只收录单猫照片；
 - `breed`：从图鉴支持的标签中选择最接近的品种，无法判断时返回“未知品种”；
 - `confidence` 和最多 3 个外观特征；
-- `scores`：魅力、机灵、灵气三个 0–100 分，用于计算咪咔并映射猫咪等级。
+- `name`：根据可见毛色、花纹、姿态或神态生成的有趣中文昵称，最多 5 个字符；
+- `description`：基于照片可见内容生成的轻松短描述，最多 50 个字符；
+- `scoreEvidence`：魅力、机灵、灵气各自的可观察子项，均为 0–100 分；服务端按 `cat-score.v0.2` 固定权重计算 `scores`，再用于计算咪咔并映射相遇等级。
 
 当前通过 TokenHub OpenAI 兼容的 `/v1/chat/completions` 调用 `glm-5.3-flash`。图片以 Chat Completions 的 `image_url` 内容块传入 Base64 Data URI；TokenHub API Key 只保存在 `cat-vision` 云函数环境变量中，不进入小程序或代码库。TokenHub 的 GLM-5.3-Flash 多模态示例也使用该接口。
 
 ### 3.2 文本模型：Hy3（当前版本不调用）
 
-Hy3 可以负责“理解视觉识别结果并生成卡片内容”，但当前版本不调用它。照片识别结果只用于品种标签和相遇评分，卡片名称与故事使用本地图鉴固定数据，避免产生额外的 AI 文案。
+Hy3 后续可以负责更长的卡片文案，但当前版本不调用它。猫咪昵称和 50 字以内的描述直接由 GLM 在看图后生成，并由服务端做长度清理；生成失败时回退到本地图鉴固定名称和描述，不影响原始拍摄记录。
 
 建议用途：
 
@@ -168,7 +170,7 @@ Hy3 可以负责“理解视觉识别结果并生成卡片内容”，但当前�
 
 - `cat identification`：判断是否有猫、品种或分类；
 - `anti-spoofing`：照片/屏幕/视频重放检查；
-- `text generation`：使用 Hy3 生成卡片文案、标签和图像提示词；
+- `text generation`：当前由 GLM 生成受约束的短昵称和短描述，后续再使用 Hy3 扩展卡片文案、标签和图像提示词；
 - `image generation`：使用两个 Hunyuan Image 模型进行文生图和图生图；
 - `card composition`：把原图、生成图、品种和故事合成为最终卡片。
 
@@ -176,10 +178,10 @@ Hy3 可以负责“理解视觉识别结果并生成卡片内容”，但当前�
 
 当前代码已新增以下链路：
 
-- `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`traits` 和 `scores`；
+- `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`name`、`description`、`traits` 和 `scoreEvidence`，服务端规范化后返回 `scores`；
 - `miniprogram/cloudfunctions/cat-transform/`：使用 `wx-server-sdk@4.0.2` 保存图片，通过 `cloud.ai().createImageModel('hunyuan-image')` 调用 `HY-Image-v3.0-I2I-ToB-v1.0.1`，以 `images: [base64]` 传入一张原图并固定使用 `images/ar/generations`；
 - 小程序拍照后先调用现有 `content-security` 校验原图，再调用 `cat-vision` 判断是否为猫、映射品种并计算相遇评分，之后调用 `cat-transform` 的 `matting` 动作；任务提交后先扣除 1 个罐罐，非猫、多猫无法确认目标或图片不合格时不写入拍摄记录且不返还罐罐；识别服务不可用等产品侧异常时返还罐罐；
-- 云函数使用固定的主体处理约束提示词和反向约束，原生接口关闭提示词改写并传入顶层 `LogoAdd: 0`；模型结果不做二次 `security.imgSecCheck`，直接保存到 `cat-album/cutout/`；
+- 云函数使用上一版 CloudBase 链路的三句主体处理提示并关闭提示词改写，CloudBase 图生图请求只传入 `footnote: '·'`，不传 `LogoAdd`；模型结果不做二次 `security.imgSecCheck`，直接保存到 `cat-album/cutout/`；
 - 本地记录同时保存安全校验后的原图 `fileID`、主体图 `fileID` 和主体处理元数据；图鉴与详情页优先展示主体图，主体处理失败时不把原图伪装成主体图；
 - 主体图临时访问地址过期后，图鉴和详情页会根据持久化 `fileID` 重新换取地址；页面不展示模型提示词、生成标签或模型说明。
 
@@ -203,7 +205,7 @@ CloudBase 图生图配置：
 
 1. 在 CloudBase AI 中确认 `HY-Image-v3.0-I2I-ToB-v1.0.1` 已开通；
 2. 确认 `cat-transform` 云函数使用 `wx-server-sdk@4.0.2` 并完成云端依赖安装；
-3. `cat-transform` 已于 2026-09-03 通过 CloudBase 控制台重新上传部署到 `$LATEST`，下一步用新照片测试；
+3. `cat-transform` 已于 2026-09-03 16:26:11 通过 CloudBase 控制台重新上传部署到 `$LATEST`；16:28:17 同步测试成功，返回 PNG 主体图并完成棋盘格清理；
 4. 若返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，先检查 CloudBase AI 模型和图生图参数，不重复尝试空 `footnote` 去除平台标识。
 
 ## 5. 推荐业务流程

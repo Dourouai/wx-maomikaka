@@ -1,6 +1,7 @@
 // pages/my/my.js
 const storage = require('../../utils/storage');
 const { ALL_CATS, getCatById } = require('../../utils/catData');
+const memberLevel = require('../../utils/memberLevel');
 
 Page({
   data: {
@@ -10,6 +11,15 @@ Page({
     todayCount: 0,
     journeyPercent: 0,
     journeyRemaining: 0,
+    memberLevel: 1,
+    memberLevelCode: 'LV1',
+    memberName: '街角新客',
+    pawGrowth: 0,
+    memberProgress: 0,
+    nextMemberName: '巷口寻猫人',
+    nextGrowth: 300,
+    growthToNext: 300,
+    memberIsMax: false,
     recentRecords: [],
     isOpeningCamera: false,
     showException: false,
@@ -32,13 +42,15 @@ Page({
   _refreshData() {
     const records = storage.getAllRecords();
     const collection = storage.getCollection();
+    const stats = storage.getUserStats();
+    const membership = memberLevel.getMemberLevel(stats.pawGrowth);
     const today = this._dateKey(Date.now());
     const recentRecords = records.slice(0, 5).map((record, index) => {
       const cat = getCatById(record.catId);
       return {
         ...record,
         photoPath: storage.getRecordDisplayPath(record),
-        catName: cat ? cat.name : '神秘猫',
+        catName: record.catName || (cat ? cat.name : '神秘猫'),
         fallbackIcon: '/assets/cat-placeholder.svg',
         timeText: this._formatDate(record.createdAt),
       };
@@ -55,6 +67,15 @@ Page({
       todayCount: records.filter(record => this._dateKey(record.createdAt) === today).length,
       journeyPercent: totalCount ? Math.min((unlockedCount / totalCount) * 100, 100) : 0,
       journeyRemaining: Math.max(totalCount - unlockedCount, 0),
+      memberLevel: membership.level,
+      memberLevelCode: membership.code,
+      memberName: membership.name,
+      pawGrowth: membership.growthValue,
+      memberProgress: membership.progressPercent,
+      nextMemberName: membership.nextName || '',
+      nextGrowth: membership.nextGrowth || 0,
+      growthToNext: membership.growthToNext,
+      memberIsMax: membership.isMax,
       recentRecords,
     });
   },
@@ -97,14 +118,14 @@ Page({
     wx.switchTab({ url: '/pages/collection/collection' });
   },
 
-  goTextImage() {
+  goDevMode() {
     wx.navigateTo({
-      url: '/pages/text-image/text-image',
+      url: '/pages/dev-mode/dev-mode',
       fail: () => {
         this.setData({
           showException: true,
-          exceptionTitle: '实验室没打开',
-          exceptionMessage: '文字生图入口暂时没有准备好，请稍后再试',
+          exceptionTitle: '开发模式没打开',
+          exceptionMessage: '测试工具暂时没有准备好，请稍后再试',
         });
       },
     });

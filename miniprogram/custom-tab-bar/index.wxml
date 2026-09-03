@@ -9,6 +9,8 @@
     catchtap="switchTab"
     hover-class="custom-tabbar-item-hover"
     hover-stay-time="100"
+    aria-role="button"
+    aria-label="{{item.text}}"
     data-path="{{item.pagePath}}"
     data-index="{{tabIndex}}"
   >
@@ -16,6 +18,7 @@
       class="custom-tabbar-icon"
       src="{{selected === tabIndex ? item.selectedIconPath : item.iconPath}}"
       mode="aspectFit"
+      aria-label="{{item.text}}"
     />
   </view>
 

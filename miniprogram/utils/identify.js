@@ -8,6 +8,8 @@ const { getCatById, getCatsByBreed } = require('./catData');
 // 视觉识别服务不可用或做流程演示时，可用“未知品种”占位卡承接结果。
 // 正常拍摄流程会调用 identifyCat，只有显式使用本方法时才走占位数据。
 const PENDING_ENCOUNTER_CAT_ID = 'cat_060';
+const MAX_CAT_NAME_LENGTH = 5;
+const MAX_CAT_DESCRIPTION_LENGTH = 50;
 
 const BREED_ALIASES = [
   ['英国短毛猫', ['英短', '英国短毛']],
@@ -60,6 +62,26 @@ function normalizeBreedLabel(value) {
   return '未知品种';
 }
 
+function normalizeCopyText(value, maxLength) {
+  const normalized = String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return Array.from(normalized).slice(0, maxLength).join('');
+}
+
+function normalizeGeneratedName(value, fallback) {
+  const generated = normalizeCopyText(value, MAX_CAT_NAME_LENGTH);
+  if (generated.length >= 2) return generated;
+  return normalizeCopyText(fallback, MAX_CAT_NAME_LENGTH);
+}
+
+function normalizeGeneratedDescription(value, fallback) {
+  const generated = normalizeCopyText(value, MAX_CAT_DESCRIPTION_LENGTH);
+  if (generated.length >= 4) return generated;
+  return normalizeCopyText(fallback, MAX_CAT_DESCRIPTION_LENGTH);
+}
+
 function chooseCatalogCat(breedLabel) {
   const candidates = getCatsByBreed(breedLabel);
   const fallbackCandidates = candidates.length ? candidates : getCatsByBreed('未知品种');
@@ -105,7 +127,7 @@ function createPendingEncounter() {
 
 /**
  * 先做猫咪检测，再把视觉模型的品种标签映射到图鉴角色。
- * 视觉模型只返回事实层；游戏角色和稀有度由本地图鉴数据决定。
+ * 视觉模型返回事实层与受约束的展示文案；游戏角色、稀有度和唯一性仍由本地图鉴数据决定。
  */
 async function identifyCat(photoPath) {
   const detection = await catVision.inspectCat(photoPath);
@@ -128,8 +150,15 @@ async function identifyCat(photoPath) {
 
   const breedLabel = normalizeBreedLabel(detection.breed);
   const catalog = chooseCatalogCat(breedLabel);
+  const catName = normalizeGeneratedName(detection.name, catalog.catData.name);
+  const catDescription = normalizeGeneratedDescription(detection.description, catalog.catData.story);
+  const displayCatData = {
+    ...catalog.catData,
+    name: catName,
+    story: catDescription,
+  };
   console.log(
-    `[Identify:Vision] ${breedLabel} -> ${catalog.catData.name} (${catalog.catData.rarity})`
+    `[Identify:Vision] ${breedLabel} -> ${catName} (${catalog.catData.rarity})`
   );
 
   return {
@@ -138,9 +167,16 @@ async function identifyCat(photoPath) {
     breedLabel,
     breedConfidence: Number(detection.confidence) || 0,
     scores: detection.scores || null,
+    scoreEvidence: detection.scoreEvidence || null,
+    scoreCoverage: detection.scoreCoverage || null,
+    scoreVersion: detection.scoreVersion || null,
+    catName,
+    catDescription,
+    copyVersion: detection.copyVersion || 'catalog-fallback',
     detectedTraits: Array.isArray(detection.traits) ? detection.traits : [],
     detectionSource: 'tokenhub-glm-5.3-flash',
     ...catalog,
+    catData: displayCatData,
   };
 }
 

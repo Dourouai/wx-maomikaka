@@ -46,7 +46,9 @@ Page({
       latestPhoto: latestRecord
         ? storage.getRecordDisplayPath(latestRecord)
         : '',
-      latestName: latestCat ? latestCat.name : '',
+      latestName: latestRecord
+        ? (latestRecord.catName || (latestCat && latestCat.name) || '')
+        : '',
     });
   },
 

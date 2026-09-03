@@ -1,11 +1,21 @@
 // 猫咪咔咔 - 相遇卡评分与等级规则
-// 规则来源：docs/CAT_SCORING_RULES_V0_1.md、docs/AI_PRODUCT_BRIEF_V1.md
+// 规则来源：docs/CAT_SCORING_RULES_V0_2.md、docs/AI_PRODUCT_BRIEF_V1.md
+
+const SCORE_VERSION = 'cat-score.v0.2';
 
 const SCORE_CONFIG = [
-  { key: 'charm', label: '魅力', weight: 0.4 },
-  { key: 'rarity', label: '稀奇', weight: 0.35 },
-  { key: 'fate', label: '缘分', weight: 0.25 },
+  { key: 'charm', label: '魅力', weight: 1 / 3 },
+  { key: 'cleverness', label: '机灵', weight: 1 / 3 },
+  { key: 'aura', label: '灵气', weight: 1 / 3 },
 ];
+
+// 兼容早期本地记录：旧 rarity 最接近新 aura，旧 fate 最接近新 cleverness。
+// 新识别结果只输出 charm / cleverness / aura，不再产生 rarity / fate。
+const SCORE_ALIASES = {
+  charm: ['charm', 'charmScore'],
+  cleverness: ['cleverness', 'clevernessScore', 'fate', 'fateScore'],
+  aura: ['aura', 'auraScore', 'rarity', 'rarityScore'],
+};
 
 const LEVELS = [
   { code: 'C', label: '街角', shortLabel: '街角常客', min: 0, max: 49, pointReward: 3 },
@@ -22,14 +32,14 @@ const LEVEL_MAP = LEVELS.reduce((map, level, index) => {
 
 const BASELINE_SCORES = {
   charm: 50,
-  rarity: 50,
-  fate: 50,
+  cleverness: 50,
+  aura: 50,
 };
 
 const EMPTY_SCORES = {
   charm: 0,
-  rarity: 0,
-  fate: 0,
+  cleverness: 0,
+  aura: 0,
 };
 
 function clampScore(value, fallback) {
@@ -44,19 +54,37 @@ function getScoreSource(input) {
 }
 
 function getScoreValue(source, key) {
-  const directValue = source[key];
-  const storedValue = source[`${key}Score`];
-  return directValue !== undefined && directValue !== null
-    ? directValue
-    : storedValue;
+  const values = SCORE_ALIASES[key] || [key, `${key}Score`];
+  for (const field of values) {
+    if (source && source[field] !== undefined && source[field] !== null) {
+      return source[field];
+    }
+  }
+  return undefined;
 }
 
 function hasExplicitScores(input) {
   const source = getScoreSource(input);
-  return SCORE_CONFIG.some(item => {
+  const hasAllScores = SCORE_CONFIG.every(item => {
     const value = getScoreValue(source, item.key);
     return value !== undefined && value !== null && Number.isFinite(Number(value));
   });
+
+  if (!hasAllScores) return false;
+
+  // 评分证据不足时，即使模型返回了部分分数，也只能作为待评估结果。
+  const coverage = input && input.scoreCoverage;
+  if (coverage && typeof coverage === 'object') {
+    return SCORE_CONFIG.every(item => Number(coverage[item.key]) >= 0.5);
+  }
+  return true;
+}
+
+function hasLegacyScoreFields(input) {
+  const source = getScoreSource(input);
+  return ['rarity', 'rarityScore', 'fate', 'fateScore'].some(field => (
+    source[field] !== undefined && source[field] !== null
+  ));
 }
 
 function normalizeScores(input, fallbackScores) {
@@ -90,8 +118,8 @@ function calculateOverallScore(scores) {
 function resolveLevel(scores, overallScore) {
   const standoutCount = SCORE_CONFIG.filter(item => scores[item.key] >= 70).length;
 
-  // UR 必须同时满足综合分、稀奇值和缘分值门槛。
-  if (overallScore >= 92 && scores.rarity >= 85 && scores.fate >= 80) return 'UR';
+  // UR 必须同时满足综合分、灵气值和机灵值门槛。
+  if (overallScore >= 92 && scores.aura >= 85 && scores.cleverness >= 80) return 'UR';
 
   // 未满足 UR 门槛但综合表现突出时，仍按 SR 的“至少两项突出”规则处理。
   if (overallScore >= 80 && standoutCount >= 2) return 'SR';
@@ -120,20 +148,29 @@ function createScoreItems(scores) {
 /**
  * 根据三项相遇分计算相遇卡等级与奖励。
  * 未接入视觉评分时使用 50/50/50 的基础记录，不伪造高等级；
- * 视觉模型恢复后，只需传入 charm / rarity / fate 即可替换。
+ * 视觉模型恢复后，只需传入 charm / cleverness / aura 即可替换。
  */
 function scoreEncounter(input, options = {}) {
   const explicit = hasExplicitScores(input);
   const fallbackScores = options.useBaseline === false ? EMPTY_SCORES : BASELINE_SCORES;
-  const scores = normalizeScores(input, fallbackScores);
+  const normalizedScores = normalizeScores(input, fallbackScores);
+  const scores = explicit ? normalizedScores : { ...fallbackScores };
   const overallScore = calculateOverallScore(scores);
   const levelCode = resolveLevel(scores, overallScore);
   const level = getLevelMeta(levelCode);
+  const scoreSource = options.scoreSource
+    || (explicit
+      ? ((input && input.scoreSource) || (hasLegacyScoreFields(input) ? 'legacy-direct' : 'evidence'))
+      : 'baseline');
+  const scoreVersion = options.scoreVersion
+    || (explicit
+      ? ((input && input.scoreVersion) || (hasLegacyScoreFields(input) ? 'legacy-v0.1' : SCORE_VERSION))
+      : 'baseline');
 
   return {
     charmScore: scores.charm,
-    rarityScore: scores.rarity,
-    fateScore: scores.fate,
+    clevernessScore: scores.cleverness,
+    auraScore: scores.aura,
     overallScore,
     levelCode: level.code,
     levelLabel: level.label,
@@ -142,7 +179,10 @@ function scoreEncounter(input, options = {}) {
     pointReward: level.pointReward,
     scoreItems: createScoreItems(scores),
     scorePending: options.scorePending === true || !explicit,
-    scoreSource: options.scoreSource || (explicit ? 'evidence' : 'baseline'),
+    scoreSource,
+    scoreVersion,
+    scoreEvidence: input && input.scoreEvidence ? input.scoreEvidence : null,
+    scoreCoverage: input && input.scoreCoverage ? input.scoreCoverage : null,
   };
 }
 
@@ -159,8 +199,8 @@ function getStoredEncounter(record) {
   if (!explicit) {
     return {
       charmScore: null,
-      rarityScore: null,
-      fateScore: null,
+      clevernessScore: null,
+      auraScore: null,
       overallScore: null,
       levelCode: storedLevel ? storedLevel.code : 'C',
       levelLabel: storedLevel ? storedLevel.label : LEVEL_MAP.C.label,
@@ -170,12 +210,16 @@ function getStoredEncounter(record) {
       scoreItems: [],
       scorePending: true,
       scoreSource: storedLevel ? (value.scoreSource || 'stored') : 'legacy',
+      scoreVersion: value.scoreVersion || 'legacy-v0.1',
     };
   }
 
   const result = scoreEncounter(value, {
     scorePending: pending || !explicit,
     scoreSource: value.scoreSource || (explicit ? 'stored' : 'legacy'),
+    scoreVersion: value.scoreVersion || (value.rarityScore !== undefined || value.fateScore !== undefined
+      ? 'legacy-v0.1'
+      : SCORE_VERSION),
   });
 
   if (storedLevel && !explicit) {
@@ -208,7 +252,9 @@ function getBestEncounter(records) {
 }
 
 module.exports = {
+  SCORE_VERSION,
   SCORE_CONFIG,
+  SCORE_ALIASES,
   LEVELS,
   BASELINE_SCORES,
   calculateOverallScore,

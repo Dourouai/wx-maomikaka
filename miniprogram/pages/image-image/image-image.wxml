@@ -1,0 +1,107 @@
+<!-- 猫咪图生图测试页：只验证主体 PNG 处理，不写入猫咪图鉴。 -->
+<navigation-bar title="猫咪图生图" back="{{true}}" color="#4A3728" background="#FFF9F1" />
+
+<view class="image-image-page">
+  <scroll-view class="image-image-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="image-image-content">
+      <view class="image-image-hero">
+        <view class="image-image-hero-tape"></view>
+        <text class="image-image-kicker">CAT IMAGE → IMAGE</text>
+        <text class="image-image-title">只留下猫咪主体</text>
+        <text class="image-image-subtitle">测试照片到透明 PNG 的主体处理效果</text>
+        <view class="image-image-note">
+          <text>只测试抠图链路，不识别、不评分、不写入图鉴。</text>
+        </view>
+      </view>
+
+      <view class="image-test-card">
+        <view class="image-test-card-head">
+          <view>
+            <text class="image-test-kicker">SOURCE PHOTO</text>
+            <text class="image-test-title">猫咪照片</text>
+          </view>
+          <text class="image-test-status">{{sourceLabel}}</text>
+        </view>
+
+        <view class="image-stage image-stage-source">
+          <view wx:if="{{sourceLoading}}" class="image-stage-empty image-stage-loading">
+            <view class="stage-loading-mark">✦</view>
+            <text>正在找回最近一次猫猫</text>
+          </view>
+          <image wx:elif="{{sourcePath}}" class="stage-image" src="{{sourcePath}}" mode="aspectFit" />
+          <view wx:else class="image-stage-empty">
+            <view class="stage-empty-mark">＋</view>
+            <text class="stage-empty-title">还没有测试图片</text>
+            <text class="stage-empty-subtitle">可以从相册或相机选择</text>
+          </view>
+        </view>
+
+        <view class="image-source-actions">
+          <view class="image-button image-button-secondary" bindtap="chooseImage">
+            <text>重新选择照片</text>
+          </view>
+          <view class="image-button image-button-primary {{isTransforming ? 'image-button-disabled' : ''}}" bindtap="transformImage">
+            <text>{{isTransforming ? '处理中…' : '开始主体处理'}}</text>
+            <text class="image-button-arrow">→</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="image-flow-mark">
+        <view class="image-flow-line"></view>
+        <view class="image-flow-dot">↓</view>
+        <text>提取主体</text>
+      </view>
+
+      <view class="image-test-card image-result-card">
+        <view class="image-test-card-head">
+          <view>
+            <text class="image-test-kicker">SUBJECT PNG</text>
+            <text class="image-test-title">处理结果</text>
+          </view>
+          <text class="image-test-status">{{resultStatus}}</text>
+        </view>
+
+        <view wx:if="{{isTransforming}}" class="image-stage image-stage-result image-stage-empty image-stage-loading">
+          <view class="stage-loading-mark">✦</view>
+          <text class="stage-empty-title">正在提取猫咪轮廓</text>
+          <text class="stage-empty-subtitle">保持原来的颜色、姿势和完整身体</text>
+        </view>
+        <view wx:elif="{{resultPath}}" class="image-stage image-stage-result">
+          <image class="stage-image" src="{{resultPath}}" mode="aspectFit" />
+          <view class="result-png-badge">PNG · 透明背景</view>
+        </view>
+        <view wx:else class="image-stage image-stage-result image-stage-empty">
+          <view class="stage-empty-mark">✦</view>
+          <text class="stage-empty-title">这里会出现猫咪主体</text>
+          <text class="stage-empty-subtitle">猫以外的区域应保持透明</text>
+        </view>
+
+        <view wx:if="{{resultPath}}" class="result-meta">
+          <text>{{modelLabel}}</text>
+          <view class="result-clear" bindtap="clearResult"><text>清除结果</text></view>
+        </view>
+      </view>
+
+      <view class="image-test-footnote">
+        <view class="image-test-footnote-mark">✓</view>
+        <view>
+          <text class="image-test-footnote-title">测试结果不会进入正式流程</text>
+          <text class="image-test-footnote-subtitle">确认效果后，再回到拍猫流程收录猫咪。</text>
+        </view>
+      </view>
+
+      <view class="image-image-bottom-safe"></view>
+    </view>
+  </scroll-view>
+
+  <exception-modal
+    visible="{{showException}}"
+    eyebrow="{{exceptionEyebrow}}"
+    title="{{exceptionTitle}}"
+    message="{{exceptionMessage}}"
+    detail="{{exceptionDetail}}"
+    primary-text="{{exceptionPrimaryText}}"
+    bind:primary="closeException"
+  />
+</view>

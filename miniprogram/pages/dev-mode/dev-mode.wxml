@@ -1,0 +1,69 @@
+<!-- 开发模式：模型测试入口，不写入猫咪图鉴。 -->
+<navigation-bar title="开发模式" back="{{true}}" color="#4A3728" background="#FFF9F1" />
+
+<view class="dev-mode-page">
+  <scroll-view class="dev-mode-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="dev-mode-content">
+      <view class="dev-mode-hero">
+        <view class="dev-mode-hero-tape"></view>
+        <text class="dev-mode-kicker">DEVELOPER MODE</text>
+        <text class="dev-mode-title">模型测试工具箱</text>
+        <text class="dev-mode-subtitle">把模型单独拎出来试一试，正式图鉴不受影响。</text>
+        <view class="dev-mode-note">
+          <text>测试结果不写入图鉴，也不会改变正式收录记录。</text>
+        </view>
+      </view>
+
+      <view class="dev-tool-list">
+        <view class="dev-tool-card dev-tool-card-text" bindtap="goTextImage">
+          <view class="dev-tool-icon dev-tool-icon-text">
+            <image src="/assets/doodle-spark.svg" mode="aspectFit" />
+          </view>
+          <view class="dev-tool-copy">
+            <view class="dev-tool-label-row">
+              <text class="dev-tool-kicker">TEXT → IMAGE</text>
+              <text class="dev-tool-badge">免费模型</text>
+            </view>
+            <text class="dev-tool-title">文字生图</text>
+            <text class="dev-tool-subtitle">输入一句话，测试混元文生图模型。</text>
+          </view>
+          <image class="dev-tool-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
+        </view>
+
+        <view class="dev-tool-card dev-tool-card-image" bindtap="goImageImage">
+          <view class="dev-tool-icon dev-tool-icon-image">
+            <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+          </view>
+          <view class="dev-tool-copy">
+            <view class="dev-tool-label-row">
+              <text class="dev-tool-kicker">CAT IMAGE → IMAGE</text>
+              <text class="dev-tool-badge">猫咪测试</text>
+            </view>
+            <text class="dev-tool-title">猫咪图生图</text>
+            <text class="dev-tool-subtitle">用猫咪照片测试主体抠图链路。</text>
+          </view>
+          <image class="dev-tool-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view class="dev-mode-footnote">
+        <view class="dev-mode-footnote-mark">✦</view>
+        <view>
+          <text class="dev-mode-footnote-title">给模型留一块试验田</text>
+          <text class="dev-mode-footnote-subtitle">这里的每一次调用，都是为了验证模型表现。</text>
+        </view>
+      </view>
+
+      <view class="dev-mode-bottom-safe"></view>
+    </view>
+  </scroll-view>
+
+  <exception-modal
+    visible="{{showException}}"
+    eyebrow="{{exceptionEyebrow}}"
+    title="{{exceptionTitle}}"
+    message="{{exceptionMessage}}"
+    primary-text="{{exceptionPrimaryText}}"
+    bind:primary="closeException"
+  />
+</view>

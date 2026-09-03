@@ -30,6 +30,31 @@
         </view>
       </view>
 
+      <view class="member-card">
+        <view class="member-head">
+          <view class="member-copy">
+            <text class="member-kicker">CAT WALKER LEVEL</text>
+            <text class="member-title">{{memberName}}</text>
+          </view>
+          <view class="member-badge">
+            <text>Lv.{{memberLevel}}</text>
+          </view>
+        </view>
+        <view class="member-growth-row">
+          <text>猫爪成长值 {{pawGrowth}}</text>
+          <text wx:if="{{!memberIsMax}}">距 {{nextMemberName}} 还差 {{growthToNext}}</text>
+          <text wx:else>已抵达当前最高等级</text>
+        </view>
+        <view class="member-line">
+          <view class="member-line-fill" style="width: {{memberProgress}}%;"></view>
+        </view>
+        <view class="member-foot">
+          <text>Lv.{{memberLevel}} · {{memberName}}</text>
+          <text wx:if="{{!memberIsMax}}">下一等级 {{nextGrowth}}</text>
+          <text wx:else>继续城市冒险</text>
+        </view>
+      </view>
+
       <view class="section-heading">
         <text class="section-title">最近遇见</text>
         <view class="section-more" bindtap="goCollection">
@@ -82,16 +107,16 @@
         </view>
       </view>
 
-      <view class="text-image-entry" bindtap="goTextImage">
-        <view class="text-image-entry-icon">
+      <view class="dev-mode-entry" bindtap="goDevMode">
+        <view class="dev-mode-entry-icon">
           <image src="/assets/doodle-spark.svg" mode="aspectFit" />
         </view>
-        <view class="text-image-entry-copy">
-          <text class="text-image-entry-kicker">TINY IMAGE LAB</text>
-          <text class="text-image-entry-title">文字生图实验室</text>
-          <text class="text-image-entry-subtitle">写一句话，看看画面会长什么样</text>
+        <view class="dev-mode-entry-copy">
+          <text class="dev-mode-entry-kicker">DEVELOPER MODE</text>
+          <text class="dev-mode-entry-title">开发模式</text>
+          <text class="dev-mode-entry-subtitle">文生图 · 猫咪图生图测试工具</text>
         </view>
-        <image class="text-image-entry-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
+        <image class="dev-mode-entry-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
       </view>
 
       <view class="coming-section-heading">

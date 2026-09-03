@@ -2,14 +2,16 @@
   "pages": [
     "pages/index/index",
     "pages/my/my",
+    "pages/dev-mode/dev-mode",
     "pages/text-image/text-image",
+    "pages/image-image/image-image",
     "pages/camera/camera",
     "pages/reveal/reveal",
     "pages/collection/collection",
     "pages/card-detail/card-detail"
   ],
   "tabBar": {
-    "custom": false,
+    "custom": true,
     "color": "#999",
     "selectedColor": "#EF745E",
     "backgroundColor": "#FFF9F1",
@@ -17,21 +19,15 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "",
-        "iconPath": "assets/tab-encounter.png",
-        "selectedIconPath": "assets/tab-encounter-active.png"
+        "text": "相遇"
       },
       {
         "pagePath": "pages/collection/collection",
-        "text": "",
-        "iconPath": "assets/tab-album.png",
-        "selectedIconPath": "assets/tab-album-active.png"
+        "text": "图鉴"
       },
       {
         "pagePath": "pages/my/my",
-        "text": "",
-        "iconPath": "assets/tab-profile.png",
-        "selectedIconPath": "assets/tab-profile-active.png"
+        "text": "我的"
       }
     ]
   },
@@ -41,17 +37,7 @@
     "backgroundColor": "#FFF8F0"
   },
   "style": "v2",
-  "renderer": "skyline",
-  "rendererOptions": {
-    "skyline": {
-      "defaultDisplayBlock": true,
-      "defaultContentBox": true,
-      "tagNameStyleIsolation": "legacy",
-      "disableABTest": true,
-      "sdkVersionBegin": "3.0.0",
-      "sdkVersionEnd": "15.255.255"
-    }
-  },
+  "renderer": "webview",
   "componentFramework": "glass-easel",
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"

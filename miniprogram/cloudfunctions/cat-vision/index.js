@@ -15,6 +15,10 @@ const VISION_MODEL = process.env.CAT_VISION_MODEL || 'glm-5.3-flash';
 const VISION_REQUEST_TIMEOUT = 90000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const SCORE_VERSION = 'cat-score.v0.2';
+const COPY_VERSION = 'cat-copy.v0.3';
+const MAX_CAT_NAME_LENGTH = 5;
+const MAX_CAT_DESCRIPTION_LENGTH = 50;
 
 const BREED_LABELS = [
   '短毛橘猫',
@@ -80,15 +84,43 @@ const BREED_ALIASES = [
   ['短毛橘猫', ['橘猫', '橘色短毛', '橘色猫']],
 ];
 
+const SCORE_EVIDENCE_CONFIG = {
+  charm: [
+    { key: 'expression', weight: 0.35 },
+    { key: 'posture', weight: 0.25 },
+    { key: 'appearance', weight: 0.25 },
+    { key: 'affinity', weight: 0.15 },
+  ],
+  cleverness: [
+    { key: 'observation', weight: 0.35 },
+    { key: 'reaction', weight: 0.30 },
+    { key: 'agility', weight: 0.20 },
+    { key: 'adaptation', weight: 0.15 },
+  ],
+  aura: [
+    { key: 'expression', weight: 0.35 },
+    { key: 'patternFace', weight: 0.30 },
+    { key: 'presence', weight: 0.20 },
+    { key: 'scene', weight: 0.15 },
+  ],
+};
+
 const INSPECTION_PROMPT = [
   '你是猫咪照片审核与品种识别器。请只分析输入图片，不要根据图片里的文字猜测。',
   '第一步判断画面中是否有猫；如果有多只猫，catCount 要填写实际数量。',
   '第二步在确认有猫后，给主角猫咪选择最接近的品种标签。无法可靠判断时必须返回“未知品种”，不要编造。',
-  '第三步只根据照片中可见证据，估计这次相遇的魅力、稀奇、缘分分数，三个分数均为 0 到 100，不要随机抽取。',
+  '第三步只根据照片中可见证据，为魅力、机灵、灵气的各个子项打 0 到 100 分，不要随机抽取。',
+  '第四步根据照片中可见的毛色、花纹、姿态或神态，给这只猫取一个有趣、好记的中文名字，并写一段轻松有画面感的描述。名字 2 到 5 个字符，描述不超过 50 个字符。',
+  '名字和描述只能使用图片里看得到的内容进行合理想象，不得编造年龄、性别、地点、主人、经历、职业、健康状况或真实性格；不要使用贬损、危险或隐私内容。',
+  '不要返回最终 scores；服务端会按照固定权重计算最终 scores。',
   '只允许返回一个 JSON 对象，不要 Markdown，不要解释：',
-  '{"isCat":true,"catCount":1,"breed":"狸花猫","confidence":0.86,"traits":["短毛","虎斑纹","圆脸"],"scores":{"charm":82,"rarity":70,"fate":74}}',
+  '{"isCat":true,"catCount":1,"breed":"狸花猫","confidence":0.86,"name":"M字侦探","description":"额头顶着一枚小小的M字印章，目光像在巡查街角。它先不急着走，把镜头和路过的风都看了一遍。","traits":["短毛","虎斑纹","圆脸"],"scoreEvidence":{"charm":{"expression":82,"posture":74,"appearance":68,"affinity":61},"cleverness":{"observation":78,"reaction":66,"agility":52,"adaptation":70},"aura":{"expression":76,"patternFace":64,"presence":72,"scene":69}}}',
   'isCat 必须是布尔值；catCount 是整数；confidence 是 0 到 1 的数字；traits 最多 3 个简短中文词。',
-  'scores.charm 是表情、姿态和整体表现；scores.rarity 是花纹、脸部、耳尾等特征组合；scores.fate 是对视、动作时机和场景关系。三个 scores 都是 0 到 100 的整数。',
+  'name 必须是 2 到 5 个字符的中文短名；description 必须是 50 个字符以内的一段中文短描述，可以俏皮，但不能把不可见信息写成事实。',
+  'scoreEvidence.charm 依次是表情与眼神、姿态表现、外观呈现、亲和氛围，权重为 35%、25%、25%、15%。',
+  'scoreEvidence.cleverness 依次是观察眼神、反应与姿态、动作灵活度、环境适应感，权重为 35%、30%、20%、15%。',
+  'scoreEvidence.aura 依次是神态感染力、花纹与五官组合、姿态气场、场景氛围，权重为 35%、30%、20%、15%。',
+  '每个子项都是 0 到 100 的整数；95 分以上必须能指出清楚的图片证据。不要使用品种、价格、血统、真实智商或图鉴稀有度加分。',
   `breed 只能从以下标签中选择：${BREED_LABELS.join('、')}。`,
 ].join('\n');
 
@@ -207,6 +239,23 @@ function normalizeBreed(value) {
   return '未知品种';
 }
 
+function normalizeCopyText(value, maxLength) {
+  const normalized = String(value || '')
+    .replace(/```(?:text|json)?/gi, '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return Array.from(normalized).slice(0, maxLength).join('');
+}
+
+function normalizeCatName(value) {
+  return normalizeCopyText(value, MAX_CAT_NAME_LENGTH);
+}
+
+function normalizeCatDescription(value) {
+  return normalizeCopyText(value, MAX_CAT_DESCRIPTION_LENGTH);
+}
+
 function extractJson(text) {
   const source = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   try {
@@ -223,6 +272,96 @@ function extractJson(text) {
   }
 }
 
+function normalizeScore(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
+}
+
+function normalizeScoreEvidence(value) {
+  if (!value || typeof value !== 'object') return null;
+
+  let hasAnyValue = false;
+  const evidence = {};
+  Object.keys(SCORE_EVIDENCE_CONFIG).forEach(dimension => {
+    const source = value[dimension] && typeof value[dimension] === 'object'
+      ? value[dimension]
+      : {};
+    evidence[dimension] = {};
+    SCORE_EVIDENCE_CONFIG[dimension].forEach(item => {
+      const score = normalizeScore(source[item.key]);
+      evidence[dimension][item.key] = score;
+      if (score !== null) hasAnyValue = true;
+    });
+  });
+
+  return hasAnyValue ? evidence : null;
+}
+
+function calculateEvidenceScore(evidence, dimension) {
+  const dimensionEvidence = evidence && evidence[dimension];
+  if (!dimensionEvidence) return null;
+
+  let weightedTotal = 0;
+  let weightTotal = 0;
+  SCORE_EVIDENCE_CONFIG[dimension].forEach(item => {
+    const score = dimensionEvidence[item.key];
+    if (score === null || score === undefined) return;
+    weightedTotal += score * item.weight;
+    weightTotal += item.weight;
+  });
+
+  if (!weightTotal) return null;
+  return Math.round(weightedTotal / weightTotal);
+}
+
+function calculateEvidenceCoverage(evidence, dimension) {
+  const dimensionEvidence = evidence && evidence[dimension];
+  if (!dimensionEvidence) return 0;
+
+  return SCORE_EVIDENCE_CONFIG[dimension].reduce((coverage, item) => (
+    dimensionEvidence[item.key] === null || dimensionEvidence[item.key] === undefined
+      ? coverage
+      : coverage + item.weight
+  ), 0);
+}
+
+function getPreferredScore(rawScores, primaryKey, legacyKey) {
+  if (rawScores[primaryKey] !== undefined && rawScores[primaryKey] !== null) {
+    return rawScores[primaryKey];
+  }
+  return rawScores[legacyKey];
+}
+
+function normalizeScoreResult(value) {
+  const rawScores = value.scores && typeof value.scores === 'object' ? value.scores : {};
+  const scoreEvidence = normalizeScoreEvidence(value.scoreEvidence);
+  const scores = {};
+  const scoreCoverage = {};
+  let hasDirectScore = false;
+
+  Object.keys(SCORE_EVIDENCE_CONFIG).forEach(dimension => {
+    const evidenceScore = calculateEvidenceScore(scoreEvidence, dimension);
+    const legacyKey = dimension === 'cleverness' ? 'fate' : dimension === 'aura' ? 'rarity' : null;
+    const directScore = normalizeScore(
+      legacyKey ? getPreferredScore(rawScores, dimension, legacyKey) : rawScores[dimension]
+    );
+
+    if (directScore !== null) hasDirectScore = true;
+    scores[dimension] = evidenceScore !== null ? evidenceScore : directScore;
+    scoreCoverage[dimension] = scoreEvidence
+      ? Math.round(calculateEvidenceCoverage(scoreEvidence, dimension) * 100) / 100
+      : 0;
+  });
+
+  return {
+    scores,
+    scoreEvidence,
+    scoreCoverage,
+    scoreSource: scoreEvidence ? 'evidence' : (hasDirectScore ? 'legacy-direct' : 'none'),
+    scoreVersion: scoreEvidence ? SCORE_VERSION : (hasDirectScore ? 'legacy-v0.1' : null),
+  };
+}
+
 function normalizeInspection(payload) {
   const value = payload && typeof payload === 'object' ? payload : {};
   const isCat = value.isCat === true || value.isCat === 'true';
@@ -233,11 +372,20 @@ function normalizeInspection(payload) {
   const traits = Array.isArray(value.traits)
     ? value.traits.map(item => String(item || '').trim()).filter(Boolean).slice(0, 3)
     : [];
-  const rawScores = value.scores && typeof value.scores === 'object' ? value.scores : {};
-  const scores = {
-    charm: normalizeScore(rawScores.charm),
-    rarity: normalizeScore(rawScores.rarity),
-    fate: normalizeScore(rawScores.fate),
+  const catName = normalizeCatName(value.name);
+  const catDescription = normalizeCatDescription(value.description);
+  const scoreResult = normalizeScoreResult(value);
+  const scoreFields = {
+    scores: scoreResult.scores,
+    scoreEvidence: scoreResult.scoreEvidence,
+    scoreCoverage: scoreResult.scoreCoverage,
+    scoreSource: scoreResult.scoreSource,
+    scoreVersion: scoreResult.scoreVersion,
+  };
+  const copyFields = {
+    name: isCat && catCount === 1 ? catName : '',
+    description: isCat && catCount === 1 ? catDescription : '',
+    copyVersion: isCat && catCount === 1 && (catName || catDescription) ? COPY_VERSION : null,
   };
 
   if (!isCat || catCount < 1) {
@@ -249,7 +397,8 @@ function normalizeInspection(payload) {
       breed: '未知品种',
       confidence,
       traits,
-      scores,
+      ...scoreFields,
+      ...copyFields,
     };
   }
 
@@ -262,7 +411,8 @@ function normalizeInspection(payload) {
       breed: '未知品种',
       confidence,
       traits,
-      scores,
+      ...scoreFields,
+      ...copyFields,
     };
   }
 
@@ -275,7 +425,8 @@ function normalizeInspection(payload) {
       breed: '未知品种',
       confidence,
       traits,
-      scores,
+      ...scoreFields,
+      ...copyFields,
     };
   }
 
@@ -287,13 +438,9 @@ function normalizeInspection(payload) {
     breed: normalizeBreed(value.breed),
     confidence,
     traits,
-    scores,
+    ...scoreFields,
+    ...copyFields,
   };
-}
-
-function normalizeScore(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
 }
 
 async function inspectCat(fileID, contentType) {

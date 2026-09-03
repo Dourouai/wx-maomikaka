@@ -23,7 +23,7 @@ cloud.init({
   timeout: 900000,
 });
 
-const PROMPT_VERSION = 'cat-subject-only-cloudbase-i2i-v1';
+const PROMPT_VERSION = 'cat-subject-only-cloudbase-i2i-v3-previous-prompt';
 // 按项目原来的 CloudBase 图生图链路处理主体，不使用原生 aiart 接口。
 const CAT_TRANSFORM_PROVIDER = 'hunyuan-image';
 const CAT_TRANSFORM_MODEL = process.env.CAT_TRANSFORM_MODEL || 'HY-Image-v3.0-I2I-ToB-v1.0.1';
@@ -396,6 +396,8 @@ async function generateCloudBaseSubjectImage(sourceImage) {
       images: [imageBase64],
       // 关闭 prompt 改写，避免模型把主体抠图改成海报/插画创作。
       revise: { value: false },
+      // 仅保留一个轻量自定义标识，不传 LogoAdd，避免混用平台水印控制参数。
+      footnote: '·',
     });
   } catch (error) {
     throw normalizeCloudBaseError(error);

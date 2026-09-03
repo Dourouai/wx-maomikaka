@@ -9,8 +9,8 @@
 1. 猫咪识别使用 TokenHub 的 `glm-5.3-flash` 多模态模型。
 2. 主体图只保留照片中的猫，不生成卡片文案、故事、标签或装饰。
 3. 模型主体图生成后不再做二次图片安全复核；原始照片仍按现有流程先做内容安全检测。
-4. CloudBase `hunyuan-image` 生图即使传入顶层 `LogoAdd: 0` 且不传 `footnote`，返回图仍带“AI生成”标识，不能作为正式主体图方案。
-5. 主体处理恢复腾讯云原生 `aiart.ImageToImage`，请求顶层传入 `LogoAdd: 0`；不再回退到带平台标识的 CloudBase 生图。
+4. CloudBase `hunyuan-image` 生图即使不传 `footnote`，历史测试中仍出现过“AI生成”标识；该标识属于服务侧结果，不能靠空水印文字稳定关闭。
+5. 2026-09-03 按用户要求，主体处理先切回项目原来的 CloudBase `hunyuan-image` 图生图链路，便于继续验证主体风格；原生 `aiart.ImageToImage` 暂停使用。
 6. 图鉴、揭示页和详情页的主体容器统一使用暖白色；之前看到的 R 级浅蓝色来自容器 CSS，不是图鉴等级必须使用的背景。
 7. 2026-09-03 最新测试确认：AI 标识已消失，但主体图仍被默认风格重绘成带文字/画框的海报；根因是原生 `ImageToImage` 未传 `Styles` 时默认使用日系动漫风格。
 8. 2026-09-03 第二次测试确认：无风格重绘已经改善，但树枝和地面仍有残留；这是主体分割不充分，不是页面容器背景。
@@ -50,15 +50,14 @@ footnote: ''
 
 结论：这是图片服务侧的强制标识，不是小程序容器背景，也不是我们页面文案。空 `footnote` 只代表没有自定义水印文字，不能视为关闭平台标识。
 
-处理：已删除 `cloudbase-empty-footnote` 实验分支，正式代码固定使用 `tencent-native`。
+处理：已记录该方案的限制。当前不再把空 `footnote` 当成去除平台标识的方案，但主体链路按用户要求先恢复 CloudBase 图生图。
 
 不要重复尝试：
 
-- 不要重新接回 CloudBase `hunyuan-image` 作为主体图；
-- 不要继续尝试通过空字符串、改 `footnote` 文案或提示词隐藏平台标识；
+- 不要把空字符串、改 `footnote` 文案或提示词当成稳定隐藏平台标识的方法；
 - 不要通过裁切、覆盖或图像编辑去除已嵌入的 AI 标识。
 
-### 3. 原生图生图无权限
+### 3. 原生图生图无权限（历史方案）
 
 现象：`cat-transform` 返回：
 
@@ -120,6 +119,17 @@ You are not authorized to perform this operation
 
 处理：版本升级为 `cat-subject-only-v9-transparent-png`，保留 `Strength=0.6`，将正向提示词重写为主体抠图/前景分离和透明 alpha PNG 任务，并在反向约束中明确列出树枝、树干、叶子、植物、地面、墙面、白底和棋盘格；继续传入空 `Styles`，不恢复默认日系动漫风格。
 
+### 7. 按用户要求切回项目原来的 CloudBase 图生图
+
+2026-09-03 已确认并执行：`cat-transform` 不再调用原生 `aiart.ImageToImage`，改回 `wx-server-sdk@4.0.2` 的 `cloud.ai().createImageModel('hunyuan-image')`。
+
+- 模型固定为 `HY-Image-v3.0-I2I-ToB-v1.0.1`；
+- 输入使用 CloudBase 官方图生图字段 `images: [base64]`，最多传 1 张、沿用 10 MB 原图限制；
+- 固定使用 `images/ar/generations`，关闭 prompt 改写，不传 `footnote`；
+- 保留“只保留完整猫咪主体、不要文字/卡片/装饰、猫以外透明”的主体约束；
+- 保留服务端对模型返回图片的下载、云存储落盘和烘焙棋盘格清理；不增加模型结果二次安全复核；
+- 本次只修改本地代码并提交 GitHub，未重新上传云函数，避免未验证版本覆盖当前线上版本。
+
 ## 当前实现清单
 
 ### `cat-vision`
@@ -133,13 +143,12 @@ You are not authorized to perform this operation
 
 ### `cat-transform`
 
-- 服务：腾讯云原生 `aiart.ImageToImage`；
-- 请求：顶层 `LogoAdd: 0`；
-- 提示词：明确作为主体抠图/前景分离任务，只保留完整猫咪，猫以外要求为透明 alpha 背景 PNG，不生成文字或装饰；显式关闭预置风格，`Strength=0.6` 清理环境残留并保留原照片；服务端仍会清理可识别的烘焙棋盘格，但原生接口不保证真正 alpha 输出；
-- 模型输出：不做二次图片安全复核，直接保存主体图；
-- 必要环境变量：`AIART_SECRET_ID`、`AIART_SECRET_KEY`；
-- 可选环境变量：`AIART_REGION`，默认 `ap-guangzhou`；
-- 必要权限：腾讯云 CAM 允许调用 `aiart:ImageToImage`。
+- 服务：`wx-server-sdk@4.0.2` 的 `cloud.ai().createImageModel('hunyuan-image')`；
+- 模型：`HY-Image-v3.0-I2I-ToB-v1.0.1`；
+- 请求：按 CloudBase 图生图接口传入 `images: [base64]`，固定使用 `images/ar/generations` 路径，不传 `footnote`；
+- 提示词：明确作为主体抠图/前景分离任务，只保留完整猫咪，猫以外要求为透明 alpha 背景 PNG，不生成文字或装饰；关闭 prompt 改写，避免模型把主体抠图改成海报/插画创作；
+- 模型输出：不做二次图片安全复核，直接保存主体图；服务端只清理可识别的烘焙棋盘格，CloudBase 模型是否返回真正 alpha 透明及是否保留平台标识仍以实际结果为准；
+- 不需要额外的 `AIART_SECRET_ID` / `AIART_SECRET_KEY`，使用当前 CloudBase 云函数环境的 AI 能力配置。
 
 ### `text-to-image`（测试入口）
 
@@ -156,16 +165,16 @@ You are not authorized to perform this operation
 ## 部署与验证状态
 
 - `cat-vision`：已在微信开发者工具发起并完成上传流程，上传包显示约 5.1 KB、3 个文件，未显示失败提示；
-- `cat-transform`：主体清理提示词 v9 已完成代码修改，版本为 `cat-subject-only-v9-transparent-png`；需重新上传并用新照片验证；
+- `cat-transform`：2026-09-03 已切回 CloudBase 图生图，版本为 `cat-subject-only-cloudbase-i2i-v1`；代码已修改但尚未重新上传，需用新照片验证；
 - `text-to-image`：已上传包含顶层 `LogoAdd: 0` 且不传 `footnote` 的版本；真实生成已成功，但返回图片仍带平台 AI 标识；云函数执行超时已配置为 900 秒；
 - 需要用一张新照片重新测试，旧图鉴记录中的 CloudBase 图片不会自动改变；
-- 若新测试返回 `NATIVE_IMAGE_AUTH_MISSING`，优先配置原生接口密钥；
-- 若返回 `NATIVE_IMAGE_API_ERROR`，优先检查 CAM 权限和原生接口参数，不要切回 CloudBase 生图。
+- 若新测试返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，优先检查 CloudBase AI 模型开通、云函数依赖和图生图参数；
+- 若结果再次带平台 AI 标识，记录为 CloudBase 服务侧限制，不要重复调 `footnote` 或接入 `watermarks-remover`。
 
 ## 后续唯一测试路径
 
 1. 确认 `cat-vision` 云函数环境变量存在且已部署；
-2. 确认 `cat-transform` 的原生接口密钥和 `aiart:ImageToImage` 权限；
+2. 确认 CloudBase AI 中 `HY-Image-v3.0-I2I-ToB-v1.0.1` 已开通，且 `cat-transform` 依赖已安装；
 3. 重新编译小程序并拍摄一张新猫照片；
-4. 先确认 GLM 识别成功，再确认主体图无“AI生成”标识、无文字/画框且猫咪外观接近原照片；
-5. 若原生接口无法满足无标识要求，再评估非生成式主体抠图服务，不再重复 CloudBase 空 `footnote` 实验。
+4. 先确认 GLM 识别成功，再确认主体图无文字/画框且猫咪外观接近原照片，同时记录是否出现平台 AI 标识；
+5. 若 CloudBase 图生图仍无法满足无标识或透明主体要求，再评估非生成式主体抠图服务，不重复已经确认过的水印参数实验。

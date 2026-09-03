@@ -1,6 +1,6 @@
 # 猫咪咔咔 — HY3 文本与图像模型接入技术说明
 
-> 状态：当前版本接入 TokenHub GLM-5.3-Flash 图片理解 → 腾讯云原生图生图主体处理 → 入图鉴链路
+> 状态：当前版本接入 TokenHub GLM-5.3-Flash 图片理解 → CloudBase 混元图生图主体处理 → 入图鉴链路
 >
 > 更新时间：2026-09-02
 >
@@ -130,7 +130,7 @@ Hy3 可以负责“理解视觉识别结果并生成卡片内容”，但当前�
 - 不生成背景、贴纸、边框、标签、故事或其他装饰；
 - 同时保留安全校验后的原始照片作为事实记录。
 
-图生图结果不是严格像素级抠图，也不能替代原始照片；它是主体展示素材。CloudBase 的 `hunyuan-image` SDK 即使将 `footnote` 设为空，也可能保留平台强制 AI 标识，因此不进入正式主体处理链路。当前固定使用腾讯云原生 `ImageToImage` 接口，并在请求顶层传入 `LogoAdd: 0`；如果原生接口凭证或权限未配置，直接返回错误，不自动回退到带标识的 CloudBase 生图结果。
+图生图结果不是严格像素级抠图，也不能替代原始照片；它是主体展示素材。当前按项目调试阶段要求，先恢复 CloudBase 的 `hunyuan-image` 图生图链路，模型为 `HY-Image-v3.0-I2I-ToB-v1.0.1`，使用 `images` base64 垫图并关闭 prompt 改写。CloudBase 服务侧可能保留平台 AI 标识，也不保证输出是真正的 alpha 透明 PNG；模型结果只用于主体展示，不作为原始事实照片。
 
 ## 4. 总体架构
 
@@ -177,7 +177,7 @@ Hy3 可以负责“理解视觉识别结果并生成卡片内容”，但当前�
 当前代码已新增以下链路：
 
 - `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`traits` 和 `scores`；
-- `miniprogram/cloudfunctions/cat-transform/`：使用 `wx-server-sdk@4.0.2` 保存图片，固定通过腾讯云原生 `aiart.ImageToImage` 处理主体并传入顶层 `LogoAdd: 0`，不保留带默认标识的 CloudBase 生图链路；
+- `miniprogram/cloudfunctions/cat-transform/`：使用 `wx-server-sdk@4.0.2` 保存图片，通过 `cloud.ai().createImageModel('hunyuan-image')` 调用 `HY-Image-v3.0-I2I-ToB-v1.0.1`，以 `images: [base64]` 传入一张原图并固定使用 `images/ar/generations`；
 - 小程序拍照后先调用现有 `content-security` 校验原图，再调用 `cat-vision` 判断是否为猫、映射品种并计算相遇评分，之后调用 `cat-transform` 的 `matting` 动作；任务提交后先扣除 1 个罐罐，非猫、多猫无法确认目标或图片不合格时不写入拍摄记录且不返还罐罐；识别服务不可用等产品侧异常时返还罐罐；
 - 云函数使用固定的主体处理约束提示词和反向约束，原生接口关闭提示词改写并传入顶层 `LogoAdd: 0`；模型结果不做二次 `security.imgSecCheck`，直接保存到 `cat-album/cutout/`；
 - 本地记录同时保存安全校验后的原图 `fileID`、主体图 `fileID` 和主体处理元数据；图鉴与详情页优先展示主体图，主体处理失败时不把原图伪装成主体图；
@@ -199,12 +199,12 @@ Hy3 可以负责“理解视觉识别结果并生成卡片内容”，但当前�
 
 本项目不在小程序端保存 API Key，也不直接请求外部 AI 网关；模型凭证和路由由 CloudBase 服务端管理。
 
-原生图生图配置：
+CloudBase 图生图配置：
 
-1. 在 `cat-transform` 云函数环境变量中配置 `AIART_SECRET_ID`、`AIART_SECRET_KEY` 和可选的 `AIART_REGION`（默认 `ap-guangzhou`）；也可以使用云函数运行时注入的 `TENCENTCLOUD_SECRETID`、`TENCENTCLOUD_SECRETKEY`、`TENCENTCLOUD_SESSIONTOKEN`；
-2. 给对应腾讯云账号或云函数角色授权 `aiart:ImageToImage`；
+1. 在 CloudBase AI 中确认 `HY-Image-v3.0-I2I-ToB-v1.0.1` 已开通；
+2. 确认 `cat-transform` 云函数使用 `wx-server-sdk@4.0.2` 并完成云端依赖安装；
 3. 重新上传部署 `cat-transform` 后再测试；
-4. 若返回 `NATIVE_IMAGE_AUTH_MISSING` 或 `NATIVE_IMAGE_API_ERROR`，先处理凭证或 CAM 权限，不要切回 CloudBase 生图 SDK，否则会再次出现默认 AI 标识。
+4. 若返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，先检查 CloudBase AI 模型和图生图参数，不重复尝试空 `footnote` 去除平台标识。
 
 ## 5. 推荐业务流程
 

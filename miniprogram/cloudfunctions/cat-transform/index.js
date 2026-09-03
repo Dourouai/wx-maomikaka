@@ -1,6 +1,5 @@
 const https = require('https');
 const http = require('http');
-const crypto = require('crypto');
 const { URL } = require('url');
 const cloud = require('wx-server-sdk');
 
@@ -24,34 +23,19 @@ cloud.init({
   timeout: 900000,
 });
 
-const PROMPT_VERSION = 'cat-subject-only-v9-transparent-png';
-const LOGO_ADD = 0;
-// ImageToImage 不传 Styles 时会默认套用 201（日系动漫）风格；主体图必须显式关闭预置风格。
-const NATIVE_STYLES = [];
-// 在不启用预置画风的前提下，给模型足够自由度清理树枝、地面等背景残留。
-const NATIVE_SUBJECT_STRENGTH = 0.6;
-// 正式主体处理固定使用腾讯云原生 ImageToImage；不走 CloudBase 生图，避免平台强制 AI 标识。
-const CAT_TRANSFORM_PROVIDER = 'tencent-native';
-const NATIVE_AIART_HOST = 'aiart.tencentcloudapi.com';
-const NATIVE_AIART_SERVICE = 'aiart';
-const NATIVE_AIART_ACTION = 'ImageToImage';
-const NATIVE_AIART_VERSION = '2022-12-29';
-const NATIVE_AIART_DEFAULT_REGION = 'ap-guangzhou';
+const PROMPT_VERSION = 'cat-subject-only-cloudbase-i2i-v1';
+// 按项目原来的 CloudBase 图生图链路处理主体，不使用原生 aiart 接口。
+const CAT_TRANSFORM_PROVIDER = 'hunyuan-image';
+const CAT_TRANSFORM_MODEL = process.env.CAT_TRANSFORM_MODEL || 'HY-Image-v3.0-I2I-ToB-v1.0.1';
+const CAT_TRANSFORM_SUB_URL = 'images/ar/generations';
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_NATIVE_INPUT_BASE64_BYTES = 8 * 1024 * 1024;
-const MAX_NATIVE_RESPONSE_BYTES = 20 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 const MAX_CLEANUP_PIXELS = 3 * 1024 * 1024;
 
-const NATIVE_SUBJECT_PROMPT = [
+const SUBJECT_PROMPT = [
   '这是主体抠图任务，不是文生图创作，不是风格转换，也不是海报设计。请对输入照片做前景主体分离，只保留照片中这只猫。',
   '输出为透明背景 PNG，带真实 alpha 透明通道：猫以外的每一个像素都必须完全透明，不要白色背景，不要彩色背景，不要灰色背景，不要棋盘格图案。',
   '完整保留原猫的头部、耳朵、眼睛、胡须、毛发、身体、四肢、爪子和尾巴，以及原有毛色、花纹、姿势、比例、朝向和真实照片质感；不要裁切，不要补画，不要换猫，不要改变外观。',
-].join('');
-const NATIVE_NEGATIVE_PROMPT = [
-  '树枝，树干，树皮，叶子，花，植物，草，地面，泥土，道路，墙面，天空，窗户，家具，室内，室外，环境，场景，背景，背景残留，边缘残留，杂物，人物，其他动物，白底，白色背景，彩色背景，灰色背景，棋盘格，',
-  '文字，乱码，水印，AI生成标识，标题，标签，品种名，故事，评分，徽章，边框，画框，卡片，海报，贴纸，版式，报纸，画布，装饰，阴影，倒影，',
-  '插画，动漫，卡通，水彩，油画，素描，艺术风格，生成新猫，替换猫，换猫，重绘，修图，磨皮，虚构细节，裁切耳朵，裁切胡须，裁切身体，裁切爪子，裁切尾巴，缺失身体',
 ].join('');
 
 function createError(code, message) {
@@ -340,205 +324,98 @@ function downloadImage(url, redirectCount = 0) {
   });
 }
 
-function sha256(value) {
-  return crypto.createHash('sha256').update(value).digest('hex');
+function decodeDataURL(value) {
+  const match = String(value || '').match(/^data:([^;,]+);base64,([\s\S]+)$/i);
+  if (!match) return null;
+  const buffer = Buffer.from(match[2], 'base64');
+  if (!buffer.length) throw createError('CUTOUT_IMAGE_INVALID', '模型没有返回有效图片');
+  return { buffer, contentType: match[1] };
 }
 
-function hmacSha256(key, value, encoding) {
-  return crypto.createHmac('sha256', key).update(value).digest(encoding);
-}
-
-function getNativeAiartConfig() {
-  return {
-    secretId: String(process.env.AIART_SECRET_ID || process.env.TENCENTCLOUD_SECRETID || '').trim(),
-    secretKey: String(process.env.AIART_SECRET_KEY || process.env.TENCENTCLOUD_SECRETKEY || '').trim(),
-    sessionToken: String(process.env.AIART_SESSION_TOKEN || process.env.TENCENTCLOUD_SESSIONTOKEN || '').trim(),
-    region: String(process.env.AIART_REGION || process.env.TENCENTCLOUD_REGION || NATIVE_AIART_DEFAULT_REGION).trim(),
-  };
-}
-
-function createTencentAuthorization(body, timestamp, config) {
-  const date = new Date(timestamp * 1000).toISOString().slice(0, 10);
-  const canonicalHeaders = `content-type:application/json; charset=utf-8\nhost:${NATIVE_AIART_HOST}\n`;
-  const signedHeaders = 'content-type;host';
-  const canonicalRequest = [
-    'POST',
-    '/',
-    '',
-    canonicalHeaders,
-    signedHeaders,
-    sha256(body),
-  ].join('\n');
-  const credentialScope = `${date}/${NATIVE_AIART_SERVICE}/tc3_request`;
-  const stringToSign = [
-    'TC3-HMAC-SHA256',
-    String(timestamp),
-    credentialScope,
-    sha256(canonicalRequest),
-  ].join('\n');
-  const secretDate = hmacSha256(`TC3${config.secretKey}`, date);
-  const secretService = hmacSha256(secretDate, NATIVE_AIART_SERVICE);
-  const secretSigning = hmacSha256(secretService, 'tc3_request');
-  const signature = hmacSha256(secretSigning, stringToSign, 'hex');
-  return {
-    authorization: `TC3-HMAC-SHA256 Credential=${config.secretId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
-    date,
-  };
-}
-
-function requestNativeImageToImage(payload) {
-  const config = getNativeAiartConfig();
-  if (!config.secretId || !config.secretKey) {
-    throw createError(
-      'NATIVE_IMAGE_AUTH_MISSING',
-      '腾讯云原生图生图未配置 API 密钥，请配置 AIART_SECRET_ID 和 AIART_SECRET_KEY'
-    );
+async function getGeneratedImage(imageData) {
+  if (!imageData || typeof imageData !== 'object') {
+    throw createError('CUTOUT_IMAGE_UNAVAILABLE', '模型没有返回主体图片');
   }
 
-  const body = JSON.stringify(payload);
-  const timestamp = Math.floor(Date.now() / 1000);
-  const auth = createTencentAuthorization(body, timestamp, config);
-  const headers = {
-    Authorization: auth.authorization,
-    'Content-Type': 'application/json; charset=utf-8',
-    'Content-Length': Buffer.byteLength(body),
-    'X-TC-Action': NATIVE_AIART_ACTION,
-    'X-TC-Version': NATIVE_AIART_VERSION,
-    'X-TC-Timestamp': String(timestamp),
-    'X-TC-Region': config.region,
-  };
-  if (config.sessionToken) headers['X-TC-Token'] = config.sessionToken;
+  const dataURL = decodeDataURL(imageData.url);
+  if (dataURL) return dataURL;
 
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (error, value) => {
-      if (settled) return;
-      settled = true;
-      if (error) reject(error);
-      else resolve(value);
-    };
-    const request = https.request(
-      {
-        hostname: NATIVE_AIART_HOST,
-        port: 443,
-        path: '/',
-        method: 'POST',
-        headers,
-        timeout: 120000,
-      },
-      response => {
-        const chunks = [];
-        let totalBytes = 0;
-        response.on('data', chunk => {
-          totalBytes += chunk.length;
-          if (totalBytes > MAX_NATIVE_RESPONSE_BYTES) {
-            response.destroy();
-            finish(createError('NATIVE_IMAGE_RESPONSE_TOO_LARGE', '腾讯云原生图生图返回结果过大'));
-            return;
-          }
-          chunks.push(chunk);
-        });
-        response.on('end', () => {
-          const responseText = Buffer.concat(chunks).toString('utf8');
-          let result;
-          try {
-            result = JSON.parse(responseText);
-          } catch (error) {
-            finish(createError('NATIVE_IMAGE_RESPONSE_INVALID', '腾讯云原生图生图返回格式无效'));
-            return;
-          }
-
-          const apiResponse = result && result.Response;
-          if (!apiResponse || apiResponse.Error) {
-            const apiError = apiResponse && apiResponse.Error;
-            const error = createError(
-              'NATIVE_IMAGE_API_ERROR',
-              apiError && apiError.Message
-                ? `腾讯云原生图生图失败：${apiError.Message}`
-                : `腾讯云原生图生图请求失败（HTTP ${response.statusCode || 0}）`
-            );
-            error.requestId = apiResponse && apiResponse.RequestId ? apiResponse.RequestId : '';
-            error.tencentCode = apiError && apiError.Code ? String(apiError.Code) : '';
-            finish(error);
-            return;
-          }
-
-          if (Number(response.statusCode || 0) < 200 || Number(response.statusCode || 0) >= 300) {
-            finish(createError('NATIVE_IMAGE_HTTP_ERROR', `腾讯云原生图生图请求失败（HTTP ${response.statusCode || 0}）`));
-            return;
-          }
-
-          const resultImage = String(apiResponse.ResultImage || '').trim();
-          if (!resultImage) {
-            finish(createError('NATIVE_IMAGE_UNAVAILABLE', '腾讯云原生图生图没有返回图片'));
-            return;
-          }
-          const base64 = resultImage.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '');
-          let buffer;
-          try {
-            buffer = Buffer.from(base64, 'base64');
-          } catch (error) {
-            finish(createError('NATIVE_IMAGE_RESPONSE_INVALID', '腾讯云原生图生图图片格式无效'));
-            return;
-          }
-          if (!buffer.length) {
-            finish(createError('NATIVE_IMAGE_RESPONSE_INVALID', '腾讯云原生图生图图片为空'));
-            return;
-          }
-          finish(null, {
-            buffer,
-            contentType: detectImageContentType(buffer, 'image/jpeg'),
-            requestId: apiResponse.RequestId || '',
-          });
-        });
-        response.on('error', error => finish(error));
-      }
+  const base64 = imageData.b64_json || imageData.base64;
+  if (base64) {
+    const buffer = Buffer.from(
+      String(base64).replace(/^data:image\/[a-z0-9.+-]+;base64,/i, ''),
+      'base64'
     );
-    request.on('timeout', () => {
-      request.destroy();
-      finish(createError('NATIVE_IMAGE_TIMEOUT', '腾讯云原生图生图超时'));
-    });
-    request.on('error', error => {
-      if (error && error.code === 'ECONNRESET') {
-        finish(createError('NATIVE_IMAGE_TIMEOUT', '腾讯云原生图生图超时'));
-        return;
-      }
-      finish(error);
-    });
-    request.write(body);
-    request.end();
-  });
+    if (!buffer.length) throw createError('CUTOUT_IMAGE_INVALID', '模型返回了空主体图片');
+    return { buffer, contentType: detectImageContentType(buffer, 'image/png') };
+  }
+
+  const imageURL = imageData.url || imageData.image_url;
+  if (!imageURL) throw createError('CUTOUT_IMAGE_UNAVAILABLE', '模型没有返回主体图片地址');
+  return downloadImage(String(imageURL));
 }
 
-async function generateNativeSubjectImage(sourceImage) {
+function normalizeCloudBaseError(error) {
+  if (error && error.code && String(error.code).startsWith('CLOUDBASE_IMAGE_')) return error;
+  const providerMessage = error && error.message ? String(error.message) : '';
+  const isTimeout = /timeout|timed out|超时/i.test(providerMessage);
+  const normalized = createError(
+    isTimeout ? 'CLOUDBASE_IMAGE_TIMEOUT' : 'CLOUDBASE_IMAGE_API_ERROR',
+    isTimeout ? 'CloudBase 图生图等待超时' : 'CloudBase 图生图服务暂时不可用'
+  );
+  normalized.providerMessage = providerMessage.replace(/\s+/g, ' ').slice(0, 240);
+  return normalized;
+}
+
+function createCloudBaseImageModel() {
+  if (!cloud.ai || typeof cloud.ai !== 'function') {
+    throw createError('CLOUDBASE_IMAGE_NOT_CONFIGURED', 'CloudBase 图像模型未配置');
+  }
+  const ai = cloud.ai();
+  if (!ai || typeof ai.createImageModel !== 'function') {
+    throw createError('CLOUDBASE_IMAGE_NOT_CONFIGURED', 'CloudBase 图像模型未配置');
+  }
+
+  const imageModel = ai.createImageModel(CAT_TRANSFORM_PROVIDER);
+  // SDK 默认也是该路径，这里显式固定，避免模型路由被 SDK 默认值改动。
+  if (imageModel && typeof imageModel === 'object') {
+    imageModel.defaultGenerateImageSubUrl = CAT_TRANSFORM_SUB_URL;
+  }
+  return imageModel;
+}
+
+async function generateCloudBaseSubjectImage(sourceImage) {
   const imageBase64 = sourceImage.buffer.toString('base64');
-  if (Buffer.byteLength(imageBase64, 'utf8') >= MAX_NATIVE_INPUT_BASE64_BYTES) {
-    throw createError('NATIVE_IMAGE_TOO_LARGE', '原始图片超过腾讯云原生图生图大小限制');
+  let response;
+  try {
+    const imageModel = createCloudBaseImageModel();
+    response = await imageModel.generateImage({
+      model: CAT_TRANSFORM_MODEL,
+      prompt: SUBJECT_PROMPT,
+      // CloudBase 图生图官方支持 images（base64）或 image_urls；images 优先级更高。
+      images: [imageBase64],
+      // 关闭 prompt 改写，避免模型把主体抠图改成海报/插画创作。
+      revise: { value: false },
+    });
+  } catch (error) {
+    throw normalizeCloudBaseError(error);
   }
-  const result = await requestNativeImageToImage({
-    InputImage: imageBase64,
-    Prompt: NATIVE_SUBJECT_PROMPT,
-    NegativePrompt: NATIVE_NEGATIVE_PROMPT,
-    Styles: NATIVE_STYLES,
-    ResultConfig: { Resolution: 'origin' },
-    LogoAdd: LOGO_ADD,
-    Strength: NATIVE_SUBJECT_STRENGTH,
-    RspImgType: 'base64',
-    EnhanceImage: 0,
-    RestoreFace: 0,
-  });
+
+  const imageData = response && Array.isArray(response.data) ? response.data[0] : null;
+  const image = await getGeneratedImage(imageData);
   return {
-    ...result,
-    provider: 'tencent-aiart',
-    model: NATIVE_AIART_ACTION,
+    ...image,
+    provider: CAT_TRANSFORM_PROVIDER,
+    model: CAT_TRANSFORM_MODEL,
+    requestId: response && response.id ? response.id : '',
   };
 }
 
 async function generateSubjectImage(sourceImage) {
-  if (CAT_TRANSFORM_PROVIDER !== 'tencent-native') {
+  if (CAT_TRANSFORM_PROVIDER !== 'hunyuan-image') {
     throw createError('CUTOUT_PROVIDER_INVALID', '主体图片处理服务配置无效');
   }
-  return generateNativeSubjectImage(sourceImage);
+  return generateCloudBaseSubjectImage(sourceImage);
 }
 
 async function cutoutCat(fileID, contentType) {

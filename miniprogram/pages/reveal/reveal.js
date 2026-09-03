@@ -185,15 +185,15 @@ Page({
     } else if (code === 'CUTOUT_IMAGE_FORMAT_UNSUPPORTED') {
       title = '主体图格式不对';
       content = '图像模型返回的图片暂时无法使用，请稍后再试';
-    } else if (code === 'NATIVE_IMAGE_AUTH_MISSING') {
+    } else if (code === 'CLOUDBASE_IMAGE_NOT_CONFIGURED') {
       title = '主体服务还差一步';
-      content = '腾讯云原生图生图的密钥或权限还没有配置好';
-    } else if (code === 'NATIVE_IMAGE_API_ERROR') {
+      content = 'CloudBase 图生图服务暂时没有准备好，请稍后再试';
+    } else if (code === 'CLOUDBASE_IMAGE_API_ERROR') {
       title = '主体服务没接通';
-      content = '腾讯云原生图生图暂时不可用，请检查服务配置后再试';
-    } else if (code === 'NATIVE_IMAGE_TIMEOUT') {
+      content = 'CloudBase 图生图暂时不可用，请检查模型配置后再试';
+    } else if (code === 'CLOUDBASE_IMAGE_TIMEOUT') {
       title = '主体图走丢了';
-      content = '腾讯云原生图生图等待超时，请稍后再试一张';
+      content = 'CloudBase 图生图等待超时，请稍后再试一张';
     }
 
     this._openException({

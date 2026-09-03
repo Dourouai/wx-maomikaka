@@ -1,0 +1,135 @@
+/* ============================================================
+   猫咪咔咔 - 全局样式
+   ============================================================ */
+
+/* ── CSS 变量 ── */
+page {
+  --color-primary: #EF745E;
+  --color-orange: #E6A45F;
+  --color-cream: #FFF9F1;
+  --color-brown: #4A3728;
+  --color-gray: #927E70;
+  --color-light-gray: #F3EBE3;
+
+  /* 稀有度颜色 */
+  --color-n: #999999;
+  --color-r: #C19A50;
+  --color-sr: #A781B8;
+  --color-ssr: #D48457;
+
+  /* 间距 */
+  --spacing-xs: 4rpx;
+  --spacing-sm: 8rpx;
+  --spacing-md: 16rpx;
+  --spacing-lg: 24rpx;
+  --spacing-xl: 32rpx;
+  --spacing-xxl: 48rpx;
+
+  /* 圆角 */
+  --radius-sm: 8rpx;
+  --radius-md: 16rpx;
+  --radius-lg: 24rpx;
+  --radius-xl: 32rpx;
+  --radius-full: 9999rpx;
+
+  /* 阴影 */
+  --shadow-sm: 0 2rpx 8rpx rgba(74, 55, 40, 0.08);
+  --shadow-md: 0 4rpx 16rpx rgba(74, 55, 40, 0.12);
+  --shadow-lg: 0 8rpx 32rpx rgba(74, 55, 40, 0.16);
+
+  /* 背景 & 字体 */
+  background-color: var(--color-cream);
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+               "Microsoft YaHei", sans-serif;
+  --font-display: "Kaiti SC", "STKaiti", "KaiTi", "DFKai-SB", "Songti SC", serif;
+  color: var(--color-brown);
+  line-height: 1.5;
+}
+
+/* ── 盒模型全局 ── */
+/* WXSS 预览编译器不支持通配选择器，页面级盒模型已在上方设置。 */
+
+/* ── 文字辅助类 ── */
+.text-primary   { color: var(--color-primary); }
+.text-orange    { color: var(--color-orange); }
+.text-brown     { color: var(--color-brown); }
+.text-gray      { color: var(--color-gray); }
+.text-center    { text-align: center; }
+.text-bold      { font-weight: 700; }
+
+/* ── 稀有度徽章 ── */
+.rarity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rpx 12rpx;
+  border-radius: var(--radius-full);
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.rarity-n   { background: rgba(153,153,153,0.15); color: var(--color-n); }
+.rarity-r   { background: rgba(193,154, 80,0.15); color: var(--color-r); }
+.rarity-sr  { background: rgba(167,129,184,0.15); color: var(--color-sr); }
+.rarity-ssr { background: rgba(212,132, 87,0.18); color: var(--color-ssr); }
+
+/* ── 卡片基础 ── */
+.card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* ── 按钮基础 ── */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+.btn::after { border: none; }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn-orange {
+  background: var(--color-orange);
+  color: #fff;
+}
+.btn-ghost {
+  background: transparent;
+  border: 2rpx solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ── 间距辅助类 ── */
+.mt-sm  { margin-top: var(--spacing-sm); }
+.mt-md  { margin-top: var(--spacing-md); }
+.mt-lg  { margin-top: var(--spacing-lg); }
+.mb-sm  { margin-bottom: var(--spacing-sm); }
+.mb-md  { margin-bottom: var(--spacing-md); }
+.mb-lg  { margin-bottom: var(--spacing-lg); }
+.px-md  { padding-left: var(--spacing-md); padding-right: var(--spacing-md); }
+.px-lg  { padding-left: var(--spacing-lg); padding-right: var(--spacing-lg); }
+.py-md  { padding-top: var(--spacing-md); padding-bottom: var(--spacing-md); }
+
+/* ── 全屏容器 ── */
+.full-screen {
+  width: 100vw;
+  min-height: 100vh;
+  background-color: var(--color-cream);
+}
+
+/* ── Flex 辅助 ── */
+.flex         { display: flex; }
+.flex-col     { display: flex; flex-direction: column; }
+.flex-center  { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-1       { flex: 1; }

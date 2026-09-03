@@ -1,0 +1,10 @@
+{
+  "name": "maomi-kaka-cat-transform",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "jpeg-js": "0.4.4",
+    "pngjs": "7.0.0",
+    "wx-server-sdk": "4.0.2"
+  }
+}

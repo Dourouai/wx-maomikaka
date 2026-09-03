@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>猫咪咔咔 · UI 交互视觉稿 V3</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #fbf4e9;
+      --surface: #fffcf6;
+      --ink: #3b2a26;
+      --muted: #8f7d6e;
+      --line: #ddcfc0;
+      --clay: #b74f36;
+      --olive: #e7ebdd;
+      --peach: #e8c1ad;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 320px; background: var(--paper); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 92% 6%, rgba(232, 193, 173, .32), transparent 16rem),
+        radial-gradient(circle at 8% 92%, rgba(231, 235, 221, .65), transparent 20rem),
+        var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+    }
+
+    .preview-header {
+      width: min(1800px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 20px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+      font-size: clamp(22px, 3vw, 32px);
+      line-height: 1.2;
+      font-weight: 600;
+    }
+
+    .eyebrow {
+      margin: 8px 0 0;
+      color: var(--clay);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .22em;
+    }
+
+    .preview-tag {
+      flex: none;
+      padding: 8px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255, 252, 246, .78);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .preview-board {
+      width: min(1800px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: clamp(8px, 2vw, 20px);
+      overflow: auto;
+      border: 1px solid rgba(221, 207, 192, .84);
+      border-radius: 28px;
+      background: rgba(255, 252, 246, .72);
+      box-shadow: 0 18px 50px rgba(59, 42, 38, .09);
+    }
+
+    .preview-board img {
+      display: block;
+      width: 100%;
+      min-width: 900px;
+      height: auto;
+      border-radius: 16px;
+    }
+
+    .preview-footer {
+      width: min(1800px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 16px 0 30px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    a { color: var(--clay); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .preview-header,
+      .preview-board,
+      .preview-footer { width: min(100% - 24px, 1800px); }
+      .preview-header { align-items: start; flex-direction: column; padding-top: 20px; }
+      .preview-board { border-radius: 20px; padding: 8px; }
+      .preview-board img { min-width: 760px; }
+      .preview-footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="preview-header">
+    <div>
+      <h1>猫咪咔咔 · 页面交互流程与 UI 视觉稿 V3</h1>
+      <p class="eyebrow">HOME / STATE MACHINE / CAMERA / ALBUM / MY / ICONS</p>
+    </div>
+    <span class="preview-tag">HTML PREVIEW · 只看视觉稿</span>
+  </header>
+
+  <main class="preview-board">
+    <img src="./UI_FLOW_PAGES_V3.svg" alt="首页、状态机、拍照页面、图鉴页面、我的页面和元素图标设计图">
+  </main>
+
+  <footer class="preview-footer">
+    <span>首页 · 拍照页 · 图鉴页 · 我的页面 · 状态机 · 元素图标</span>
+    <a href="./UI_FLOW_PAGES_V3.svg">打开原始 SVG 设计图 →</a>
+  </footer>
+</body>
+</html>

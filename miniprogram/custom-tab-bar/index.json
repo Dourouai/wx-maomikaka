@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "exception-modal": "/components/exception-modal/exception-modal"
+  }
+}

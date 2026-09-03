@@ -1,0 +1,282 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600" role="img" aria-labelledby="title desc">
+  <title id="title">猫咪咔咔三页 UI 设计图 V2</title>
+  <desc id="desc">展示首页找猫、图鉴列表和我的页面的软萌相机视觉设计。</desc>
+  <defs>
+    <pattern id="pageDots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#E8DDE2" opacity="0.68"/>
+    </pattern>
+    <linearGradient id="finderGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D5CBE9"/>
+      <stop offset="0.5" stop-color="#B8D4C2"/>
+      <stop offset="1" stop-color="#F2D7DE"/>
+    </linearGradient>
+    <linearGradient id="photoOrange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8C4A7"/>
+      <stop offset="1" stop-color="#D58C79"/>
+    </linearGradient>
+    <linearGradient id="photoMint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D8E8DB"/>
+      <stop offset="1" stop-color="#9DC1B3"/>
+    </linearGradient>
+    <linearGradient id="photoLavender" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E6DDF0"/>
+      <stop offset="1" stop-color="#B6A8D0"/>
+    </linearGradient>
+    <filter id="frameShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="15" stdDeviation="15" flood-color="#5D5260" flood-opacity="0.14"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-30%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#5D5260" flood-opacity="0.10"/>
+    </filter>
+    <style>
+      .serif { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif; fill: #5D5260; }
+      .sans { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #5D5260; }
+      .muted { fill: #8F8190; }
+      .cream { fill: #FFFDF9; }
+      .coral { fill: #EB7D6F; }
+      .eyebrow { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #EB7D6F; font-size: 10px; font-weight: 600; letter-spacing: 2.5px; }
+      .caption { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #8F8190; font-size: 12px; }
+      .phoneLabel { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #5D5260; font-size: 14px; font-weight: 600; }
+      .tiny { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; fill: #8F8190; font-size: 10px; }
+    </style>
+    <symbol id="pawIcon" viewBox="0 0 40 40">
+      <path d="M13 18c-4 1-7-1-7-5 0-3 2-6 5-6s5 3 5 6c0 2-1 4-3 5Zm14 0c-2-1-3-3-3-5 0-3 2-6 5-6s5 3 5 6c0 4-3 6-7 5ZM9 29c0-5 5-9 11-9s11 4 11 9c0 4-4 6-11 6S9 33 9 29Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="canIcon" viewBox="0 0 34 34">
+      <path d="M7 11h20v14H7z" fill="currentColor" opacity="0.88"/>
+      <path d="M9 8h11l4 3H9z" fill="currentColor"/>
+      <path d="M11 26h12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="miniCat" viewBox="0 0 100 100">
+      <path d="M22 37 19 13l20 15m39 9 3-24-20 15" fill="#F49A83" stroke="#C5736E" stroke-width="3" stroke-linejoin="round"/>
+      <circle cx="50" cy="52" r="32" fill="#F49A83" stroke="#C5736E" stroke-width="3"/>
+      <ellipse cx="39" cy="50" rx="6" ry="8" fill="#FFFDF9"/>
+      <ellipse cx="61" cy="50" rx="6" ry="8" fill="#FFFDF9"/>
+      <circle cx="40" cy="51" r="3" fill="#5D5260"/>
+      <circle cx="60" cy="51" r="3" fill="#5D5260"/>
+      <circle cx="50" cy="62" r="4" fill="#FFFDF9" stroke="#C5736E" stroke-width="1.5"/>
+      <path d="M46 68q4 5 8 0" fill="none" stroke="#5D5260" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="navHome" viewBox="0 0 36 36">
+      <path d="M7 17 18 8l11 9v12H7z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M14 29v-8h8v8" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    </symbol>
+    <symbol id="navBook" viewBox="0 0 36 36">
+      <path d="M7 9c4-2 8-1 11 2v18c-3-3-7-4-11-2zM29 9c-4-2-8-1-11 2v18c3-3 7-4 11-2z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="navMe" viewBox="0 0 36 36">
+      <circle cx="18" cy="13" r="5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+      <path d="M8 30c1-6 5-9 10-9s9 3 10 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+
+  <rect width="1440" height="1060" fill="#FFF9F2"/>
+  <rect width="1440" height="1060" fill="url(#pageDots)"/>
+  <circle cx="1325" cy="66" r="170" fill="#F2D7DE" opacity="0.25"/>
+  <circle cx="1180" cy="1000" r="180" fill="#D5CBE9" opacity="0.18"/>
+  <path d="M0 932c142-51 230 61 366 8v120H0Z" fill="#B8D4C2" opacity="0.18"/>
+
+  <text x="62" y="67" class="serif" font-size="31" font-weight="600">猫咪咔咔 · 三页 UI 设计图 V2</text>
+  <text x="64" y="96" class="eyebrow">HOME / ALBUM / MY MEOW / SOFT CAMERA SYSTEM</text>
+  <text x="1172" y="72" class="sans muted" font-size="13">同一套视觉 · 三个清晰重点</text>
+
+  <!-- Page labels -->
+  <g>
+    <rect x="52" y="126" width="400" height="32" rx="16" fill="#F2D7DE"/>
+    <text x="72" y="147" class="phoneLabel">01　首页 / 找猫</text>
+    <text x="433" y="147" text-anchor="end" class="caption">第一重点：现在就拍</text>
+  </g>
+  <g>
+    <rect x="520" y="126" width="400" height="32" rx="16" fill="#D5CBE9"/>
+    <text x="540" y="147" class="phoneLabel">02　图鉴 / 列表</text>
+    <text x="901" y="147" text-anchor="end" class="caption">第二重点：看见收集</text>
+  </g>
+  <g>
+    <rect x="988" y="126" width="400" height="32" rx="16" fill="#B8D4C2"/>
+    <text x="1008" y="147" class="phoneLabel">03　我的 / 个人</text>
+    <text x="1369" y="147" text-anchor="end" class="caption">第三重点：留下成长</text>
+  </g>
+
+  <!-- phone shells -->
+  <g filter="url(#frameShadow)">
+    <rect x="52" y="168" width="400" height="820" rx="40" fill="#FFFDF9" stroke="#E7DCE1" stroke-width="2"/>
+    <rect x="520" y="168" width="400" height="820" rx="40" fill="#FFFDF9" stroke="#E7DCE1" stroke-width="2"/>
+    <rect x="988" y="168" width="400" height="820" rx="40" fill="#FFFDF9" stroke="#E7DCE1" stroke-width="2"/>
+  </g>
+  <rect x="66" y="182" width="372" height="792" rx="28" fill="#FFF9F2"/>
+  <rect x="534" y="182" width="372" height="792" rx="28" fill="#FFF9F2"/>
+  <rect x="1002" y="182" width="372" height="792" rx="28" fill="#FFF9F2"/>
+  <g fill="#E7DCE1">
+    <rect x="198" y="193" width="108" height="6" rx="3"/>
+    <rect x="666" y="193" width="108" height="6" rx="3"/>
+    <rect x="1134" y="193" width="108" height="6" rx="3"/>
+  </g>
+
+  <!-- HOME / FIND CAT -->
+  <g>
+    <text x="88" y="238" class="eyebrow">CAT SPOTTER</text>
+    <text x="88" y="270" class="serif" font-size="26" font-weight="600">正在找猫</text>
+    <rect x="312" y="219" width="108" height="37" rx="19" fill="#FFFDF9" stroke="#E7DCE1"/>
+    <use href="#canIcon" x="322" y="224" width="24" height="24" color="#EB7D6F"/>
+    <text x="353" y="242" class="sans" font-size="11" font-weight="500">罐罐</text>
+    <text x="405" y="243" text-anchor="end" class="coral sans" font-size="14" font-weight="600">2/3</text>
+
+    <rect x="84" y="294" width="336" height="384" rx="32" fill="url(#finderGradient)"/>
+    <rect x="102" y="312" width="300" height="348" rx="24" fill="none" stroke="#FFFDF9" stroke-width="2" stroke-dasharray="7 8" opacity="0.96"/>
+    <rect x="116" y="330" width="100" height="28" rx="14" fill="#FFFDF9" opacity="0.94"/>
+    <circle cx="134" cy="344" r="5" fill="#EB7D6F"/>
+    <text x="147" y="349" class="sans" font-size="11" font-weight="500">正在找猫</text>
+    <rect x="296" y="330" width="106" height="28" rx="14" fill="#FFFDF9" opacity="0.94"/>
+    <path d="M313 339l10 10m0-10-10 10" stroke="#8F8190" stroke-width="2" stroke-linecap="round"/>
+    <text x="335" y="349" class="sans" font-size="10" font-weight="500">不打扰模式</text>
+    <path d="M121 387v-12h12m266 12v-12h-12M121 607v12h12m266-12v12h-12" fill="none" stroke="#FFFDF9" stroke-width="3" stroke-linecap="round"/>
+    <path d="M147 447l4 9 9 4-9 4-4 9-4-9-9-4 9-4zM363 428l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#FFFDF9" opacity="0.82"/>
+    <use href="#miniCat" x="154" y="402" width="190" height="190"/>
+    <text x="252" y="633" text-anchor="middle" class="sans cream" font-size="12" font-weight="500">它在这里 · 保持一点距离</text>
+
+    <text x="84" y="720" class="eyebrow">ONE SHOT · ONE ENCOUNTER</text>
+    <text x="84" y="747" class="serif" font-size="18" font-weight="600">轻轻按下，收下这次相遇</text>
+    <text x="84" y="770" class="caption">今天还可以拍 2 次</text>
+    <circle cx="125" cy="853" r="27" fill="#DCEBE3"/>
+    <rect x="113" y="846" width="24" height="15" rx="3" fill="none" stroke="#52746D" stroke-width="2"/>
+    <path d="M118 842h14" stroke="#52746D" stroke-width="2" stroke-linecap="round"/>
+    <text x="125" y="894" text-anchor="middle" class="tiny">相册</text>
+    <circle cx="252" cy="853" r="47" fill="#FFFDF9" stroke="#D5CBE9" stroke-width="3" filter="url(#softShadow)"/>
+    <circle cx="252" cy="853" r="35" fill="#EB7D6F"/>
+    <use href="#pawIcon" x="232" y="833" width="40" height="40" color="#FFFDF9"/>
+    <text x="252" y="925" text-anchor="middle" class="tiny">拍照</text>
+    <circle cx="379" cy="853" r="27" fill="#E7DDF0"/>
+    <path d="M368 842l22 22m0-22-22 22" stroke="#7B6A86" stroke-width="2.3" stroke-linecap="round"/>
+    <text x="379" y="894" text-anchor="middle" class="tiny">闪光关闭</text>
+    <path d="M66 936h372" stroke="#E7DCE1"/>
+    <g color="#EB7D6F"><use href="#navHome" x="92" y="944" width="25" height="25"/></g>
+    <g color="#8F8190"><use href="#navBook" x="238" y="944" width="25" height="25"/></g>
+    <g color="#8F8190"><use href="#navMe" x="382" y="944" width="25" height="25"/></g>
+    <text x="104" y="972" text-anchor="middle" class="tiny coral">找猫</text>
+    <text x="250" y="972" text-anchor="middle" class="tiny">图鉴</text>
+    <text x="394" y="972" text-anchor="middle" class="tiny">我的</text>
+  </g>
+
+  <!-- ALBUM / LIST -->
+  <g>
+    <text x="560" y="238" class="eyebrow">CAT ALBUM</text>
+    <text x="560" y="270" class="serif" font-size="26" font-weight="600">我的图鉴</text>
+    <rect x="785" y="219" width="103" height="37" rx="19" fill="#FFFDF9" stroke="#E7DCE1"/>
+    <text x="806" y="242" class="sans" font-size="11" font-weight="500">已收集</text>
+    <text x="871" y="243" text-anchor="end" class="coral sans" font-size="14" font-weight="600">12</text>
+    <text x="560" y="298" class="caption">每一次相遇，都会留在这里</text>
+    <rect x="560" y="321" width="74" height="31" rx="16" fill="#5D5260"/>
+    <text x="597" y="342" text-anchor="middle" class="sans cream" font-size="11" font-weight="600">全部 12</text>
+    <rect x="642" y="321" width="74" height="31" rx="16" fill="#DCEBE3"/>
+    <text x="679" y="342" text-anchor="middle" class="sans" font-size="11" font-weight="500">街角 6</text>
+    <rect x="724" y="321" width="74" height="31" rx="16" fill="#E7DDF0"/>
+    <text x="761" y="342" text-anchor="middle" class="sans" font-size="11" font-weight="500">偶见 4</text>
+    <rect x="806" y="321" width="74" height="31" rx="16" fill="#F6E7BC"/>
+    <text x="843" y="342" text-anchor="middle" class="sans" font-size="11" font-weight="500">稀遇 2</text>
+
+    <!-- collection cards -->
+    <g filter="url(#softShadow)">
+      <rect x="560" y="378" width="153" height="210" rx="19" fill="#FFFDF9" stroke="#E7DCE1"/>
+      <rect x="727" y="378" width="153" height="210" rx="19" fill="#FFFDF9" stroke="#E7DCE1"/>
+      <rect x="560" y="604" width="153" height="210" rx="19" fill="#FFFDF9" stroke="#E7DCE1"/>
+      <rect x="727" y="604" width="153" height="210" rx="19" fill="#FFFDF9" stroke="#E7DCE1"/>
+    </g>
+    <rect x="572" y="390" width="129" height="133" rx="13" fill="url(#photoOrange)"/>
+    <path d="M586 494c13-30 24-38 45-35 20 3 28 20 45 35" fill="none" stroke="#FFF3DD" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+    <use href="#miniCat" x="590" y="407" width="94" height="94"/>
+    <rect x="584" y="535" width="70" height="22" rx="11" fill="#F6E7BC"/>
+    <text x="619" y="550" text-anchor="middle" class="sans" font-size="10" font-weight="600">R · 稀遇</text>
+    <text x="673" y="550" text-anchor="end" class="sans" font-size="13" font-weight="600">橘子</text>
+    <text x="580" y="573" class="tiny">刚刚 · 巷口</text>
+
+    <rect x="739" y="390" width="129" height="133" rx="13" fill="url(#photoMint)"/>
+    <path d="M751 486c25-24 42-28 76-1" fill="none" stroke="#EFFFF0" stroke-width="8" stroke-linecap="round" opacity="0.85"/>
+    <use href="#miniCat" x="760" y="409" width="86" height="86"/>
+    <rect x="751" y="535" width="76" height="22" rx="11" fill="#DCEBE3"/>
+    <text x="789" y="550" text-anchor="middle" class="sans" font-size="10" font-weight="600">C · 街角</text>
+    <text x="855" y="550" text-anchor="end" class="sans" font-size="13" font-weight="600">牛奶</text>
+    <text x="747" y="573" class="tiny">昨天 · 小区门口</text>
+
+    <rect x="572" y="616" width="129" height="133" rx="13" fill="url(#photoLavender)"/>
+    <path d="M584 719c20-27 48-28 104-4" fill="none" stroke="#F8F3FF" stroke-width="8" stroke-linecap="round" opacity="0.8"/>
+    <use href="#miniCat" x="594" y="632" width="84" height="84"/>
+    <rect x="584" y="761" width="76" height="22" rx="11" fill="#E7DDF0"/>
+    <text x="622" y="776" text-anchor="middle" class="sans" font-size="10" font-weight="600">U · 偶见</text>
+    <text x="689" y="776" text-anchor="end" class="sans" font-size="13" font-weight="600">小花</text>
+    <text x="580" y="799" class="tiny">周一 · 公园长椅</text>
+
+    <rect x="739" y="616" width="129" height="133" rx="13" fill="#F8F3EC" stroke="#E7DCE1" stroke-dasharray="4 5"/>
+    <circle cx="803" cy="677" r="24" fill="#E7DCE1"/>
+    <path d="M793 677h20M803 667v20" stroke="#8F8190" stroke-width="2" stroke-linecap="round"/>
+    <text x="803" y="715" text-anchor="middle" class="sans" font-size="12" font-weight="500">下一次相遇</text>
+    <text x="803" y="735" text-anchor="middle" class="tiny">留一格给它</text>
+    <text x="560" y="851" class="caption">重复遇见的猫，会进入同一只猫的记录里</text>
+    <path d="M534 936h372" stroke="#E7DCE1"/>
+    <g color="#8F8190"><use href="#navHome" x="560" y="944" width="25" height="25"/></g>
+    <g color="#EB7D6F"><use href="#navBook" x="706" y="944" width="25" height="25"/></g>
+    <g color="#8F8190"><use href="#navMe" x="850" y="944" width="25" height="25"/></g>
+    <text x="572" y="972" text-anchor="middle" class="tiny">找猫</text>
+    <text x="718" y="972" text-anchor="middle" class="tiny coral">图鉴</text>
+    <text x="864" y="972" text-anchor="middle" class="tiny">我的</text>
+  </g>
+
+  <!-- MY / PROFILE -->
+  <g>
+    <text x="1028" y="238" class="eyebrow">MY MEOW</text>
+    <text x="1028" y="270" class="serif" font-size="26" font-weight="600">我的</text>
+    <circle cx="1340" cy="239" r="18" fill="#E7DDF0"/>
+    <path d="M1332 239h16m-8-8v16" stroke="#7B6A86" stroke-width="2" stroke-linecap="round"/>
+
+    <rect x="1028" y="302" width="320" height="158" rx="25" fill="#FFFDF9" stroke="#E7DCE1" filter="url(#softShadow)"/>
+    <circle cx="1081" cy="361" r="39" fill="#F2D7DE"/>
+    <use href="#pawIcon" x="1058" y="338" width="46" height="46" color="#EB7D6F"/>
+    <text x="1140" y="340" class="serif" font-size="20" font-weight="600">猫咪漫游者</text>
+    <text x="1140" y="364" class="caption">猫爪 Lv.03</text>
+    <text x="1140" y="397" class="sans" font-size="13" font-weight="600">距离 Lv.04 还差 170 猫爪</text>
+    <rect x="1140" y="414" width="174" height="8" rx="4" fill="#F2D7DE"/>
+    <rect x="1140" y="414" width="96" height="8" rx="4" fill="#EB7D6F"/>
+    <text x="1320" y="421" text-anchor="end" class="tiny">130 / 300</text>
+
+    <g filter="url(#softShadow)">
+      <rect x="1028" y="482" width="98" height="86" rx="19" fill="#DCEBE3"/>
+      <rect x="1138" y="482" width="98" height="86" rx="19" fill="#E7DDF0"/>
+      <rect x="1248" y="482" width="100" height="86" rx="19" fill="#F2D7DE"/>
+    </g>
+    <text x="1040" y="509" class="tiny">已收集</text>
+    <text x="1040" y="543" class="serif" font-size="24" font-weight="600">12</text>
+    <text x="1150" y="509" class="tiny">相遇次数</text>
+    <text x="1150" y="543" class="serif" font-size="24" font-weight="600">18</text>
+    <text x="1260" y="509" class="tiny">连续记录</text>
+    <text x="1260" y="543" class="serif" font-size="24" font-weight="600">4 天</text>
+
+    <text x="1028" y="619" class="eyebrow">RECENT ENCOUNTERS</text>
+    <text x="1028" y="647" class="serif" font-size="18" font-weight="600">最近的相遇</text>
+    <text x="1348" y="647" text-anchor="end" class="caption">查看全部</text>
+    <rect x="1028" y="670" width="153" height="104" rx="17" fill="#FFFDF9" stroke="#E7DCE1"/>
+    <rect x="1040" y="682" width="64" height="80" rx="11" fill="url(#photoOrange)"/>
+    <use href="#miniCat" x="1045" y="687" width="54" height="54"/>
+    <text x="1117" y="704" class="sans" font-size="13" font-weight="600">橘子</text>
+    <text x="1117" y="727" class="tiny">R · 稀遇</text>
+    <text x="1117" y="750" class="tiny">今天 09:41</text>
+    <rect x="1195" y="670" width="153" height="104" rx="17" fill="#FFFDF9" stroke="#E7DCE1"/>
+    <rect x="1207" y="682" width="64" height="80" rx="11" fill="url(#photoMint)"/>
+    <use href="#miniCat" x="1212" y="687" width="54" height="54"/>
+    <text x="1284" y="704" class="sans" font-size="13" font-weight="600">牛奶</text>
+    <text x="1284" y="727" class="tiny">C · 街角</text>
+    <text x="1284" y="750" class="tiny">昨天 17:22</text>
+
+    <text x="1028" y="823" class="eyebrow">MORE</text>
+    <rect x="1028" y="844" width="320" height="44" rx="15" fill="#FFFDF9" stroke="#E7DCE1"/>
+    <text x="1048" y="871" class="sans" font-size="13" font-weight="500">相遇记录</text>
+    <text x="1326" y="871" text-anchor="end" class="caption">›</text>
+    <path d="M1002 936h372" stroke="#E7DCE1"/>
+    <g color="#8F8190"><use href="#navHome" x="1028" y="944" width="25" height="25"/></g>
+    <g color="#8F8190"><use href="#navBook" x="1174" y="944" width="25" height="25"/></g>
+    <g color="#EB7D6F"><use href="#navMe" x="1318" y="944" width="25" height="25"/></g>
+    <text x="1040" y="972" text-anchor="middle" class="tiny">找猫</text>
+    <text x="1186" y="972" text-anchor="middle" class="tiny">图鉴</text>
+    <text x="1330" y="972" text-anchor="middle" class="tiny coral">我的</text>
+  </g>
+
+  <text x="720" y="1030" text-anchor="middle" class="sans" font-size="13" font-weight="500" fill="#8F8190">首页让人行动 · 列表让人浏览 · 我的让人留下来</text>
+</svg>

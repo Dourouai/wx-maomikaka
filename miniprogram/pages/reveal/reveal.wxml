@@ -1,0 +1,112 @@
+<!-- 揭示页：轻量收录结果 -->
+<view class="reveal-page">
+  <view wx:if="{{showLoading}}" class="loading-state">
+    <view class="loading-mark">
+      <image class="loading-icon" src="/assets/paw.svg" mode="aspectFit" />
+    </view>
+    <text class="loading-title">{{loadingTitle}}</text>
+    <text class="loading-subtitle">{{loadingSubtitle}}</text>
+    <view class="loading-dots">
+      <view></view><view></view><view></view>
+    </view>
+  </view>
+
+  <scroll-view wx:if="{{showCard}}" class="reveal-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="reveal-content">
+      <view class="reveal-close" bindtap="goCamera">
+        <image src="/assets/icon-close.svg" mode="aspectFit" />
+      </view>
+      <view class="reveal-topline">
+        <text class="reveal-kicker">NEW ENCOUNTER</text>
+        <text class="reveal-date">{{capturedAtText}}</text>
+      </view>
+
+      <view wx:if="{{isNew}}" class="new-note">新发现 · 第一次遇见</view>
+
+      <view class="found-sheet">
+        <view class="found-photo-wrap found-photo-wrap-{{levelCode}}">
+          <view class="found-photo-backdrop"></view>
+          <image wx:if="{{photo}}" class="found-photo" src="{{photo}}" mode="aspectFit" />
+          <image wx:else class="found-icon" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+          <view class="found-level-badge found-level-badge-{{levelCode}}">
+            <text class="found-level-code">{{levelCode}}</text>
+            <text class="found-level-label">{{levelLabel}}</text>
+          </view>
+        </view>
+
+        <view class="found-label">
+          <text class="found-name">{{catData.name}}</text>
+          <view class="breed-tag">
+            <text class="breed-tag-key">品种标签</text>
+            <text class="breed-tag-value">{{breedLabel || catData.breed}}</text>
+          </view>
+        </view>
+
+        <view class="trait-list">
+          <view wx:for="{{catData.trait}}" wx:for-item="trait" wx:key="index" class="trait-pill">{{trait}}</view>
+        </view>
+
+        <view class="encounter-score-card">
+          <view class="encounter-score-head">
+            <view class="encounter-score-title-wrap">
+              <text class="encounter-score-title">这次相遇</text>
+              <text class="encounter-score-subtitle">{{levelShortLabel}}</text>
+            </view>
+            <view class="encounter-score-total">
+              <text class="encounter-score-total-value">{{overallScore}}</text>
+              <text class="encounter-score-total-label">综合分</text>
+            </view>
+          </view>
+
+          <view class="score-list">
+            <view wx:for="{{scoreItems}}" wx:for-item="score" wx:key="key" class="score-item">
+              <view class="score-item-head">
+                <text>{{score.label}}</text>
+                <text>{{score.value}}</text>
+              </view>
+              <view class="score-track">
+                <view class="score-track-fill score-track-fill-{{levelCode}}" style="width: {{score.value}}%;"></view>
+              </view>
+            </view>
+          </view>
+
+          <view class="reward-row">
+            <text>猫爪 +{{pawReward}}</text>
+            <text>积分 +{{pointReward}}</text>
+          </view>
+          <text wx:if="{{scoreNote}}" class="score-pending-note">{{scoreNote}}</text>
+        </view>
+
+        <view class="story-note">
+          <text class="story-note-title">关于它</text>
+          <text class="story-note-text">{{catData.story}}</text>
+        </view>
+      </view>
+
+      <view class="reveal-actions">
+        <view class="action-secondary" bindtap="goCamera">
+          <text>再遇见一只</text>
+        </view>
+        <view class="action-primary" bindtap="goCollection">
+          <text>收进图鉴</text>
+          <image class="action-arrow" src="/assets/icon-arrow-right-white.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view class="reveal-bottom-safe"></view>
+    </view>
+  </scroll-view>
+
+  <exception-modal
+    visible="{{showException}}"
+    eyebrow="{{exceptionEyebrow}}"
+    title="{{exceptionTitle}}"
+    message="{{exceptionMessage}}"
+    detail="{{exceptionDetail}}"
+    primary-text="{{exceptionPrimaryText}}"
+    secondary-text="{{exceptionSecondaryText}}"
+    show-secondary="{{exceptionShowSecondary}}"
+    bind:primary="onExceptionPrimary"
+    bind:secondary="onExceptionSecondary"
+  />
+</view>

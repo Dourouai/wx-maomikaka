@@ -1,0 +1,143 @@
+<!-- 我的：相遇记录 -->
+<navigation-bar title="我的" back="{{false}}" color="#4A3728" background="#FFF9F1" />
+
+<view class="my-page">
+  <scroll-view class="my-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="my-content">
+      <view class="profile-head">
+        <image class="profile-avatar" src="/assets/maomi-kaka-icon.png" mode="aspectFill" />
+        <view class="profile-copy">
+          <text class="profile-kicker">MY CAT LOG</text>
+          <text class="profile-title">我的相遇记录</text>
+          <text class="profile-subtitle">每一次遇见，都值得被记住</text>
+        </view>
+      </view>
+
+      <view class="stats-board">
+        <view class="stat-item">
+          <text class="stat-value">{{unlockedCount}}</text>
+          <text class="stat-label">已收录</text>
+        </view>
+        <view class="stat-divider"></view>
+        <view class="stat-item">
+          <text class="stat-value">{{totalPhotos}}</text>
+          <text class="stat-label">相遇次数</text>
+        </view>
+        <view class="stat-divider"></view>
+        <view class="stat-item">
+          <text class="stat-value">{{todayCount}}</text>
+          <text class="stat-label">今日记录</text>
+        </view>
+      </view>
+
+      <view class="section-heading">
+        <text class="section-title">最近遇见</text>
+        <view class="section-more" bindtap="goCollection">
+          <text>看图鉴</text>
+          <image src="/assets/icon-arrow-up-right-coral.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view wx:if="{{recentRecords.length > 0}}" class="recent-list">
+        <view wx:for="{{recentRecords}}" wx:for-item="record" wx:key="recordId" class="recent-item">
+          <block wx:if="{{record.photoPath}}">
+            <image class="recent-photo" src="{{record.photoPath}}" mode="aspectFit" />
+          </block>
+          <block wx:else>
+            <view class="recent-photo recent-photo-fallback">
+              <image src="{{record.fallbackIcon}}" mode="aspectFit" />
+            </view>
+          </block>
+          <view class="recent-copy">
+            <text class="recent-name">{{record.catName}}</text>
+            <text class="recent-time">{{record.timeText}}</text>
+          </view>
+          <image class="recent-arrow" src="/assets/icon-chevron-right.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view wx:else class="my-empty">
+        <image class="my-empty-mark" src="/assets/paw.svg" mode="aspectFit" />
+        <text class="my-empty-title">还没有相遇记录</text>
+        <text class="my-empty-sub">去拍一只猫，留下第一笔记录</text>
+      </view>
+
+      <view class="my-journey">
+        <image class="journey-stamp" src="/assets/paw.svg" mode="aspectFit" />
+        <view class="journey-head">
+          <view class="journey-copy">
+            <text class="journey-kicker">CAT JOURNEY</text>
+            <text class="journey-title">我的猫咪旅程</text>
+          </view>
+          <view class="journey-count">
+            <text class="journey-count-value">{{unlockedCount}}</text>
+          </view>
+        </view>
+        <view class="journey-line">
+          <view class="journey-line-fill" style="width: {{journeyPercent}}%;"></view>
+        </view>
+        <view class="journey-foot">
+          <text>已收录 {{unlockedCount}} 只</text>
+          <text>继续去遇见</text>
+        </view>
+      </view>
+
+      <view class="text-image-entry" bindtap="goTextImage">
+        <view class="text-image-entry-icon">
+          <image src="/assets/doodle-spark.svg" mode="aspectFit" />
+        </view>
+        <view class="text-image-entry-copy">
+          <text class="text-image-entry-kicker">TINY IMAGE LAB</text>
+          <text class="text-image-entry-title">文字生图实验室</text>
+          <text class="text-image-entry-subtitle">写一句话，看看画面会长什么样</text>
+        </view>
+        <image class="text-image-entry-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
+      </view>
+
+      <view class="coming-section-heading">
+        <text class="section-title">更多内容</text>
+        <text class="coming-section-note">陆续开放</text>
+      </view>
+
+      <view class="coming-grid">
+        <view class="coming-item">
+          <image class="coming-icon" src="/assets/paw.svg" mode="aspectFit" />
+          <text class="coming-title">相遇足迹</text>
+          <text class="coming-subtitle">记录城市路线</text>
+        </view>
+        <view class="coming-item">
+          <image class="coming-icon" src="/assets/icon-heart.svg" mode="aspectFit" />
+          <text class="coming-title">猫咪偏好</text>
+          <text class="coming-subtitle">慢慢生成</text>
+        </view>
+        <view class="coming-item">
+          <image class="coming-icon" src="/assets/tab-album.svg" mode="aspectFit" />
+          <text class="coming-title">相遇徽章</text>
+          <text class="coming-subtitle">继续收集</text>
+        </view>
+      </view>
+
+      <view class="my-link" bindtap="goCamera">
+        <view class="my-link-icon">
+          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="my-link-copy">
+          <text class="my-link-title">去遇见一只猫</text>
+          <text class="my-link-sub">继续收集你的城市猫咪</text>
+        </view>
+        <image class="my-link-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
+      </view>
+
+      <view class="my-bottom-safe"></view>
+    </view>
+  </scroll-view>
+
+  <exception-modal
+    visible="{{showException}}"
+    eyebrow="{{exceptionEyebrow}}"
+    title="{{exceptionTitle}}"
+    message="{{exceptionMessage}}"
+    primary-text="{{exceptionPrimaryText}}"
+    bind:primary="onExceptionPrimary"
+  />
+</view>

@@ -1,0 +1,259 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1024" viewBox="0 0 1440 1024">
+  <defs>
+    <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.1" fill="#C9B6A3" opacity=".42"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="16" stdDeviation="14" flood-color="#4A3022" flood-opacity=".16"/>
+    </filter>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#4A3022" flood-opacity=".11"/>
+    </filter>
+    <clipPath id="screenA"><rect x="102" y="124" width="346" height="778" rx="34"/></clipPath>
+    <clipPath id="screenB"><rect x="516" y="124" width="346" height="778" rx="34"/></clipPath>
+    <style>
+      .ui { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #34251F; }
+      .serif { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif; }
+      .eng { letter-spacing: 3px; font-weight: 800; }
+      .small { font-size: 12px; }
+      .muted { fill: #8D796B; }
+      .coral { fill: #A7472D; }
+      .line { stroke: #E6D9CA; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="1024" fill="#F7F0E6"/>
+  <rect width="1440" height="1024" fill="url(#dots)"/>
+  <circle cx="1340" cy="120" r="168" fill="#ECCB88" opacity=".14"/>
+  <circle cx="50" cy="820" r="160" fill="#A9BE91" opacity=".12"/>
+
+  <text x="72" y="68" class="ui" font-size="26" font-weight="800">猫咪咔咔 · 首页视觉稿</text>
+  <text x="73" y="96" class="ui muted small">HOME / PHOTO FIRST / V1.0 · 2026.09</text>
+
+  <!-- Phone A: ready state -->
+  <g filter="url(#shadow)">
+    <rect x="92" y="114" width="366" height="804" rx="42" fill="#FFF9F0" stroke="#D7C6B4" stroke-width="2"/>
+  </g>
+  <rect x="102" y="124" width="346" height="778" rx="34" fill="#F7F0E6"/>
+  <g clip-path="url(#screenA)">
+    <rect x="102" y="124" width="346" height="778" fill="url(#dots)" opacity=".65"/>
+    <circle cx="420" cy="214" r="90" fill="#D9775B" opacity=".09"/>
+
+    <g class="ui">
+      <rect x="122" y="145" width="36" height="36" rx="11" fill="#FFFAF2" stroke="#E4D5C5" stroke-width="1.5" transform="rotate(-7 140 163)"/>
+      <g transform="translate(128 151) scale(.32)">
+        <ellipse cx="27" cy="27" rx="7" ry="9" transform="rotate(-28 27 27)" fill="#A7472D"/>
+        <ellipse cx="41" cy="22" rx="7" ry="9" transform="rotate(-8 41 22)" fill="#A7472D"/>
+        <ellipse cx="55" cy="27" rx="7" ry="9" transform="rotate(28 55 27)" fill="#A7472D"/>
+        <path d="M40.5 38c-11 0-19 8-19 18 0 8 6 12 13 12 5 0 7-3 10-3s5 3 10 3c7 0 13-4 13-12 0-10-8-18-19-18-3 0-5 1-8 1s-5-1-8-1Z" fill="#A7472D"/>
+      </g>
+      <text x="168" y="160" font-size="15" font-weight="800">猫咪咔咔</text>
+      <text x="168" y="175" font-size="8" class="muted eng">CITY CAT ARCHIVE</text>
+      <rect x="383" y="148" width="44" height="26" rx="10" fill="#FFFAF2" stroke="#DAC8B7" transform="rotate(3 405 161)"/>
+      <text x="391" y="165" font-size="9" class="muted" font-weight="700">LV.</text>
+      <text x="405" y="166" font-size="13" class="coral" font-weight="800">12</text>
+
+      <text x="124" y="218" font-size="11" class="coral eng">CAT SPOTTER · PHOTO FIRST</text>
+      <text x="124" y="259" font-size="34" class="serif" font-weight="700">去遇见</text>
+      <text x="124" y="296" font-size="34" class="serif coral" font-weight="700">一只猫</text>
+      <text x="124" y="322" font-size="13" class="muted">把城市转角的偶然，变成一张相遇卡</text>
+
+      <g transform="translate(0 -80)">
+      <text x="124" y="433" font-size="10" class="coral eng">今日剩余罐罐</text>
+      <text x="421" y="433" font-size="10" class="muted" text-anchor="end">还可以拍 3 次</text>
+      <!-- cans -->
+      <g transform="translate(125 444)">
+        <g>
+          <rect x="0" y="4" width="48" height="34" rx="8" fill="#F2DFBD" stroke="#C79F69" stroke-width="1.5"/>
+          <ellipse cx="24" cy="4" rx="24" ry="6" fill="#F6E9C9" stroke="#C79F69" stroke-width="1.5"/>
+          <circle cx="24" cy="22" r="7" fill="#A7472D" opacity=".87"/>
+        </g>
+        <g transform="translate(58)">
+          <rect x="0" y="4" width="48" height="34" rx="8" fill="#F2DFBD" stroke="#C79F69" stroke-width="1.5"/>
+          <ellipse cx="24" cy="4" rx="24" ry="6" fill="#F6E9C9" stroke="#C79F69" stroke-width="1.5"/>
+          <circle cx="24" cy="22" r="7" fill="#A7472D" opacity=".87"/>
+        </g>
+        <g transform="translate(116)">
+          <rect x="0" y="4" width="48" height="34" rx="8" fill="#F2DFBD" stroke="#C79F69" stroke-width="1.5"/>
+          <ellipse cx="24" cy="4" rx="24" ry="6" fill="#F6E9C9" stroke="#C79F69" stroke-width="1.5"/>
+          <circle cx="24" cy="22" r="7" fill="#A7472D" opacity=".87"/>
+        </g>
+      </g>
+
+      <rect x="124" y="503" width="298" height="256" rx="20" fill="#FFF9F0" stroke="#D9C7B5" stroke-width="1.5" transform="rotate(.55 273 631)"/>
+      <rect x="135" y="514" width="276" height="214" rx="13" fill="#E9DFD2"/>
+      <rect x="135" y="514" width="276" height="214" rx="13" fill="url(#dots)" opacity=".35"/>
+      <rect x="135" y="514" width="276" height="214" rx="13" fill="none" stroke="#F1E5D7" stroke-width="7"/>
+      <path d="M156 550v-15h15M390 550v-15h-15M156 688v15h15M390 688v15h-15" fill="none" stroke="#FFF9F0" stroke-width="3"/>
+      <circle cx="273" cy="620" r="32" fill="#A7472D" opacity=".9"/>
+      <circle cx="273" cy="620" r="8" fill="#FFF9F0"/>
+      <circle cx="273" cy="620" r="43" fill="none" stroke="#FFF9F0" stroke-width="1.5" opacity=".8"/>
+      <text x="273" y="674" font-size="16" font-weight="800" text-anchor="middle">等待一只猫</text>
+      <text x="273" y="694" font-size="11" class="muted" text-anchor="middle">轻触这里，打开相机</text>
+      <rect x="149" y="694" width="120" height="24" rx="8" fill="#FFFAF2" opacity=".95"/>
+      <text x="158" y="710" font-size="9" class="coral">保持一点距离，不打扰它</text>
+
+      <rect x="124" y="777" width="298" height="58" rx="17" fill="#A7472D" stroke="#87361F" stroke-width="1.5"/>
+      <circle cx="154" cy="806" r="18" fill="#C56B4D" opacity=".7"/>
+      <path d="M145 801h5l2-3h6l2 3h5c1 0 2 1 2 2v9c0 1-1 2-2 2h-20c-1 0-2-1-2-2v-9c0-1 1-2 2-2Z" fill="none" stroke="#FFF9F0" stroke-width="1.7"/>
+      <circle cx="157" cy="808" r="3.5" fill="none" stroke="#FFF9F0" stroke-width="1.3"/>
+      <text x="184" y="804" font-size="16" fill="#FFF9F0" font-weight="800">拍照</text>
+      <text x="184" y="821" font-size="10" fill="#F9DCCC">发现猫咪了吗？</text>
+      <path d="M391 805h17m-6-6 6 6-6 6" fill="none" stroke="#FFF9F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+
+      <rect x="102" y="850" width="346" height="52" fill="#FFF9F0" opacity=".96"/>
+      <line x1="102" y1="850" x2="448" y2="850" stroke="#E6D9CA" stroke-width="1.5"/>
+      <text x="160" y="881" font-size="10" class="coral" text-anchor="middle" font-weight="800">●</text>
+      <text x="160" y="893" font-size="9" class="coral" text-anchor="middle">相遇</text>
+      <text x="275" y="881" font-size="18" class="muted" text-anchor="middle">▣</text>
+      <text x="275" y="893" font-size="9" class="muted" text-anchor="middle">图鉴</text>
+      <text x="390" y="881" font-size="18" class="muted" text-anchor="middle">♢</text>
+      <text x="390" y="893" font-size="9" class="muted" text-anchor="middle">我的</text>
+    </g>
+  </g>
+  <text x="275" y="948" class="ui" font-size="15" font-weight="800" text-anchor="middle">状态 A · 3 个罐罐 / 可拍摄</text>
+  <text x="275" y="971" class="ui muted small" text-anchor="middle">首页只突出拍照与当日额度</text>
+
+  <!-- Phone B: depleted state -->
+  <g filter="url(#shadow)">
+    <rect x="506" y="114" width="366" height="804" rx="42" fill="#FFF9F0" stroke="#D7C6B4" stroke-width="2"/>
+  </g>
+  <rect x="516" y="124" width="346" height="778" rx="34" fill="#F7F0E6"/>
+  <g clip-path="url(#screenB)">
+    <rect x="516" y="124" width="346" height="778" fill="url(#dots)" opacity=".65"/>
+    <circle cx="832" cy="250" r="104" fill="#A9BE91" opacity=".1"/>
+    <g class="ui">
+      <rect x="536" y="145" width="36" height="36" rx="11" fill="#FFFAF2" stroke="#E4D5C5" stroke-width="1.5" transform="rotate(-7 554 163)"/>
+      <g transform="translate(542 151) scale(.32)">
+        <ellipse cx="27" cy="27" rx="7" ry="9" transform="rotate(-28 27 27)" fill="#A7472D"/>
+        <ellipse cx="41" cy="22" rx="7" ry="9" transform="rotate(-8 41 22)" fill="#A7472D"/>
+        <ellipse cx="55" cy="27" rx="7" ry="9" transform="rotate(28 55 27)" fill="#A7472D"/>
+        <path d="M40.5 38c-11 0-19 8-19 18 0 8 6 12 13 12 5 0 7-3 10-3s5 3 10 3c7 0 13-4 13-12 0-10-8-18-19-18-3 0-5 1-8 1s-5-1-8-1Z" fill="#A7472D"/>
+      </g>
+      <text x="582" y="160" font-size="15" font-weight="800">猫咪咔咔</text>
+      <text x="582" y="175" font-size="8" class="muted eng">CITY CAT ARCHIVE</text>
+      <rect x="797" y="148" width="44" height="26" rx="10" fill="#FFFAF2" stroke="#DAC8B7" transform="rotate(3 819 161)"/>
+      <text x="805" y="165" font-size="9" class="muted" font-weight="700">LV.</text>
+      <text x="819" y="166" font-size="13" class="coral" font-weight="800">12</text>
+
+      <text x="538" y="218" font-size="11" class="coral eng">CAT SPOTTER · PHOTO FIRST</text>
+      <text x="538" y="259" font-size="34" class="serif" font-weight="700">今天的相遇</text>
+      <text x="538" y="296" font-size="34" class="serif coral" font-weight="700">已经完成</text>
+      <text x="538" y="322" font-size="13" class="muted">把下一次期待，留给明天</text>
+
+      <g transform="translate(0 -80)">
+      <text x="538" y="433" font-size="10" class="coral eng">今日剩余罐罐</text>
+      <text x="835" y="433" font-size="10" class="muted" text-anchor="end">明天再来</text>
+      <g transform="translate(539 444)" opacity=".5">
+        <g>
+          <rect x="0" y="4" width="48" height="34" rx="8" fill="#E6E0D9" stroke="#BDB2A8" stroke-width="1.5"/>
+          <ellipse cx="24" cy="4" rx="24" ry="6" fill="#EFEAE3" stroke="#BDB2A8" stroke-width="1.5"/>
+          <path d="M18 20l12 0M24 14v12" stroke="#9F948A" stroke-width="2"/>
+        </g>
+        <g transform="translate(58)">
+          <rect x="0" y="4" width="48" height="34" rx="8" fill="#E6E0D9" stroke="#BDB2A8" stroke-width="1.5"/>
+          <ellipse cx="24" cy="4" rx="24" ry="6" fill="#EFEAE3" stroke="#BDB2A8" stroke-width="1.5"/>
+          <path d="M18 20l12 0M24 14v12" stroke="#9F948A" stroke-width="2"/>
+        </g>
+        <g transform="translate(116)">
+          <rect x="0" y="4" width="48" height="34" rx="8" fill="#E6E0D9" stroke="#BDB2A8" stroke-width="1.5"/>
+          <ellipse cx="24" cy="4" rx="24" ry="6" fill="#EFEAE3" stroke="#BDB2A8" stroke-width="1.5"/>
+          <path d="M18 20l12 0M24 14v12" stroke="#9F948A" stroke-width="2"/>
+        </g>
+      </g>
+
+      <rect x="538" y="503" width="298" height="256" rx="20" fill="#FFF9F0" stroke="#D9C7B5" stroke-width="1.5" transform="rotate(-.55 687 631)"/>
+      <rect x="549" y="514" width="276" height="214" rx="13" fill="#E9DFD2"/>
+      <rect x="549" y="514" width="276" height="214" rx="13" fill="url(#dots)" opacity=".35"/>
+      <rect x="549" y="514" width="276" height="214" rx="13" fill="none" stroke="#F1E5D7" stroke-width="7"/>
+      <path d="M570 550v-15h15M804 550v-15h-15M570 688v15h15M804 688v15h-15" fill="none" stroke="#FFF9F0" stroke-width="3"/>
+      <circle cx="687" cy="620" r="32" fill="#9E958B" opacity=".42"/>
+      <circle cx="687" cy="620" r="8" fill="#FFF9F0" opacity=".75"/>
+      <circle cx="687" cy="620" r="43" fill="none" stroke="#FFF9F0" stroke-width="1.5" opacity=".8"/>
+      <text x="687" y="674" font-size="16" fill="#7D746B" font-weight="800" text-anchor="middle">明天再来遇见</text>
+      <text x="687" y="694" font-size="11" class="muted" text-anchor="middle">今天的三次相遇已经用完啦</text>
+      <rect x="538" y="777" width="298" height="58" rx="17" fill="#D5CDC3" stroke="#BEB3A8" stroke-width="1.5"/>
+      <circle cx="568" cy="806" r="18" fill="#BDB3A9" opacity=".55"/>
+      <path d="M559 801h5l2-3h6l2 3h5c1 0 2 1 2 2v9c0 1-1 2-2 2h-20c-1 0-2-1-2-2v-9c0-1 1-2 2-2Z" fill="none" stroke="#FFF9F0" stroke-width="1.7"/>
+      <circle cx="571" cy="808" r="3.5" fill="none" stroke="#FFF9F0" stroke-width="1.3"/>
+      <text x="598" y="806" font-size="16" fill="#FFF9F0" font-weight="800">今日已完成</text>
+      <text x="598" y="821" font-size="10" fill="#F6F0E8">明天再来拍照</text>
+      </g>
+
+      <rect x="516" y="850" width="346" height="52" fill="#FFF9F0" opacity=".96"/>
+      <line x1="516" y1="850" x2="862" y2="850" stroke="#E6D9CA" stroke-width="1.5"/>
+      <text x="574" y="881" font-size="10" class="coral" text-anchor="middle" font-weight="800">●</text>
+      <text x="574" y="893" font-size="9" class="coral" text-anchor="middle">相遇</text>
+      <text x="689" y="881" font-size="18" class="muted" text-anchor="middle">▣</text>
+      <text x="689" y="893" font-size="9" class="muted" text-anchor="middle">图鉴</text>
+      <text x="804" y="881" font-size="18" class="muted" text-anchor="middle">♢</text>
+      <text x="804" y="893" font-size="9" class="muted" text-anchor="middle">我的</text>
+    </g>
+  </g>
+  <text x="689" y="948" class="ui" font-size="15" font-weight="800" text-anchor="middle">状态 B · 0 个罐罐 / 不可拍摄</text>
+  <text x="689" y="971" class="ui muted small" text-anchor="middle">用完后明确告知下一次可用时间</text>
+
+  <!-- Design tokens panel -->
+  <g class="ui">
+    <text x="942" y="155" font-size="12" class="coral eng">DESIGN ELEMENTS</text>
+    <text x="942" y="190" font-size="30" class="serif" font-weight="700">首页组件板</text>
+    <text x="942" y="218" font-size="13" class="muted">为“拍照第一”的首页保留必要信息</text>
+
+    <text x="942" y="270" font-size="12" font-weight="800">色彩</text>
+    <g filter="url(#softShadow)">
+      <rect x="942" y="286" width="80" height="62" rx="12" fill="#F7F0E6" stroke="#E0D1C1"/>
+      <rect x="1032" y="286" width="80" height="62" rx="12" fill="#A7472D"/>
+      <rect x="1122" y="286" width="80" height="62" rx="12" fill="#E9EFDE"/>
+      <rect x="1212" y="286" width="80" height="62" rx="12" fill="#F2DFBD"/>
+      <rect x="1302" y="286" width="80" height="62" rx="12" fill="#34251F"/>
+    </g>
+    <text x="982" y="367" font-size="10" class="muted" text-anchor="middle">米白</text>
+    <text x="1072" y="367" font-size="10" class="muted" text-anchor="middle">烧褐</text>
+    <text x="1162" y="367" font-size="10" class="muted" text-anchor="middle">草木绿</text>
+    <text x="1252" y="367" font-size="10" class="muted" text-anchor="middle">罐罐黄</text>
+    <text x="1342" y="367" font-size="10" class="muted" text-anchor="middle">墨色</text>
+
+    <text x="942" y="423" font-size="12" font-weight="800">罐罐状态</text>
+    <g transform="translate(942 441)">
+      <rect x="0" y="4" width="54" height="38" rx="9" fill="#F2DFBD" stroke="#C79F69" stroke-width="1.5"/>
+      <ellipse cx="27" cy="4" rx="27" ry="6" fill="#F6E9C9" stroke="#C79F69" stroke-width="1.5"/>
+      <circle cx="27" cy="24" r="8" fill="#A7472D"/>
+      <text x="72" y="29" font-size="12">未使用 · 可拍照</text>
+    </g>
+    <g transform="translate(942 505)" opacity=".58">
+      <rect x="0" y="4" width="54" height="38" rx="9" fill="#E6E0D9" stroke="#BDB2A8" stroke-width="1.5"/>
+      <ellipse cx="27" cy="4" rx="27" ry="6" fill="#EFEAE3" stroke="#BDB2A8" stroke-width="1.5"/>
+      <path d="M19 24h16M27 16v16" stroke="#9F948A" stroke-width="2"/>
+      <text x="72" y="29" font-size="12">已使用 · 不可拍照</text>
+    </g>
+
+    <text x="942" y="590" font-size="12" font-weight="800">卡片等级标签</text>
+    <g filter="url(#softShadow)">
+      <rect x="942" y="610" width="79" height="35" rx="10" fill="#E9EFDE"/>
+      <rect x="1032" y="610" width="79" height="35" rx="10" fill="#E4EEF1"/>
+      <rect x="1122" y="610" width="79" height="35" rx="10" fill="#F2DFBD"/>
+      <rect x="1212" y="610" width="79" height="35" rx="10" fill="#EEE6F2"/>
+      <rect x="1302" y="610" width="80" height="35" rx="10" fill="#F2D0BD"/>
+    </g>
+    <text x="981" y="633" font-size="12" text-anchor="middle" font-weight="800">C · 街角</text>
+    <text x="1071" y="633" font-size="12" text-anchor="middle" font-weight="800">U · 偶见</text>
+    <text x="1161" y="633" font-size="12" text-anchor="middle" font-weight="800">R · 稀遇</text>
+    <text x="1251" y="633" font-size="12" text-anchor="middle" font-weight="800">SR · 惊鸿</text>
+    <text x="1342" y="633" font-size="12" text-anchor="middle" font-weight="800">UR · 神隐</text>
+
+    <text x="942" y="698" font-size="12" font-weight="800">结果卡奖励</text>
+    <rect x="942" y="718" width="440" height="124" rx="18" fill="#FFFAF2" stroke="#D9C7B5" stroke-width="1.5" filter="url(#softShadow)"/>
+    <text x="965" y="747" font-size="10" class="coral eng">★ CAT FOUND ★</text>
+    <text x="965" y="780" font-size="18" class="serif" font-weight="700">阿橘队长</text>
+    <rect x="1110" y="763" width="66" height="25" rx="8" fill="#F2DFBD"/>
+    <text x="1143" y="780" font-size="11" text-anchor="middle" font-weight="800">R · 稀遇</text>
+    <rect x="965" y="801" width="119" height="26" rx="8" fill="#F2DFBD"/>
+    <text x="1025" y="818" font-size="12" text-anchor="middle" font-weight="800">猫爪 +130</text>
+    <rect x="1094" y="801" width="119" height="26" rx="8" fill="#E9EFDE"/>
+    <text x="1153" y="818" font-size="12" text-anchor="middle" font-weight="800">咔咔分 +8</text>
+    <text x="1240" y="818" font-size="11" class="muted">自动结算</text>
+
+    <text x="942" y="895" font-size="11" class="muted">第一版关键词：看见额度 · 立即拍照 · 温柔观察</text>
+  </g>
+</svg>

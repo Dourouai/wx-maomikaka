@@ -1,0 +1,90 @@
+<!-- 图鉴：轻量收集册 -->
+<navigation-bar title="猫咪咔咔" back="{{false}}" color="#4A3728" background="#FFF9F1" />
+
+<view class="collection-page">
+  <scroll-view class="collection-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="collection-content">
+      <view class="album-heading">
+        <view class="album-heading-copy">
+          <text class="album-kicker">CAT ALBUM</text>
+          <text class="album-title">猫咪图鉴</text>
+          <text class="album-subtitle">把遇见过的猫，留在这里</text>
+        </view>
+        <view class="album-heading-stamp">
+          <image src="/assets/doodle-leaf.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view class="album-summary">
+        <view class="album-count">
+          <text class="album-count-title">已收集</text>
+          <text class="album-count-number">{{unlockedCount}}</text>
+        </view>
+        <text class="album-count-note">把城市里的猫，慢慢收进来</text>
+      </view>
+
+      <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="filter-list">
+          <view
+            wx:for="{{filterOptions}}"
+            wx:for-item="filter"
+            wx:key="value"
+            class="filter-chip {{activeFilter === filter.value ? 'filter-chip-active' : ''}}"
+            bindtap="switchFilter"
+            data-value="{{filter.value}}"
+          >
+            <text>{{filter.label}}</text>
+            <text class="filter-count">{{filter.count}}</text>
+          </view>
+        </view>
+      </scroll-view>
+
+      <view wx:if="{{filteredList.length > 0}}" class="album-grid">
+        <view
+          wx:for="{{filteredList}}"
+          wx:for-item="cat"
+          wx:key="id"
+          class="album-entry"
+          bindtap="goDetail"
+          data-cat-id="{{cat.id}}"
+          data-unlocked="{{cat.unlocked}}"
+        >
+          <view class="cat-portrait cat-portrait-{{cat.levelCode}}">
+            <block wx:if="{{cat.photoPath}}">
+              <image class="cat-photo" src="{{cat.photoPath}}" mode="aspectFit" />
+            </block>
+
+            <view class="level-mark level-mark-{{cat.levelCode}}">
+              <text class="level-mark-code">{{cat.levelCode}}</text>
+              <text>{{cat.levelLabel}}</text>
+            </view>
+            <view wx:if="{{cat.isNew}}" class="new-mark">NEW</view>
+          </view>
+
+          <view class="cat-label">
+            <text class="cat-label-name">{{cat.displayName}}</text>
+            <text class="cat-label-meta">{{cat.metaText}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{filteredList.length === 0}}" class="empty-album">
+        <image class="empty-album-mark" src="/assets/paw.svg" mode="aspectFit" />
+        <text class="empty-album-title">这里还没有猫咪</text>
+        <text class="empty-album-sub">去相遇，收进第一只猫吧</text>
+      </view>
+
+      <view class="album-footnote">轻轻滑动，继续发现城市里的猫</view>
+      <view class="collection-bottom-safe"></view>
+    </view>
+  </scroll-view>
+
+  <exception-modal
+    visible="{{showException}}"
+    eyebrow="{{exceptionEyebrow}}"
+    title="{{exceptionTitle}}"
+    message="{{exceptionMessage}}"
+    primary-text="{{exceptionPrimaryText}}"
+    bind:primary="onExceptionPrimary"
+  />
+</view>

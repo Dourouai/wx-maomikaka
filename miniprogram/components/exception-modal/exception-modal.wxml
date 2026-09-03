@@ -1,0 +1,41 @@
+<view
+  wx:if="{{visible}}"
+  class="exception-modal-layer"
+  catchtap="handleMaskTap"
+  aria-role="alertdialog"
+  aria-label="{{title}}"
+>
+  <view class="exception-modal-backdrop"></view>
+  <view class="exception-modal-card" catchtap="stopPropagation">
+    <view class="exception-modal-tape"></view>
+
+    <view class="exception-modal-head">
+      <view class="exception-modal-icon-shell">
+        <image class="exception-modal-icon" src="/assets/icon-warning.svg" mode="aspectFit" />
+      </view>
+      <view class="exception-modal-stamp">
+        <text>NOTE</text>
+      </view>
+    </view>
+
+    <text class="exception-modal-eyebrow">{{eyebrow}}</text>
+    <text class="exception-modal-title">{{title}}</text>
+    <text class="exception-modal-message">{{message}}</text>
+    <text wx:if="{{detail}}" class="exception-modal-detail">{{detail}}</text>
+
+    <view class="exception-modal-divider"></view>
+
+    <view class="exception-modal-actions">
+      <view
+        wx:if="{{showSecondary && secondaryText}}"
+        class="exception-modal-button exception-modal-button-secondary"
+        bindtap="handleSecondary"
+      >
+        <text>{{secondaryText}}</text>
+      </view>
+      <view class="exception-modal-button exception-modal-button-primary" bindtap="handlePrimary">
+        <text>{{primaryText}}</text>
+      </view>
+    </view>
+  </view>
+</view>

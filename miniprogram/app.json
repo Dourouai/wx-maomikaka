@@ -1,0 +1,58 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/my/my",
+    "pages/text-image/text-image",
+    "pages/camera/camera",
+    "pages/reveal/reveal",
+    "pages/collection/collection",
+    "pages/card-detail/card-detail"
+  ],
+  "tabBar": {
+    "custom": false,
+    "color": "#999",
+    "selectedColor": "#EF745E",
+    "backgroundColor": "#FFF9F1",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "",
+        "iconPath": "assets/tab-encounter.png",
+        "selectedIconPath": "assets/tab-encounter-active.png"
+      },
+      {
+        "pagePath": "pages/collection/collection",
+        "text": "",
+        "iconPath": "assets/tab-album.png",
+        "selectedIconPath": "assets/tab-album-active.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "",
+        "iconPath": "assets/tab-profile.png",
+        "selectedIconPath": "assets/tab-profile-active.png"
+      }
+    ]
+  },
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationStyle": "custom",
+    "backgroundColor": "#FFF8F0"
+  },
+  "style": "v2",
+  "renderer": "skyline",
+  "rendererOptions": {
+    "skyline": {
+      "defaultDisplayBlock": true,
+      "defaultContentBox": true,
+      "tagNameStyleIsolation": "legacy",
+      "disableABTest": true,
+      "sdkVersionBegin": "3.0.0",
+      "sdkVersionEnd": "15.255.255"
+    }
+  },
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

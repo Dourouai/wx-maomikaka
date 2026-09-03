@@ -1,0 +1,119 @@
+<!-- 猫咪详情：单只猫的相遇记录 -->
+<navigation-bar title="猫咪档案" back="{{true}}" color="#4A3728" background="#FFF9F1" />
+
+<view class="detail-page">
+  <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="detail-content">
+      <view class="detail-heading">
+        <view>
+          <text class="detail-kicker">CAT NOTE · {{bestLevelLabel}}</text>
+          <text class="detail-title">{{catData.name}}</text>
+        </view>
+        <image class="detail-heart" src="/assets/icon-heart.svg" mode="aspectFit" />
+      </view>
+
+      <view class="detail-sheet">
+        <view class="detail-photo-wrap detail-photo-wrap-{{bestLevelCode}}">
+          <view class="detail-photo-backdrop"></view>
+          <image wx:if="{{featuredPhoto}}" class="detail-photo" src="{{featuredPhoto}}" mode="aspectFit" />
+          <image wx:else class="detail-icon" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+          <view class="detail-level-badge detail-level-badge-{{bestLevelCode}}">
+            <text class="detail-level-code">{{bestLevelCode}}</text>
+            <text>{{bestLevelLabel}}</text>
+          </view>
+        </view>
+
+        <view class="detail-name-label">
+          <text>{{catData.name}}</text>
+          <text class="detail-name-meta">{{catData.breed}}</text>
+        </view>
+
+        <view class="detail-traits">
+          <view wx:for="{{catData.trait}}" wx:for-item="trait" wx:key="index" class="detail-trait">{{trait}}</view>
+        </view>
+      </view>
+
+      <view class="detail-facts">
+        <view class="fact-item">
+          <text class="fact-value">{{encounterCount}}</text>
+          <text class="fact-label">遇见次数</text>
+        </view>
+        <view class="fact-item">
+          <text class="fact-value fact-date">{{firstSeenText}}</text>
+          <text class="fact-label">第一次遇见</text>
+        </view>
+        <view class="fact-item">
+          <text class="fact-value fact-date">{{lastSeenText}}</text>
+          <text class="fact-label">最近遇见</text>
+        </view>
+      </view>
+
+      <view wx:if="{{bestScoreItems.length > 0}}" class="detail-score-card">
+        <view class="detail-score-head">
+          <view class="detail-score-title-wrap">
+            <text class="detail-score-title">最高相遇等级</text>
+            <text class="detail-score-subtitle">{{bestLevelShortLabel}}</text>
+          </view>
+          <view class="detail-score-total">
+            <text class="detail-score-total-value">{{bestOverallScore}}</text>
+            <text class="detail-score-total-label">综合分</text>
+          </view>
+        </view>
+        <view class="detail-score-list">
+          <view wx:for="{{bestScoreItems}}" wx:for-item="score" wx:key="key" class="detail-score-item">
+            <view class="detail-score-item-head">
+              <text>{{score.label}}</text>
+              <text>{{score.value}}</text>
+            </view>
+            <view class="detail-score-track">
+              <view class="detail-score-fill detail-score-fill-{{bestLevelCode}}" style="width: {{score.value}}%;"></view>
+            </view>
+          </view>
+        </view>
+        <view wx:if="{{bestPawReward !== null}}" class="detail-reward-row">
+          <text>猫爪 +{{bestPawReward}}</text>
+          <text>积分 +{{bestPointReward}}</text>
+        </view>
+        <text wx:if="{{bestScorePending}}" class="detail-score-pending">这条记录暂未完成评分</text>
+      </view>
+
+      <view class="detail-note">
+        <text class="detail-note-title">关于它</text>
+        <text class="detail-note-text">{{catData.story}}</text>
+      </view>
+
+      <view wx:if="{{records.length > 0}}" class="records-section">
+        <view class="records-heading">
+          <text>我的相遇</text>
+          <text>{{records.length}} 次</text>
+        </view>
+        <view class="records-list">
+          <view
+            wx:for="{{records}}"
+            wx:for-item="record"
+            wx:key="recordId"
+            class="record-row {{record.recordId === featuredRecordId ? 'record-row-featured' : ''}}"
+            bindtap="setFeatured"
+            data-record-id="{{record.recordId}}"
+          >
+            <block wx:if="{{record.photoPath}}">
+              <image class="record-thumb" src="{{record.photoPath}}" mode="aspectFit" />
+            </block>
+            <block wx:else>
+              <view class="record-thumb record-thumb-fallback">
+                <image class="record-fallback-icon" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+              </view>
+            </block>
+            <view class="record-copy">
+              <text class="record-date">{{record.timeText}}</text>
+              <text class="record-location">{{record.levelCode}} · {{record.levelLabel}}</text>
+            </view>
+            <text wx:if="{{record.recordId === featuredRecordId}}" class="record-mark">主图</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="detail-bottom-safe"></view>
+    </view>
+  </scroll-view>
+</view>

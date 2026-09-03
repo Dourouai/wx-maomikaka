@@ -1,0 +1,6 @@
+{
+  "usingComponents": {
+    "exception-modal": "/components/exception-modal/exception-modal"
+  },
+  "navigationStyle": "custom"
+}

@@ -1,0 +1,211 @@
+.exception-modal-layer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  box-sizing: border-box;
+}
+
+.exception-modal-backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(58, 43, 32, 0.28);
+  animation: exceptionBackdropIn 180ms ease-out both;
+}
+
+.exception-modal-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640rpx;
+  padding: 38rpx 34rpx 30rpx;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 2rpx solid #e8d9cc;
+  border-radius: 28rpx 24rpx 32rpx 22rpx;
+  background: #fffaf4;
+  box-shadow: 0 24rpx 56rpx rgba(58, 43, 32, 0.22), 8rpx 8rpx 0 rgba(239, 116, 94, 0.1);
+  transform: rotate(-1.2deg);
+  animation: exceptionCardIn 220ms cubic-bezier(0.2, 0.9, 0.3, 1.12) both;
+}
+
+.exception-modal-card::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 12rpx;
+  background: repeating-linear-gradient(135deg, #f7d8ca 0, #f7d8ca 10rpx, #fff0e8 10rpx, #fff0e8 20rpx);
+  content: '';
+}
+
+.exception-modal-card::after {
+  position: absolute;
+  right: 28rpx;
+  bottom: 18rpx;
+  width: 94rpx;
+  height: 12rpx;
+  border-top: 2rpx solid #ddcabc;
+  border-bottom: 2rpx solid #ddcabc;
+  opacity: 0.56;
+  content: '';
+  transform: rotate(-8deg);
+}
+
+.exception-modal-tape {
+  position: absolute;
+  top: 22rpx;
+  right: 42rpx;
+  width: 112rpx;
+  height: 28rpx;
+  background: rgba(194, 207, 172, 0.76);
+  box-shadow: 0 2rpx 5rpx rgba(74, 55, 40, 0.08);
+  transform: rotate(7deg);
+}
+
+.exception-modal-head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.exception-modal-icon-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 108rpx;
+  height: 108rpx;
+  border: 2rpx solid #efb9a9;
+  border-radius: 48% 42% 50% 44%;
+  background: #fff0e8;
+  box-shadow: 5rpx 6rpx 0 rgba(239, 116, 94, 0.1);
+  transform: rotate(-5deg);
+}
+
+.exception-modal-icon {
+  width: 62rpx;
+  height: 62rpx;
+}
+
+.exception-modal-stamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  margin-top: 18rpx;
+  border: 2rpx dashed #d9c8b8;
+  border-radius: 50%;
+  color: #927e70;
+  font-size: 17rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+  transform: rotate(8deg);
+}
+
+.exception-modal-eyebrow {
+  display: block;
+  margin-top: 26rpx;
+  color: #ef745e;
+  font-size: 20rpx;
+  font-weight: 800;
+  letter-spacing: 3rpx;
+}
+
+.exception-modal-title {
+  display: block;
+  margin-top: 10rpx;
+  color: #4a3728;
+  font-family: var(--font-display);
+  font-size: 40rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+}
+
+.exception-modal-message {
+  display: block;
+  margin-top: 14rpx;
+  color: #5f4b3c;
+  font-size: 26rpx;
+  line-height: 1.65;
+}
+
+.exception-modal-detail {
+  display: block;
+  margin-top: 10rpx;
+  color: #927e70;
+  font-size: 21rpx;
+  line-height: 1.55;
+}
+
+.exception-modal-divider {
+  width: 100%;
+  height: 2rpx;
+  margin-top: 26rpx;
+  background: #eadfd4;
+}
+
+.exception-modal-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: 24rpx;
+}
+
+.exception-modal-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 184rpx;
+  min-height: 76rpx;
+  padding: 0 26rpx;
+  box-sizing: border-box;
+  border-radius: 100rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.exception-modal-button:active {
+  transform: scale(0.97);
+}
+
+.exception-modal-button-primary {
+  background: #ef745e;
+  color: #fff;
+  box-shadow: 0 8rpx 16rpx rgba(239, 116, 94, 0.22);
+}
+
+.exception-modal-button-secondary {
+  margin-right: 14rpx;
+  border: 2rpx solid #e7c8b8;
+  background: #fffaf4;
+  color: #ae7967;
+}
+
+@keyframes exceptionBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes exceptionCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx) rotate(-1.2deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(-1.2deg) scale(1);
+  }
+}

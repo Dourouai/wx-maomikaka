@@ -1,0 +1,15 @@
+# macOS / Finder metadata
+.DS_Store
+._*
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+
+# Local runtime logs
+*.log

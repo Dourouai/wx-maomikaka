@@ -1,0 +1,30 @@
+<view class="custom-tabbar">
+  <view class="custom-tabbar-line"></view>
+  <view
+    wx:for="{{list}}"
+    wx:for-item="item"
+    wx:for-index="tabIndex"
+    wx:key="pagePath"
+    class="custom-tabbar-item {{selected === tabIndex ? 'custom-tabbar-item-selected' : ''}}"
+    catchtap="switchTab"
+    hover-class="custom-tabbar-item-hover"
+    hover-stay-time="100"
+    data-path="{{item.pagePath}}"
+    data-index="{{tabIndex}}"
+  >
+    <image
+      class="custom-tabbar-icon"
+      src="{{selected === tabIndex ? item.selectedIconPath : item.iconPath}}"
+      mode="aspectFit"
+    />
+  </view>
+
+  <exception-modal
+    visible="{{showException}}"
+    eyebrow="菜单切换"
+    title="页面没有打开"
+    message="这次跳转没有接住，再试一次就好"
+    primary-text="再试一次"
+    bind:primary="onExceptionPrimary"
+  />
+</view>

@@ -1,0 +1,82 @@
+<!-- 拍照页 camera.wxml -->
+<view class="camera-page">
+
+  <view class="camera-topbar">
+    <view class="close-btn" bindtap="goBack">
+      <image class="close-icon" src="/assets/icon-close.svg" mode="aspectFit" />
+    </view>
+
+    <view class="camera-heading">
+      <view class="camera-heading-row">
+        <text class="camera-kicker">CAT SPOTTER · 01</text>
+        <view class="camera-status">
+          <view class="camera-status-dot"></view>
+          <text>相机在线</text>
+        </view>
+      </view>
+      <text class="camera-title">去遇见一只猫</text>
+      <text class="camera-subtitle">把它放进你的相遇记录</text>
+    </view>
+  </view>
+
+  <view class="viewfinder-wrap">
+    <view class="viewfinder">
+      <camera
+        id="cat-camera"
+        class="camera-preview"
+        device-position="back"
+        flash="off"
+        binderror="onCameraError"
+      ></camera>
+
+      <!-- camera 是原生组件，取景框装饰用 cover-view 保证始终显示在画面上层。 -->
+      <cover-view class="camera-overlay">
+        <cover-view class="viewfinder-topline">
+          <cover-view class="viewfinder-chip">猫咪观察区</cover-view>
+          <cover-view class="viewfinder-lens">后置镜头</cover-view>
+        </cover-view>
+        <cover-view class="viewfinder-corner corner-top-left"></cover-view>
+        <cover-view class="viewfinder-corner corner-top-right"></cover-view>
+        <cover-view class="viewfinder-corner corner-bottom-left"></cover-view>
+        <cover-view class="viewfinder-corner corner-bottom-right"></cover-view>
+        <cover-view class="viewfinder-center-mark">
+          <cover-view class="viewfinder-center-dot"></cover-view>
+          <cover-view class="viewfinder-center-ring"></cover-view>
+        </cover-view>
+        <cover-view class="viewfinder-hint">
+          <cover-view class="hint-text">让它出现在框里</cover-view>
+        </cover-view>
+        <cover-view class="viewfinder-note">保持一点距离，不打扰它</cover-view>
+      </cover-view>
+
+      <cover-view wx:if="{{cameraError}}" class="camera-error-mask">
+        <cover-view class="camera-error-card">
+          <cover-view class="camera-error-icon"><cover-view>!</cover-view></cover-view>
+          <cover-view class="camera-error-eyebrow">{{cameraIssueEyebrow}}</cover-view>
+          <cover-view class="camera-error-title">{{cameraIssueTitle}}</cover-view>
+          <cover-view class="camera-error-subtitle">{{cameraIssueSubtitle}}</cover-view>
+          <cover-view class="camera-error-button" bindtap="handleCameraIssue">{{cameraIssueAction}}</cover-view>
+        </cover-view>
+      </cover-view>
+    </view>
+  </view>
+
+  <view class="bottom-bar">
+    <view class="bottom-copy">
+      <text class="bottom-title">发现猫咪了吗？</text>
+      <text class="bottom-subtitle">轻轻按下，收下这次相遇</text>
+    </view>
+    <view class="shutter-wrap">
+      <view class="shutter-btn {{isTakingPhoto ? 'shutter-btn-busy' : ''}}" bindtap="takePhoto">
+        <view class="shutter-inner">
+          <image class="shutter-camera-icon" src="/assets/icon-camera-white.svg" mode="aspectFit" />
+        </view>
+      </view>
+    </view>
+    <view class="bottom-mark">
+      <image src="/assets/paw.svg" mode="aspectFit" />
+      <text>一张相遇卡</text>
+    </view>
+  </view>
+
+</view>

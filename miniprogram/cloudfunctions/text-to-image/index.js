@@ -174,6 +174,8 @@ async function generate(prompt) {
     revise: { value: false },
     // 按文生图接口的顶层参数关闭显式平台标识。
     LogoAdd: 0,
+    // 本次测试按 CloudBase 官方自定义水印示例主动添加水印。
+    footnote: 'CloudBase AI',
   });
   const imageData = response && response.data && response.data[0];
   const image = await getImageResult(imageData);

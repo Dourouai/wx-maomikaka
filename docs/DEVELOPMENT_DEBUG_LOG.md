@@ -160,13 +160,14 @@ You are not authorized to perform this operation
 - 已关闭 prompt 改写（`revise: { value: false }`），不向模型追加猫咪图鉴文案；
 - 文生图请求顶层传入 `LogoAdd: 0`，不主动添加显式平台标识；
 - 该页面不保存或发布用户输入，默认不调用当前不可用的文字安全检测；如需恢复，可给云函数设置 `TEXT_IMAGE_CHECK_PROMPT=true`；模型输出不做二次图片复核；
-- 文生图请求不再传 `footnote`；如果服务侧仍返回平台 AI 标识，说明该模型/账号策略强制保留，测试页已明确提示。
+- 当前测试版本按 [CloudBase 官方自定义水印示例](https://docs.cloudbase.net/ai/image-model/custom-watermark) 传入 `footnote: 'CloudBase AI'`，同时保留顶层 `LogoAdd: 0`，用于区分自定义水印和平台默认 AI 标识。
+- 2026-09-03 15:09 已完成真实调用：返回成功，生成文件为 `text-image-test/1788419352541-8437gqqk.jpg`；控制台预览确认图片右下角出现 `CloudBase AI`。结论：`footnote` 确实会被服务端烘焙进图片，`LogoAdd: 0` 不会抵消显式传入的 `footnote`。
 
 ## 部署与验证状态
 
 - `cat-vision`：已在微信开发者工具发起并完成上传流程，上传包显示约 5.1 KB、3 个文件，未显示失败提示；
 - `cat-transform`：2026-09-03 已切回 CloudBase 图生图，版本为 `cat-subject-only-cloudbase-i2i-v1`；已于 14:53:58 通过 CloudBase 控制台上传并部署到 `$LATEST`，函数状态正常，需用新照片验证；
-- `text-to-image`：已上传包含顶层 `LogoAdd: 0` 且不传 `footnote` 的版本；真实生成已成功，但返回图片仍带平台 AI 标识；云函数执行超时已配置为 900 秒；
+- `text-to-image`：已于 15:06:53 上传并部署本次 `footnote: 'CloudBase AI'` 测试版本到 `$LATEST`，函数状态正常；保留顶层 `LogoAdd: 0`，云函数执行超时已配置为 900 秒；真实调用已确认右下角显示 `CloudBase AI`；
 - 需要用一张新照片重新测试，旧图鉴记录中的 CloudBase 图片不会自动改变；
 - 若新测试返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，优先检查 CloudBase AI 模型开通、云函数依赖和图生图参数；
 - 若结果再次带平台 AI 标识，记录为 CloudBase 服务侧限制，不要重复调 `footnote` 或接入 `watermarks-remover`。

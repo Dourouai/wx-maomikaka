@@ -128,7 +128,7 @@ You are not authorized to perform this operation
 - 固定使用 `images/ar/generations`，关闭 prompt 改写，不传 `footnote`；
 - 保留“只保留完整猫咪主体、不要文字/卡片/装饰、猫以外透明”的主体约束；
 - 保留服务端对模型返回图片的下载、云存储落盘和烘焙棋盘格清理；不增加模型结果二次安全复核；
-- 本次只修改本地代码并提交 GitHub，未重新上传云函数，避免未验证版本覆盖当前线上版本。
+- 本次先只修改本地代码并提交 GitHub；随后于 2026-09-03 14:53:58 通过 CloudBase 控制台上传并部署 `cat-transform` ZIP 到 `$LATEST`，页面显示“正常”且“与已部署代码一致”。控制台另提示云调用接口权限仍需微信开发者工具同步，该权限同步是独立步骤。
 
 ## 当前实现清单
 
@@ -165,7 +165,7 @@ You are not authorized to perform this operation
 ## 部署与验证状态
 
 - `cat-vision`：已在微信开发者工具发起并完成上传流程，上传包显示约 5.1 KB、3 个文件，未显示失败提示；
-- `cat-transform`：2026-09-03 已切回 CloudBase 图生图，版本为 `cat-subject-only-cloudbase-i2i-v1`；代码已修改但尚未重新上传，需用新照片验证；
+- `cat-transform`：2026-09-03 已切回 CloudBase 图生图，版本为 `cat-subject-only-cloudbase-i2i-v1`；已于 14:53:58 通过 CloudBase 控制台上传并部署到 `$LATEST`，函数状态正常，需用新照片验证；
 - `text-to-image`：已上传包含顶层 `LogoAdd: 0` 且不传 `footnote` 的版本；真实生成已成功，但返回图片仍带平台 AI 标识；云函数执行超时已配置为 900 秒；
 - 需要用一张新照片重新测试，旧图鉴记录中的 CloudBase 图片不会自动改变；
 - 若新测试返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，优先检查 CloudBase AI 模型开通、云函数依赖和图生图参数；

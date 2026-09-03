@@ -203,7 +203,7 @@ CloudBase 图生图配置：
 
 1. 在 CloudBase AI 中确认 `HY-Image-v3.0-I2I-ToB-v1.0.1` 已开通；
 2. 确认 `cat-transform` 云函数使用 `wx-server-sdk@4.0.2` 并完成云端依赖安装；
-3. 重新上传部署 `cat-transform` 后再测试；
+3. `cat-transform` 已于 2026-09-03 通过 CloudBase 控制台重新上传部署到 `$LATEST`，下一步用新照片测试；
 4. 若返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，先检查 CloudBase AI 模型和图生图参数，不重复尝试空 `footnote` 去除平台标识。
 
 ## 5. 推荐业务流程

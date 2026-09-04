@@ -1,11 +1,14 @@
 // pages/my/my.js
 const storage = require('../../utils/storage');
+const userData = require('../../utils/userData');
+const cloudFiles = require('../../utils/cloudFiles');
 const { ALL_CATS, getCatById } = require('../../utils/catData');
 const memberLevel = require('../../utils/memberLevel');
 const deviceLayout = require('../../utils/deviceLayout');
 
 Page({
   data: {
+    isLoggedIn: false,
     unlockedCount: 0,
     totalCount: ALL_CATS.length,
     totalPhotos: 0,
@@ -23,6 +26,12 @@ Page({
     growthToNext: 300,
     memberIsMax: false,
     recentRecords: [],
+    syncBusy: false,
+    syncKicker: 'ACCOUNT / ARCHIVE',
+    syncTitle: '绑定当前微信账号',
+    syncSubtitle: '把本机的相遇记录安全同步到云端',
+    syncActionText: '开始同步',
+    syncPendingCount: 0,
     isOpeningCamera: false,
     showException: false,
     exceptionEyebrow: '相遇入口',
@@ -33,14 +42,16 @@ Page({
     headerRightInset: 0,
   },
 
-  onLoad() {
+  onLoad(options) {
     this._syncDeviceLayout();
+    // 仅用于设计验收：my?preview=guest 强制展示未登录态，不改变本地账号绑定状态。
+    this.previewGuest = String((options && (options.preview || options.state)) || '').toLowerCase() === 'guest';
   },
 
   onShow() {
     this._syncDeviceLayout();
-    this._syncTabBar();
     this._refreshData();
+    this._refreshSyncState();
   },
 
   onResize() {
@@ -57,7 +68,12 @@ Page({
 
   _syncTabBar() {
     const tabBar = this.getTabBar && this.getTabBar();
-    if (tabBar) tabBar.setData({ selected: 2 });
+    if (tabBar) {
+      tabBar.setData({
+        selected: 2,
+        hidden: !this.data.isLoggedIn,
+      });
+    }
   },
 
   _refreshData() {
@@ -100,6 +116,150 @@ Page({
       memberIsMax: membership.isMax,
       recentRecords,
     });
+    this._refreshRecordPhotoURLs(recentRecords);
+  },
+
+  async _refreshRecordPhotoURLs(records) {
+    await Promise.all((records || []).map(async record => {
+      if (!record || record.photoPath || (!record.cutoutFileID && !record.originalFileID)) return;
+
+      let photoPath = '';
+      for (const fileID of [record.cutoutFileID, record.originalFileID].filter(Boolean)) {
+        try {
+          photoPath = await cloudFiles.getTempFileURL(fileID);
+          if (photoPath) break;
+        } catch (error) {
+          // 主体图地址失效时继续尝试安全校验后的原图。
+        }
+      }
+      if (!photoPath) return;
+
+      const index = this.data.recentRecords.findIndex(item => item.recordId === record.recordId);
+      if (index >= 0) this.setData({ [`recentRecords[${index}].photoPath`]: photoPath });
+    }));
+  },
+
+  _refreshSyncState() {
+    const state = storage.getSyncState();
+    const summary = storage.getSyncSummary();
+    const pendingText = summary.pendingRecords > 0
+      ? `还有 ${summary.pendingRecords} 条相遇记录待同步`
+      : '本机相遇记录已同步';
+    let syncTitle = '绑定当前微信账号';
+    let syncSubtitle = summary.totalRecords > 0
+      ? `发现 ${summary.totalRecords} 条本机记录，绑定后可在其他设备查看`
+      : '把本机的相遇记录安全同步到云端';
+    let syncActionText = '开始同步';
+
+    if (state.status === 'syncing') {
+      syncTitle = '正在同步我的相遇';
+      syncSubtitle = '请稍等，正在整理猫咪档案和相遇记录';
+      syncActionText = '同步中';
+    } else if (state.userBound && state.status === 'synced') {
+      syncTitle = '已绑定当前微信账号';
+      syncSubtitle = pendingText;
+      syncActionText = summary.pendingRecords > 0 ? '继续同步' : '刷新云端';
+    } else if (state.userBound) {
+      syncTitle = '继续同步相遇记录';
+      syncSubtitle = state.lastSyncError || pendingText;
+      syncActionText = '重试同步';
+    }
+
+    const isLoggedIn = !this.previewGuest && state.userBound === true;
+    this.setData({
+      isLoggedIn,
+      syncTitle,
+      syncSubtitle,
+      syncActionText,
+      syncPendingCount: summary.pendingRecords,
+    }, () => this._syncTabBar());
+  },
+
+  _confirmLocalImport(recordCount, accountChanged) {
+    return new Promise(resolve => {
+      wx.showModal({
+        title: accountChanged ? '切换账号，绑定本机记录' : '绑定我的相遇',
+        content: accountChanged
+          ? `检测到当前微信账号发生变化。这台设备已有 ${recordCount} 条本地记录，是否将它们绑定到当前账号？`
+          : `这台设备已有 ${recordCount} 条相遇记录。绑定后会同步到当前微信账号，是否继续？`,
+        confirmText: '同步',
+        cancelText: '先不绑定',
+        success: response => resolve(response && response.confirm === true),
+        fail: () => resolve(false),
+      });
+    });
+  },
+
+  async onBindAccount() {
+    if (this.data.syncBusy) return;
+
+    this.setData({ syncBusy: true });
+    this._refreshSyncState();
+    try {
+      const summary = storage.getSyncSummary();
+      const accountCheck = await userData.checkAccount();
+      const state = storage.getSyncState();
+      const accountChanged = accountCheck.accountChanged === true || state.accountChanged === true;
+      let markConsent = false;
+      const needsConsent = summary.totalRecords > 0
+        && (!state.userBound || accountChanged || !state.importConsentAt);
+      if (needsConsent) {
+        const confirmed = await this._confirmLocalImport(summary.totalRecords, accountChanged);
+        if (!confirmed) return;
+        markConsent = true;
+      } else if (!state.importConsentAt) {
+        markConsent = true;
+      }
+
+      const result = await userData.syncLocalData({
+        force: true,
+        source: state.userBound && !accountChanged ? 'capture' : 'guest-import',
+        markConsent,
+      });
+      this._refreshData();
+      this._refreshSyncState();
+      const importedCount = Number(result.importedCount) || 0;
+      const mergedCount = Number(result.mergedCount) || 0;
+      const visibleCount = importedCount || mergedCount;
+      const title = visibleCount
+        ? `已同步 ${visibleCount} 条记录`
+        : (result.rejected && result.rejected.length ? '账号已绑定，部分记录待重试' : '账号已绑定');
+      wx.showToast({ title, icon: 'success', duration: 1600 });
+    } catch (error) {
+      console.error('[My] 用户数据同步失败:', error);
+      this._refreshSyncState();
+      wx.showToast({
+        title: this._getSyncErrorMessage(error),
+        icon: 'none',
+        duration: 2200,
+      });
+    } finally {
+      this.setData({ syncBusy: false });
+      this._refreshSyncState();
+    }
+  },
+
+  _getSyncErrorMessage(error) {
+    const code = error && error.code;
+    if (code === 'CLOUD_NOT_READY') return '云端服务暂时不可用';
+    if (code === 'IDENTITY_UNAVAILABLE') return '当前微信身份暂时不可用';
+    if (code === 'ACCOUNT_CHANGED_REQUIRES_CONFIRMATION') return '请确认当前设备记录的绑定关系';
+    if (code === 'DATABASE_PERMISSION_DENIED') return '云端档案权限不足';
+    return '同步没有完成，请稍后重试';
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '我的猫咪相遇记录｜猫咪咔咔',
+      path: '/pages/my/my?from=share',
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: '我的猫咪相遇记录｜留下每一次遇见',
+      query: 'from=timeline',
+    };
   },
 
   _dateKey(timestamp) {
@@ -156,6 +316,36 @@ Page({
 
   goCollection() {
     wx.switchTab({ url: '/pages/collection/collection' });
+  },
+
+  goHome() {
+    wx.switchTab({ url: '/pages/index/index' });
+  },
+
+  goPrivacy() {
+    wx.navigateTo({
+      url: '/pages/privacy/privacy',
+      fail: () => {
+        this.setData({
+          showException: true,
+          exceptionTitle: '隐私条款没打开',
+          exceptionMessage: '页面暂时没有准备好，请稍后再试',
+        });
+      },
+    });
+  },
+
+  goAbout() {
+    wx.navigateTo({
+      url: '/pages/about/about',
+      fail: () => {
+        this.setData({
+          showException: true,
+          exceptionTitle: '关于页面没打开',
+          exceptionMessage: '页面暂时没有准备好，请稍后再试',
+        });
+      },
+    });
   },
 
   goDevMode() {

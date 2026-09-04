@@ -3,6 +3,7 @@
 // 小程序端不保存、不传递 openid。CloudBase 云函数从
 // cloud.getWXContext().OPENID 读取当前微信用户身份。
 const storage = require('./storage');
+const { normalizeFeatureProfile } = require('./catFeatureProfile');
 
 const AUTH_FUNCTION_NAME = 'auth-bootstrap';
 const SYNC_FUNCTION_NAME = 'sync-guest-data';
@@ -64,6 +65,7 @@ function toRecordPayload(record, deviceId, source) {
   const item = record || {};
   const clientRecordId = trimString(item.clientRecordId || item.recordId, 128);
   if (!clientRecordId) return null;
+  const glmCatFeatureProfile = normalizeFeatureProfile(item.glmCatFeatureProfile);
 
   return {
     clientRecordId,
@@ -91,6 +93,8 @@ function toRecordPayload(record, deviceId, source) {
         : [],
       catCount: Number.isFinite(Number(item.catCount)) ? Number(item.catCount) : 1,
       source: trimString(item.detectionSource, 100),
+      // 只同步白名单后的结构化观察，不同步本机向量数组；服务端后续可按版本重算。
+      glmCatFeatureProfile,
     },
     score: {
       levelCode: trimString(item.levelCode, 20),
@@ -251,6 +255,7 @@ async function performSyncLocalData(options = {}) {
     storage.markRecordsSynced(mappings);
     const snapshot = await pullMine();
     const mergedCount = storage.mergeRemoteRecords(snapshot.encounters || []);
+    storage.mergeRemoteStats(snapshot.stats);
     const remoteRecordCount = Array.isArray(snapshot.encounters)
       ? snapshot.encounters.length
       : 0;

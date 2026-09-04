@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 112" role="img" aria-labelledby="logo-title logo-desc" focusable="false" shape-rendering="geometricPrecision">
+  <title id="logo-title">猫咪咔咔 CITY CAT ARCHIVE</title>
+  <desc id="logo-desc">一只完整的橙色胖猫抱着相机，搭配猫咪咔咔中文字标与 CITY CAT ARCHIVE 英文副标。</desc>
+  <g id="cat-mark-previous" transform="translate(5 4)" fill="none" stroke="#342923" stroke-linecap="round" stroke-linejoin="round" display="none">
+    <path d="M91 84c12 4 22-1 22-11 0-6-4-9-8-7-4 2-4 7 0 9" fill="none" stroke-width="5.2"/>
+    <path d="M15 83C9 68 11 46 21 31L20 14l24 15c12-5 28-5 40 0l24-15-1 19c10 15 12 35 6 51-7 18-22 27-47 28-25 0-43-9-51-29Z" fill="#e97850" stroke-width="3.6"/>
+    <path d="M25 20l5 17 14-9zM99 19l-5 18-14-9z" fill="#f8f0e6" stroke-width="2.2"/>
+    <path d="M29 53c1-11 11-19 22-19 6 0 10 2 13 7 3-5 7-7 13-7 11 0 21 8 22 19 1 11-7 19-19 20-7 1-12-2-16-8-4 6-9 9-16 8-12-1-20-9-19-20Z" fill="#f8f0e6" stroke="none"/>
+    <ellipse cx="45" cy="48" rx="7.7" ry="8.4" fill="#342923" stroke="none"/>
+    <ellipse cx="83" cy="48" rx="7.7" ry="8.4" fill="#342923" stroke="none"/>
+    <ellipse cx="43.1" cy="45.3" rx="2.1" ry="2.5" fill="#f8f0e6" stroke="none"/>
+    <ellipse cx="81.1" cy="45.3" rx="2.1" ry="2.5" fill="#f8f0e6" stroke="none"/>
+    <path d="M64 55l5 4-5 4-5-4Z" fill="#342923" stroke="none"/>
+    <path d="M64 63v2m0 0c-3 4-8 4-11 1m11-1c3 4 8 4 11 1" stroke-width="2.2"/>
+    <path d="M29 62 11 58m18 8L10 69m73-7 18-4m-18 10 19 2" stroke-width="2"/>
+    <path d="M40 91c7 6 15 9 24 9s17-3 24-9v8c-7 5-15 7-24 7s-17-2-24-7Z" fill="#f8f0e6" stroke="none"/>
+    <path d="M25 76c-4 2-6 6-4 10 2 5 7 7 12 5l8-5-3-10Z" fill="#f8f0e6" stroke-width="3"/>
+    <path d="M103 76c4 2 6 6 4 10-2 5-7 7-12 5l-8-5 3-10Z" fill="#f8f0e6" stroke-width="3"/>
+    <path d="M32 68h15l5-5h24l5 5h15c4 0 7 3 7 7v15c0 5-3 8-8 8H31c-5 0-8-3-8-8V75c0-4 3-7 9-7Z" fill="#f8f0e6" stroke-width="3.4"/>
+    <path d="M55 63h18l-3-5H58Z" fill="#342923" stroke="none"/>
+    <rect x="85" y="72" width="8" height="5" rx="1.5" fill="#e97850" stroke="none"/>
+    <circle cx="64" cy="81" r="13" fill="#342923" stroke="none"/>
+    <circle cx="64" cy="81" r="8" fill="#e97850" stroke="none"/>
+    <circle cx="61.5" cy="78.5" r="1.4" fill="#f8f0e6" stroke="none"/>
+  </g>
+  <g id="cat-mark" transform="translate(-7 -5) scale(.38)" stroke="#342923" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M245 199c31-39 65-25 56 10-5 20-21 38-45 46-13 4-27-2-34-13z" fill="#e97850"/>
+    <path d="M78 111 63 39l68 41c18-7 40-7 58 0l68-41-15 72c20 20 29 49 26 88-4 55-39 86-108 86S56 254 52 199c-3-39 6-68 26-88Z" fill="#e97850"/>
+    <path d="m77 61 48 29-28 9zM243 61l-48 29 28 9z" fill="#f8f0e6"/>
+    <ellipse cx="160" cy="224" rx="64" ry="57" fill="#f8f0e6" stroke="none"/>
+    <path d="M116 148c0-18 18-30 44-30s44 12 44 30c0 19-18 31-44 31s-44-12-44-31Z" fill="#f8f0e6" stroke="none"/>
+    <circle cx="124" cy="136" r="12" fill="#342923" stroke="none"/>
+    <circle cx="196" cy="136" r="12" fill="#342923" stroke="none"/>
+    <circle cx="120" cy="131" r="3.3" fill="#f8f0e6" stroke="none"/>
+    <circle cx="192" cy="131" r="3.3" fill="#f8f0e6" stroke="none"/>
+    <path d="m160 145 9 6-9 9-9-9z" fill="#e97850" stroke="none"/>
+    <path d="M160 160v7m0 0c-10 13-24 13-33 3m33-3c10 13 24 13 33 3" fill="none" stroke-width="5"/>
+    <path d="M111 156 80 150m31 17-34 2m165-13 31-6m-31 17 34 2" fill="none" stroke-width="4"/>
+    <path d="M91 177c-14 2-22 18-18 35 4 16 18 25 35 20 11-3 18-12 16-22-2-15-16-36-33-33Zm138 0c14 2 22 18 18 35-4 16-18 25-35 20-11-3-18-12-16-22 2-15 16-36 33-33Z" fill="#e97850"/>
+    <rect x="92" y="165" width="136" height="76" rx="14" fill="#f8f0e6"/>
+    <rect x="103" y="158" width="114" height="25" rx="7" fill="#f8f0e6"/>
+    <rect x="119" y="153" width="27" height="12" rx="4" fill="#342923" stroke="none"/>
+    <rect x="187" y="170" width="20" height="13" rx="3" fill="#342923" stroke="none"/>
+    <circle cx="160" cy="204" r="28" fill="#342923"/>
+    <circle cx="160" cy="204" r="19" fill="#e97850" stroke="none"/>
+    <circle cx="160" cy="204" r="4" fill="#f8f0e6" stroke="none"/>
+    <path d="M105 226c-9-9-25-7-31 3-7 11 0 26 14 30 12 4 25-3 28-14 3-8-3-15-11-19Zm110 0c9-9 25-7 31 3 7 11 0 26-14 30-12 4-25-3-28-14-3-8 3-15 11-19Z" fill="#f8f0e6"/>
+    <path d="M122 244c-3 20-6 31-19 40m95-40c3 20 6 31 19 40" fill="none" stroke-width="5"/>
+  </g>
+  <g id="wordmark" fill="#342923">
+    <text x="143" y="52" font-family="Songti SC, STSong, Noto Serif CJK SC, serif" font-size="29" font-weight="800" letter-spacing="-1.8">猫咪咔咔</text>
+    <text x="145" y="73" font-family="-apple-system, BlinkMacSystemFont, PingFang SC, sans-serif" font-size="9" font-weight="700" letter-spacing="3.6">CITY CAT ARCHIVE</text>
+    <path d="M145 84h106" fill="none" stroke="#e97850" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="261" cy="84" r="2.2" fill="#e97850"/>
+  </g>
+</svg>

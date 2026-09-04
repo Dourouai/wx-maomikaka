@@ -50,7 +50,7 @@ Page({
 
   _syncTabBar() {
     const tabBar = this.getTabBar && this.getTabBar();
-    if (tabBar) tabBar.setData({ selected: 1 });
+    if (tabBar) tabBar.setData({ selected: 1, hidden: false });
   },
 
   _refreshData() {
@@ -192,5 +192,19 @@ Page({
   onExceptionPrimary() {
     this.setData({ showException: false });
     wx.switchTab({ url: '/pages/index/index' });
+  },
+
+  onShareAppMessage() {
+    return {
+      title: '我的猫咪图鉴｜猫咪咔咔',
+      path: '/pages/collection/collection?from=share',
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: '我的猫咪图鉴｜收集城市里的每一只猫',
+      query: 'from=timeline',
+    };
   },
 });

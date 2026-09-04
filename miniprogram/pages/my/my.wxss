@@ -27,6 +27,334 @@ page {
   box-sizing: border-box;
 }
 
+/* 未登录态：按 city-cat-archive-v6 的 ACCESS / AUTH 页面排版。 */
+.my-login-scroll {
+  height: 100vh;
+}
+
+.my-login-content {
+  padding: 36rpx 36rpx 64rpx;
+  box-sizing: border-box;
+}
+
+.my-login-topline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  color: var(--muted-ink);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  letter-spacing: 2rpx;
+  line-height: 1.2;
+}
+
+.my-login-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 36rpx;
+  padding-bottom: 28rpx;
+  border-bottom: 2rpx solid var(--line);
+}
+
+.my-login-full-logo {
+  display: block;
+  flex: 1;
+  width: 436rpx;
+  height: 136rpx;
+  min-width: 0;
+}
+
+.my-login-badge {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 116rpx;
+  min-height: 74rpx;
+  padding: 10rpx 8rpx;
+  border: 2rpx solid var(--line);
+  color: var(--stamp);
+  background: var(--paper);
+  box-sizing: border-box;
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  letter-spacing: 1rpx;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.my-login-divider {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 28rpx;
+  color: var(--muted-ink);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  letter-spacing: 1rpx;
+  line-height: 1.2;
+}
+
+.my-login-divider-line {
+  flex: 1;
+  height: 2rpx;
+  background: var(--line);
+}
+
+.my-login-kicker {
+  display: block;
+  margin-top: 36rpx;
+  color: var(--stamp);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 16rpx;
+  font-weight: 700;
+  letter-spacing: 3rpx;
+  line-height: 1.2;
+}
+
+.my-login-title {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14rpx;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 48rpx;
+  font-weight: 700;
+  letter-spacing: -2rpx;
+  line-height: 1.13;
+}
+
+.my-login-title-em {
+  color: var(--stamp);
+}
+
+.my-login-lead {
+  display: block;
+  max-width: 540rpx;
+  margin-top: 16rpx;
+  color: var(--muted-ink);
+  font-size: 20rpx;
+  line-height: 1.55;
+}
+
+.my-login-access-card {
+  width: 100%;
+  margin-top: 32rpx;
+  padding: 20rpx 22rpx;
+  border: 2rpx solid var(--line);
+  background: rgba(255, 253, 248, 0.78);
+  box-sizing: border-box;
+}
+
+.my-login-card-head {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx solid var(--line);
+}
+
+.my-login-card-head text:first-child {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.my-login-card-head text:last-child {
+  flex-shrink: 0;
+  color: var(--stamp);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  letter-spacing: 1rpx;
+  line-height: 1.2;
+}
+
+.my-login-access-list {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4rpx;
+}
+
+.my-login-access-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  min-width: 0;
+  padding: 14rpx 0;
+}
+
+.my-login-access-row + .my-login-access-row {
+  border-top: 2rpx dashed var(--line);
+}
+
+.my-login-access-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 50rpx;
+  height: 50rpx;
+  background: var(--blush, #efd2d1);
+}
+
+.my-login-access-icon image {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.my-login-access-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.my-login-access-title {
+  display: block;
+  color: var(--ink);
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.my-login-access-subtitle {
+  display: block;
+  margin-top: 4rpx;
+  color: var(--muted-ink);
+  font-size: 16rpx;
+  line-height: 1.4;
+}
+
+.my-login-access-status {
+  flex-shrink: 0;
+  color: var(--muted-ink);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  line-height: 1.2;
+}
+
+.my-login-scope-note {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 16rpx;
+  padding: 16rpx 18rpx;
+  border-left: 4rpx solid var(--coral);
+  background: rgba(239, 210, 209, 0.28);
+  box-sizing: border-box;
+}
+
+.my-login-scope-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 50rpx;
+  height: 50rpx;
+  background: var(--blush, #efd2d1);
+}
+
+.my-login-scope-icon image {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.my-login-scope-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.my-login-scope-title {
+  display: block;
+  color: var(--ink);
+  font-size: 18rpx;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.my-login-scope-subtitle {
+  display: block;
+  margin-top: 4rpx;
+  color: var(--muted-ink);
+  font-size: 16rpx;
+  line-height: 1.4;
+}
+
+.my-login-scope-status {
+  flex-shrink: 0;
+  color: var(--stamp);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  line-height: 1.2;
+}
+
+.my-login-primary {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 98rpx;
+  margin-top: 28rpx;
+  border-radius: 20rpx;
+  background: var(--stamp);
+  box-shadow: 0 12rpx 0 rgba(155, 68, 42, 0.16);
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.my-login-primary image {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 12rpx;
+}
+
+.my-login-primary-busy {
+  opacity: 0.64;
+}
+
+.my-login-skip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48rpx;
+  padding-top: 12rpx;
+  color: var(--muted-ink);
+  font-size: 20rpx;
+  line-height: 1.2;
+}
+
+.my-login-legal {
+  margin: 18rpx 8rpx 0;
+  color: var(--muted-ink);
+  font-size: 16rpx;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.my-login-legal-link {
+  color: var(--stamp);
+  text-decoration: underline;
+}
+
 .my-page-header {
   display: flex;
   flex-direction: row;
@@ -78,15 +406,6 @@ page {
   font-size: 13rpx;
   letter-spacing: 3rpx;
   line-height: 1;
-}
-
-.my-level {
-  padding: 10rpx 14rpx;
-  border: 2rpx solid var(--line);
-  color: var(--stamp);
-  background: var(--paper);
-  font-size: 17rpx;
-  letter-spacing: 1rpx;
 }
 
 .my-page-kicker {
@@ -315,6 +634,152 @@ page {
   text-align: center;
 }
 
+.sync-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14rpx;
+  margin: 28rpx 0 36rpx;
+  padding: 18rpx;
+  border: 2rpx solid var(--line);
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.sync-card:active {
+  opacity: 0.78;
+  transform: translateY(2rpx);
+}
+
+.sync-card-busy {
+  opacity: 0.7;
+}
+
+.sync-card-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  background: #efd2d1;
+}
+
+.sync-card-icon image {
+  width: 34rpx;
+  height: 34rpx;
+}
+
+.sync-card-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sync-card-kicker {
+  color: var(--stamp);
+  font-size: 15rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+  line-height: 1.1;
+}
+
+.sync-card-title {
+  margin-top: 6rpx;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-card-subtitle {
+  margin-top: 5rpx;
+  overflow: hidden;
+  color: var(--muted-ink);
+  font-size: 17rpx;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-card-action {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  color: var(--stamp);
+  font-size: 16rpx;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sync-card-arrow {
+  margin-top: 3rpx;
+  font-size: 25rpx;
+  line-height: 1;
+}
+
+.ai-source-note {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 28rpx;
+  padding: 18rpx;
+  border: 2rpx solid var(--line);
+  background: rgba(241, 207, 132, 0.18);
+  box-sizing: border-box;
+}
+
+.ai-source-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  background: rgba(201, 154, 73, 0.35);
+}
+
+.ai-source-icon image {
+  width: 34rpx;
+  height: 34rpx;
+}
+
+.ai-source-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ai-source-title {
+  color: var(--ink);
+  font-size: 21rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ai-source-subtitle {
+  margin-top: 6rpx;
+  color: var(--muted-ink);
+  font-size: 17rpx;
+  line-height: 1.35;
+}
+
+.ai-source-label {
+  flex-shrink: 0;
+  color: var(--stamp);
+  font-size: 15rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  text-align: right;
+}
+
 .section-head {
   display: flex;
   flex-direction: row;
@@ -440,17 +905,62 @@ page {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  padding: 22rpx 20rpx;
+  gap: 14rpx;
+  padding: 18rpx 20rpx;
   border: 2rpx solid var(--line);
   color: var(--ink);
   background: var(--paper);
+  box-sizing: border-box;
+}
+
+.setting-row-link:active {
+  opacity: 0.72;
+  transform: translateY(2rpx);
+}
+
+.setting-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  background: var(--blush, #efd2d1);
+}
+
+.setting-icon image {
+  width: 34rpx;
+  height: 34rpx;
+}
+
+.setting-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.setting-title {
+  color: var(--ink);
   font-size: 21rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.setting-subtitle {
+  margin-top: 6rpx;
+  overflow: hidden;
+  color: var(--muted-ink);
+  font-size: 17rpx;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .setting-arrow {
+  flex-shrink: 0;
   color: var(--muted-ink);
-  font-size: 31rpx;
+  font-size: 34rpx;
   line-height: 1;
 }
 

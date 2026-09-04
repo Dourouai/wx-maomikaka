@@ -5,6 +5,7 @@ const storage = require('../../utils/storage');
 const contentSafety = require('../../utils/contentSafety');
 const catTransform = require('../../utils/catTransform');
 const catScoring = require('../../utils/catScoring');
+const userData = require('../../utils/userData');
 const deviceLayout = require('../../utils/deviceLayout');
 
 Page({
@@ -66,6 +67,16 @@ Page({
 
   onLoad(options) {
     this._syncDeviceLayout();
+    // 仅用于开发验收：预览异常结果页时不调用模型、不扣罐罐、不写入记录。
+    if (String(options && (options.preview || options.state) || '').toLowerCase() === 'error') {
+      this._openErrorPage({
+        title: '这次没拍清楚',
+        titleEm: '猫猫',
+        message: '猫猫没有完整进入画面',
+        messageDetail: '换个角度，再试一次吧。',
+      });
+      return;
+    }
     const photo = options.photo ? decodeURIComponent(options.photo) : '';
     this.setData({ photo, originalPhoto: photo });
     this._processPhoto(photo);
@@ -232,6 +243,13 @@ Page({
         recordId: saved.recordId,
         capturedAtText: this._formatDate(Date.now()),
       });
+
+      // 已绑定用户的拍摄记录后台同步；未绑定时只保存在本机，等待用户在“我的”里确认导入。
+      if (userData.isUserBound()) {
+        userData.syncLocalData({ source: 'capture' }).catch(error => {
+          console.warn('[Reveal] 已绑定记录后台同步失败，保留本地待同步状态:', error);
+        });
+      }
     } catch (err) {
       console.error('[Reveal] 抠图或保存失败:', err);
       this._cleanupRejectedProcessing(sourceFileID, transformState);

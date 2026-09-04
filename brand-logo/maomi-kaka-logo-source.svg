@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">猫咪咔咔图形标记</title>
+  <desc id="desc">一只抱着相机的胖猫，使用橙色、奶油色和深咖色三色。</desc>
+  <g stroke="#342923" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path fill="#e97850" d="M245 199c31-39 65-25 56 10-5 20-21 38-45 46-13 4-27-2-34-13z"/>
+    <path fill="#e97850" d="M78 111 63 39l68 41c18-7 40-7 58 0l68-41-15 72c20 20 29 49 26 88-4 55-39 86-108 86S56 254 52 199c-3-39 6-68 26-88Z"/>
+    <path fill="#f8f0e6" d="m77 61 48 29-28 9zM243 61l-48 29 28 9z"/>
+    <ellipse fill="#f8f0e6" cx="160" cy="224" rx="64" ry="57"/>
+    <path fill="#f8f0e6" d="M116 148c0-18 18-30 44-30s44 12 44 30c0 19-18 31-44 31s-44-12-44-31Z"/>
+    <circle fill="#342923" cx="124" cy="136" r="11" stroke="none"/>
+    <circle fill="#342923" cx="196" cy="136" r="11" stroke="none"/>
+    <path fill="#342923" d="m160 145 9 6-9 9-9-9z" stroke="none"/>
+    <path fill="none" d="M160 160v7m0 0c-10 13-24 13-33 3m33-3c10 13 24 13 33 3"/>
+    <path fill="none" d="M111 156 75 148m36 19-38 2m165-13 36-8m-36 19 38 2" stroke-width="4"/>
+    <path fill="#e97850" d="M91 177c-14 2-22 18-18 35 4 16 18 25 35 20 11-3 18-12 16-22-2-15-16-36-33-33Zm138 0c14 2 22 18 18 35-4 16-18 25-35 20-11-3-18-12-16-22 2-15 16-36 33-33Z"/>
+    <rect fill="#e97850" x="92" y="165" width="136" height="76" rx="14"/>
+    <rect fill="#f8f0e6" x="103" y="158" width="114" height="25" rx="7"/>
+    <rect fill="#342923" x="119" y="153" width="27" height="12" rx="4"/>
+    <rect fill="#342923" x="187" y="170" width="20" height="13" rx="3"/>
+    <circle fill="#f8f0e6" cx="160" cy="204" r="28"/>
+    <circle fill="#342923" cx="160" cy="204" r="19"/>
+    <path fill="#f8f0e6" d="M105 226c-9-9-25-7-31 3-7 11 0 26 14 30 12 4 25-3 28-14 3-8-3-15-11-19Zm110 0c9-9 25-7 31 3 7 11 0 26-14 30-12 4-25-3-28-14-3-8 3-15 11-19Z"/>
+    <path fill="none" d="M122 244c-3 20-6 31-19 40m95-40c3 20 6 31 19 40"/>
+  </g>
+</svg>

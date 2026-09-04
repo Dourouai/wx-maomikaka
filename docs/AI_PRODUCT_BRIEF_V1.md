@@ -257,21 +257,25 @@ stableTraits
 capturePose
 eyeContact
 sceneRelation
-featureVersion
+glmCatFeatureProfile
+glmFeatureVectorVersion
+glmFeatureVectorDimension
 ```
 
 ### 3. 同一只猫的判断
 
-首版可以把以下信息作为“可能同一只猫”的判断依据：
+当前 MVP 只把以下信息作为“可能同一只猫”的候选信号，不直接宣称唯一识别，也不自动合并档案：
 
 - 花纹和毛色组合；
 - 脸部记号；
 - 耳朵和尾巴特征；
 - 体态和体型；
-- 视觉特征向量相似度；
+- GLM 固定特征槽位编码出的临时向量相似度；
 - 历史拍摄地点和时间，仅作为辅助，不作为唯一依据。
 
-建议阈值仅作为原型参数：
+当前临时向量版本为 `glm-cat-vector.v0.1`，固定 83 维，仅在特征质量合格时生成。真正的视觉 embedding / re-identification 模型接入后，才进入候选检索、阈值校准和用户确认流程。
+
+以下阈值仅作为未来真实 embedding 接入后的原型参数：
 
 | 相似度 | 处理方式 |
 | ---: | --- |

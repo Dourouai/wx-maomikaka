@@ -3,16 +3,7 @@
   <scroll-view class="collection-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="collection-content" style="padding-top: {{pageHeaderTop}}px;">
       <view class="album-page-header" style="padding-right: {{headerRightInset}}px;">
-        <view class="album-brand-mark">
-          <view class="album-brand-symbol">
-            <image src="/assets/tab-album.svg" mode="aspectFit" />
-          </view>
-          <view class="album-brand-copy">
-            <text class="album-brand-name">猫咪咔咔</text>
-            <text class="album-brand-sub">CITY CAT ARCHIVE</text>
-          </view>
-        </view>
-        <text class="album-level">{{unlockedCount}} ENTRIES</text>
+        <image class="album-full-logo" src="/assets/maomi-kaka-logo.svg" mode="aspectFit" />
       </view>
 
       <text class="album-page-kicker">ARCHIVE INDEX · LIVING INDEX</text>

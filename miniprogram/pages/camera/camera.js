@@ -5,6 +5,7 @@ Page({
   data: {
     isTakingPhoto: false,
     cameraError: false,
+    showExitPrompt: false,
     cameraIssueKind: 'permission',
     cameraIssueEyebrow: '相机权限',
     cameraIssueTitle: '需要使用相机',
@@ -19,8 +20,15 @@ Page({
     safeBottom: 34,
   },
 
-  onLoad() {
+  onLoad(options) {
     this._syncDeviceLayout();
+
+    // 仅用于设计验收：直接打开 camera?preview=exit 可查看退出状态提示，
+    // 不触发拍照、消耗罐罐或写入任何记录。
+    const previewState = String((options && (options.preview || options.state)) || '').toLowerCase();
+    if (previewState === 'exit') {
+      this.setData({ showExitPrompt: true });
+    }
   },
 
   onResize() {
@@ -98,6 +106,9 @@ Page({
   onCameraError(event) {
     console.error('[Camera] 相机不可用:', event && event.detail);
 
+    // 设计预览或用户已经结束拍摄时，不要再被 camera 的异步错误覆盖退出状态提示。
+    if (this.data.showExitPrompt) return;
+
     const detail = event && event.detail;
     const detailText = typeof detail === 'string' ? detail : JSON.stringify(detail || '');
     if (/api scope is not declared|privacy agreement|errno.?112/i.test(detailText)) {
@@ -151,10 +162,15 @@ Page({
 
   // 返回上一页
   goBack() {
-    wx.navigateBack({
-      delta: 1,
-      fail: () => wx.switchTab({ url: '/pages/index/index' }),
-    });
+    if (this.data.showExitPrompt) return;
+    this.setData({ showExitPrompt: true });
+  },
+
+  stopExitPromptPropagation() {},
+
+  returnHome() {
+    this.setData({ showExitPrompt: false });
+    wx.switchTab({ url: '/pages/index/index' });
   },
 
   goCollection() {

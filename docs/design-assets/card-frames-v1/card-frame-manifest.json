@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "canvas": { "width": 1060, "height": 1484 },
+  "photoWindow": { "x": 82, "y": 78, "width": 897, "height": 941, "radius": 56 },
+  "layers": [
+    { "id": "frame", "dynamic": false, "file": "card-frame-{level}.png" },
+    { "id": "photo", "dynamic": true, "type": "background-and-cat" },
+    { "id": "fixedElements", "dynamic": false, "file": "fixed-elements-v1/fixed-elements-{level}.png" },
+    { "id": "text", "dynamic": true, "type": "canvas-text" }
+  ],
+  "levels": {
+    "C": { "frame": "card-frame-c.png", "fixedElements": "fixed-elements-v1/fixed-elements-c.png" },
+    "U": { "frame": "card-frame-u.png", "fixedElements": "fixed-elements-v1/fixed-elements-u.png" },
+    "R": { "frame": "card-frame-r.png", "fixedElements": "fixed-elements-v1/fixed-elements-r.png" },
+    "SR": { "frame": "card-frame-sr.png", "fixedElements": "fixed-elements-v1/fixed-elements-sr.png" },
+    "UR": { "frame": "card-frame-ur.png", "fixedElements": "fixed-elements-v1/fixed-elements-ur.png" }
+  },
+  "textSlots": {
+    "cardNo": { "x": 630, "y": 147, "width": 315, "height": 30, "align": "right" },
+    "name": { "x": 165, "y": 1028, "width": 583, "height": 102, "align": "center", "maxChars": 5 },
+    "copy": { "x": 165, "y": 1152, "width": 583, "height": 116, "align": "center", "maxChars": 50 },
+    "mika": { "x": 798, "y": 1100, "width": 104, "height": 72, "align": "center" },
+    "stats": { "x": 94, "y": 1285, "width": 878, "height": 149, "align": "center", "placeholder": 100 }
+  }
+}

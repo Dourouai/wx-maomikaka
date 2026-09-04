@@ -1,0 +1,179 @@
+<!-- 隐私条款：按 city-cat-archive-v5 信息页设计落地。 -->
+<view class="info-page privacy-page">
+  <scroll-view class="info-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="info-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="info-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="info-back" bindtap="goBack" aria-role="button" aria-label="返回我的">
+          <image class="info-back-icon" src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="info-heading">
+          <text class="info-kicker">PRIVACY NOTE · 01</text>
+          <text class="info-title">隐私条款</text>
+        </view>
+      </view>
+
+      <view class="info-intro">
+        <view class="info-icon">
+          <image src="/assets/paw.svg" mode="aspectFit" />
+        </view>
+        <view class="info-intro-copy">
+          <text class="info-intro-title">猫咪咔咔小程序隐私指引</text>
+          <text>开发者仅处理实现小程序功能所必要的信息，并在需要时先征得你的明示同意。</text>
+        </view>
+      </view>
+
+      <view class="privacy-section privacy-section-first">
+        <view class="info-section-head">
+          <text class="info-section-head-title">开发者处理的信息</text>
+          <text class="info-section-head-code">WHAT WE COLLECT</text>
+        </view>
+        <text class="privacy-body">本版本会在你主动拍摄或选择照片后处理照片，用于内容安全检查、猫咪识别、主体图处理和生成相遇档案。开发者只处理实现这些功能所必要的信息。</text>
+
+        <view class="privacy-permissions">
+          <view class="privacy-permission">
+            <view class="privacy-permission-icon">
+              <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+            </view>
+            <view class="privacy-permission-copy">
+              <text class="privacy-permission-title">摄像头</text>
+              <text>仅在你进入拍摄并实际使用相机时由微信申请，用于拍摄猫咪；不在后台持续访问。</text>
+            </view>
+          </view>
+          <view class="privacy-permission">
+            <view class="privacy-permission-icon">
+              <image src="/assets/tab-album.svg" mode="aspectFit" />
+            </view>
+            <view class="privacy-permission-copy">
+              <text class="privacy-permission-title">你选中的照片</text>
+              <text>仅处理你主动拍摄或选择的照片，用于安全检测、识别猫咪和制作相遇档案。</text>
+            </view>
+          </view>
+          <view class="privacy-permission">
+            <view class="privacy-permission-icon">
+              <image src="/assets/paw.svg" mode="aspectFit" />
+            </view>
+            <view class="privacy-permission-copy">
+              <text class="privacy-permission-title">相遇档案与统计</text>
+              <text>未绑定账号时，猫咪档案、相遇记录和成长统计主要保存在当前设备；绑定当前微信账号并确认同步后，相关档案和记录会保存到云端，供你在其他设备继续查看。</text>
+            </view>
+          </view>
+          <view class="privacy-permission">
+            <view class="privacy-permission-icon">
+              <image src="/assets/icon-close.svg" mode="aspectFit" />
+            </view>
+            <view class="privacy-permission-copy">
+              <text class="privacy-permission-title">当前不主动收集</text>
+              <text>当前版本不主动读取位置信息、微信昵称或头像，不基于这些信息建立用户画像。</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view class="privacy-section">
+        <view class="info-section-head">
+          <text class="info-section-head-title">第三方 AI 服务</text>
+          <text class="info-section-head-code">AI PROCESSING</text>
+        </view>
+        <text class="privacy-body">为完成猫咪图片识别、结果生成与主体图处理，在你主动发起识别后，提交的照片以及完成识别所必需的文本和参数，可能通过 API 传输至下列服务进行处理。</text>
+        <view class="privacy-provider-list">
+          <view class="privacy-provider">
+            <view class="privacy-provider-mark">
+              <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+            </view>
+            <view class="privacy-provider-copy">
+              <text class="privacy-provider-title">混元图像服务 · CloudBase</text>
+              <text>用途：猫咪主体图处理及开发测试页的图像生成；处理数据：本次提交的照片和必要参数。</text>
+            </view>
+          </view>
+          <view class="privacy-provider">
+            <view class="privacy-provider-mark">
+              <image src="/assets/doodle-spark.svg" mode="aspectFit" />
+            </view>
+            <view class="privacy-provider-copy">
+              <text class="privacy-provider-title">GLM-5.3 · TokenHub</text>
+              <text>用途：猫咪识别、评分和档案文案整理；处理数据：本次提交的照片和必要参数。</text>
+            </view>
+          </view>
+        </view>
+        <view class="privacy-sdk">
+          <text class="privacy-sdk-label">处理边界：</text>
+          <text>相关数据可能由上述服务商处理，但不等同于向第三方公开发布。是否用于模型训练、保存多久、删除方式及是否发生跨境传输，须以实际服务协议、控制台配置和服务商官方规则核验为准。</text>
+        </view>
+      </view>
+
+      <view class="privacy-section">
+        <view class="info-section-head">
+          <text class="info-section-head-title">未成年人保护</text>
+          <text class="info-section-head-code">MINORS</text>
+        </view>
+        <text class="privacy-body">若你是 14 周岁以下的未成年人，请和你的监护人共同仔细阅读本指引，并在征得监护人明示同意后继续使用小程序服务。</text>
+      </view>
+
+      <view class="privacy-section">
+        <view class="info-section-head">
+          <text class="info-section-head-title">你的权益</text>
+          <text class="info-section-head-code">YOUR RIGHTS</text>
+        </view>
+        <view class="privacy-points">
+          <view class="privacy-point">
+            <text class="privacy-bullet">•</text>
+            <text class="privacy-point-copy">相机或照片权限：可通过小程序右上角“…”—“设置”撤回相应授权。</text>
+          </view>
+          <view class="privacy-point">
+            <text class="privacy-bullet">•</text>
+            <text class="privacy-point-copy">相遇档案：可在猫档案页点击“放归”，移除当前设备中的档案；已绑定账号的云端档案会同步软删除。</text>
+          </view>
+          <view class="privacy-point">
+            <text class="privacy-bullet">•</text>
+            <text class="privacy-point-copy">如需查阅、更正或删除与功能相关的信息，可通过下方联系方式提交申请。</text>
+          </view>
+        </view>
+        <view class="privacy-contact">
+          <text class="privacy-contact-label">个人信息与账号申请</text>
+          <text class="privacy-contact-value">huters@qq.com</text>
+        </view>
+      </view>
+
+      <view class="privacy-section">
+        <view class="info-section-head">
+          <text class="info-section-head-title">信息的存储</text>
+          <text class="info-section-head-code">STORAGE</text>
+        </view>
+        <text class="privacy-body">未绑定账号时，档案和统计主要保存在当前设备；绑定并确认同步后，档案、相遇记录和必要的图片文件关联会保存到云端。原始照片和主体图保存在云存储，数据库只保存文件编号和处理结果元数据。除法律法规另有规定外，开发者不设置超出处理目的所必要的固定保存期限。</text>
+      </view>
+
+      <view class="privacy-section">
+        <view class="info-section-head">
+          <text class="info-section-head-title">信息的使用规则</text>
+          <text class="info-section-head-code">USE</text>
+        </view>
+        <text class="privacy-body">开发者将在本指引明示的用途内使用收集的信息。如使用目的或范围发生实质变化，将在变更前通过页面提示再次告知，并在需要时征得你的明示同意。</text>
+      </view>
+
+      <view class="privacy-section">
+        <view class="info-section-head">
+          <text class="info-section-head-title">信息对外提供</text>
+          <text class="info-section-head-code">DISCLOSURE</text>
+        </view>
+        <text class="privacy-body">开发者不会主动公开发布你的照片或档案。为完成已经说明的识别和生成能力，必要数据可能交由本页面列明的服务商处理；如需超出本指引范围共享或转让，将依法另行告知并征得同意。</text>
+      </view>
+
+      <view class="privacy-section privacy-section-last">
+        <view class="info-section-head">
+          <text class="info-section-head-title">联系我们</text>
+          <text class="info-section-head-code">CONTACT</text>
+        </view>
+        <text class="privacy-body">如果你认为开发者未遵守上述约定，或有投诉建议、未成年人个人信息保护相关问题，可通过以下方式联系开发者，也可以向微信进行投诉。</text>
+        <view class="privacy-contact">
+          <text class="privacy-contact-label">邮箱</text>
+          <text class="privacy-contact-value">huters@qq.com</text>
+        </view>
+      </view>
+
+      <view class="info-footnote">
+        <text>版本：V0.1 · 更新日期：2026.09.04；本页面为产品原型文案，正式上线前将完成主体信息、SDK 清单、实际数据流和法务审核的补充。</text>
+      </view>
+      <view class="info-bottom-safe"></view>
+    </view>
+  </scroll-view>
+</view>

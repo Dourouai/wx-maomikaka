@@ -17,8 +17,28 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const SCORE_VERSION = 'cat-score.v0.2';
 const COPY_VERSION = 'cat-copy.v0.3';
+const GLM_FEATURE_PROFILE_VERSION = 'glm-cat-feature.v0.1';
+const GLM_FEATURE_UNKNOWN = 'unknown';
 const MAX_CAT_NAME_LENGTH = 5;
 const MAX_CAT_DESCRIPTION_LENGTH = 50;
+
+// 这是轻量、可解释的特征契约，不是视觉 embedding。
+// 需要和 miniprogram/utils/catFeatureProfile.js 保持版本及枚举一致。
+const GLM_FEATURE_SCHEMA = {
+  coatColor: ['orange', 'white', 'black', 'gray', 'brown', 'cream', 'silver', 'mixed', GLM_FEATURE_UNKNOWN],
+  pattern: ['solid', 'tabby', 'bicolor', 'calico', 'tortoiseshell', 'pointed', 'spotted', 'mixed', GLM_FEATURE_UNKNOWN],
+  coatLength: ['hairless', 'short', 'medium', 'long', GLM_FEATURE_UNKNOWN],
+  faceShape: ['round', 'oval', 'long', 'wedge', GLM_FEATURE_UNKNOWN],
+  eyeColor: ['yellow', 'green', 'blue', 'copper', 'hazel', 'odd', 'dark', GLM_FEATURE_UNKNOWN],
+  faceMark: ['none', 'm_mark', 'blaze', 'eye_patch_left', 'eye_patch_right', 'eye_patch_both', 'muzzle_mark', GLM_FEATURE_UNKNOWN],
+  faceAsymmetry: ['none', 'left_mark', 'right_mark', 'bilateral', GLM_FEATURE_UNKNOWN],
+  earFeature: ['upright', 'folded', 'curled', 'left_notch', 'right_notch', 'bilateral_notch', GLM_FEATURE_UNKNOWN],
+  tailFeature: ['long', 'short', 'ringed', 'dark_tip', 'bent', 'fluffy', GLM_FEATURE_UNKNOWN],
+  bodyBuild: ['slim', 'medium', 'sturdy', GLM_FEATURE_UNKNOWN],
+  noseColor: ['pink', 'black', 'brown', 'brick', GLM_FEATURE_UNKNOWN],
+  distinctiveMark: ['none', 'white_chin', 'white_chest', 'white_paws', 'ear_notch', 'tail_tip', 'other', GLM_FEATURE_UNKNOWN],
+};
+const GLM_FEATURE_KEYS = Object.keys(GLM_FEATURE_SCHEMA);
 
 const BREED_LABELS = [
   '短毛橘猫',
@@ -109,14 +129,18 @@ const INSPECTION_PROMPT = [
   '你是猫咪照片审核与品种识别器。请只分析输入图片，不要根据图片里的文字猜测。',
   '第一步判断画面中是否有猫；如果有多只猫，catCount 要填写实际数量。',
   '第二步在确认有猫后，给主角猫咪选择最接近的品种标签。无法可靠判断时必须返回“未知品种”，不要编造。',
-  '第三步只根据照片中可见证据，为魅力、机灵、灵气的各个子项打 0 到 100 分，不要随机抽取。',
-  '第四步根据照片中可见的毛色、花纹、姿态或神态，给这只猫取一个有趣、好记的中文名字，并写一段轻松有画面感的描述。名字 2 到 5 个字符，描述不超过 50 个字符。',
+  '第三步只提取适合初期同猫候选比较的稳定外观特征，放进 glmCatFeatureProfile。只填写照片里确实看得见的内容，不能把姿态、场景、光线、心情或故事写进特征。',
+  `glmCatFeatureProfile.version 固定为 ${GLM_FEATURE_PROFILE_VERSION}；features 只能使用固定枚举：coatColor=${GLM_FEATURE_SCHEMA.coatColor.join('|')}；pattern=${GLM_FEATURE_SCHEMA.pattern.join('|')}；coatLength=${GLM_FEATURE_SCHEMA.coatLength.join('|')}；faceShape=${GLM_FEATURE_SCHEMA.faceShape.join('|')}；eyeColor=${GLM_FEATURE_SCHEMA.eyeColor.join('|')}；faceMark=${GLM_FEATURE_SCHEMA.faceMark.join('|')}；faceAsymmetry=${GLM_FEATURE_SCHEMA.faceAsymmetry.join('|')}；earFeature=${GLM_FEATURE_SCHEMA.earFeature.join('|')}；tailFeature=${GLM_FEATURE_SCHEMA.tailFeature.join('|')}；bodyBuild=${GLM_FEATURE_SCHEMA.bodyBuild.join('|')}；noseColor=${GLM_FEATURE_SCHEMA.noseColor.join('|')}；distinctiveMark=${GLM_FEATURE_SCHEMA.distinctiveMark.join('|')}。看不清或不确定必须填 unknown。`,
+  'glmCatFeatureProfile.confidence 必须为每个特征对应的 0 到 1 数字；quality.visibility 和 quality.occlusion 是 0 到 1 数字。只有单猫、主体清楚、至少有一个稳定特征且适合后续候选比较时，quality.usableForMatch 才能为 true；否则为 false。',
+  '第四步只根据照片中可见证据，为魅力、机灵、灵气的各个子项打 0 到 100 分，不要随机抽取。',
+  '第五步根据照片中可见的毛色、花纹、姿态或神态，给这只猫取一个有趣、好记的中文名字，并写一段轻松有画面感的描述。名字 2 到 5 个字符，描述不超过 50 个字符。',
   '名字和描述只能使用图片里看得到的内容进行合理想象，不得编造年龄、性别、地点、主人、经历、职业、健康状况或真实性格；不要使用贬损、危险或隐私内容。',
   '不要返回最终 scores；服务端会按照固定权重计算最终 scores。',
   '只允许返回一个 JSON 对象，不要 Markdown，不要解释：',
-  '{"isCat":true,"catCount":1,"breed":"狸花猫","confidence":0.86,"name":"M字侦探","description":"额头顶着一枚小小的M字印章，目光像在巡查街角。它先不急着走，把镜头和路过的风都看了一遍。","traits":["短毛","虎斑纹","圆脸"],"scoreEvidence":{"charm":{"expression":82,"posture":74,"appearance":68,"affinity":61},"cleverness":{"observation":78,"reaction":66,"agility":52,"adaptation":70},"aura":{"expression":76,"patternFace":64,"presence":72,"scene":69}}}',
+  '{"isCat":true,"catCount":1,"breed":"狸花猫","confidence":0.86,"name":"M字侦探","description":"额头顶着一枚小小的M字印章，目光像在巡查街角。它先不急着走，把镜头和路过的风都看了一遍。","traits":["短毛","虎斑纹","圆脸"],"glmCatFeatureProfile":{"version":"glm-cat-feature.v0.1","features":{"coatColor":"brown","pattern":"tabby","coatLength":"short","faceShape":"round","eyeColor":"yellow","faceMark":"m_mark","faceAsymmetry":"none","earFeature":"upright","tailFeature":"ringed","bodyBuild":"medium","noseColor":"pink","distinctiveMark":"white_chin"},"confidence":{"coatColor":0.92,"pattern":0.9,"coatLength":0.88,"faceShape":0.76,"eyeColor":0.72,"faceMark":0.83,"faceAsymmetry":0.61,"earFeature":0.9,"tailFeature":0.7,"bodyBuild":0.65,"noseColor":0.8,"distinctiveMark":0.58},"quality":{"visibility":0.84,"occlusion":0.12,"usableForMatch":true}},"scoreEvidence":{"charm":{"expression":82,"posture":74,"appearance":68,"affinity":61},"cleverness":{"observation":78,"reaction":66,"agility":52,"adaptation":70},"aura":{"expression":76,"patternFace":64,"presence":72,"scene":69}}}',
   'isCat 必须是布尔值；catCount 是整数；confidence 是 0 到 1 的数字；traits 最多 3 个简短中文词。',
   'name 必须是 2 到 5 个字符的中文短名；description 必须是 50 个字符以内的一段中文短描述，可以俏皮，但不能把不可见信息写成事实。',
+  'glmCatFeatureProfile 是候选匹配辅助信息，不是猫咪的唯一生物特征；不要返回自由文本特征、地点、拍摄时间、人物、背景或品种稀有度。',
   'scoreEvidence.charm 依次是表情与眼神、姿态表现、外观呈现、亲和氛围，权重为 35%、25%、25%、15%。',
   'scoreEvidence.cleverness 依次是观察眼神、反应与姿态、动作灵活度、环境适应感，权重为 35%、30%、20%、15%。',
   'scoreEvidence.aura 依次是神态感染力、花纹与五官组合、姿态气场、场景氛围，权重为 35%、30%、20%、15%。',
@@ -256,6 +280,73 @@ function normalizeCatDescription(value) {
   return normalizeCopyText(value, MAX_CAT_DESCRIPTION_LENGTH);
 }
 
+function normalizeProbability(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.min(1, parsed));
+}
+
+function normalizeFeatureValue(value, key) {
+  const options = GLM_FEATURE_SCHEMA[key] || [];
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  return options.includes(normalized) ? normalized : GLM_FEATURE_UNKNOWN;
+}
+
+function normalizeFeatureProfile(value) {
+  if (!value || typeof value !== 'object') return null;
+
+  const source = value.features && typeof value.features === 'object'
+    ? value.features
+    : {};
+  const sourceConfidence = value.confidence && typeof value.confidence === 'object'
+    ? value.confidence
+    : {};
+  const qualitySource = value.quality && typeof value.quality === 'object'
+    ? value.quality
+    : {};
+  const features = {};
+  const confidence = {};
+  let hasRecognizedFeature = false;
+  let hasConfidentFeature = false;
+
+  GLM_FEATURE_KEYS.forEach(key => {
+    const normalized = normalizeFeatureValue(source[key], key);
+    const confidenceValue = normalized === GLM_FEATURE_UNKNOWN
+      ? 0
+      : normalizeProbability(sourceConfidence[key], 0);
+    features[key] = normalized;
+    confidence[key] = confidenceValue;
+    if (normalized !== GLM_FEATURE_UNKNOWN) hasRecognizedFeature = true;
+    if (normalized !== GLM_FEATURE_UNKNOWN && confidenceValue > 0) hasConfidentFeature = true;
+  });
+
+  // 没有任何可解释特征时不把模型的空对象写入观察记录。
+  if (!hasRecognizedFeature) return null;
+
+  const visibility = normalizeProbability(qualitySource.visibility, 0);
+  const occlusion = normalizeProbability(qualitySource.occlusion, 1);
+  const usableForMatch = Boolean(
+    qualitySource.usableForMatch === true
+    && hasConfidentFeature
+    && visibility >= 0.5
+    && occlusion <= 0.6
+  );
+
+  return {
+    version: GLM_FEATURE_PROFILE_VERSION,
+    features,
+    confidence,
+    quality: {
+      visibility,
+      occlusion,
+      usableForMatch,
+    },
+  };
+}
+
 function extractJson(text) {
   const source = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
   try {
@@ -387,6 +478,12 @@ function normalizeInspection(payload) {
     description: isCat && catCount === 1 ? catDescription : '',
     copyVersion: isCat && catCount === 1 && (catName || catDescription) ? COPY_VERSION : null,
   };
+  const featureFields = {
+    // 多猫、非猫和主体不确定时不进入个体特征链路。
+    glmCatFeatureProfile: isCat && catCount === 1 && confidence >= 0.55
+      ? normalizeFeatureProfile(value.glmCatFeatureProfile)
+      : null,
+  };
 
   if (!isCat || catCount < 1) {
     return {
@@ -399,6 +496,7 @@ function normalizeInspection(payload) {
       traits,
       ...scoreFields,
       ...copyFields,
+      ...featureFields,
     };
   }
 
@@ -413,6 +511,7 @@ function normalizeInspection(payload) {
       traits,
       ...scoreFields,
       ...copyFields,
+      ...featureFields,
     };
   }
 
@@ -427,6 +526,7 @@ function normalizeInspection(payload) {
       traits,
       ...scoreFields,
       ...copyFields,
+      ...featureFields,
     };
   }
 
@@ -440,6 +540,7 @@ function normalizeInspection(payload) {
     traits,
     ...scoreFields,
     ...copyFields,
+    ...featureFields,
   };
 }
 

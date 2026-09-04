@@ -6,7 +6,6 @@
       <text>今日剩余罐罐</text>
       <text class="camera-count-value">3 / 3</text>
     </view>
-    <text class="camera-mode">不打扰模式</text>
   </view>
 
   <view class="viewfinder-wrap">
@@ -58,6 +57,24 @@
           </cover-view>
         </cover-view>
 
+      </cover-view>
+
+      <cover-view wx:if="{{showExitPrompt}}" class="camera-exit-prompt">
+        <cover-view class="camera-exit-dim"></cover-view>
+        <cover-view class="camera-exit-sheet" catchtap="stopExitPromptPropagation">
+          <cover-view class="camera-exit-state">STATE / CAMERA EXIT</cover-view>
+          <cover-view class="camera-exit-title">已退出拍照</cover-view>
+          <cover-view class="camera-exit-message">这次没有记录，不会消耗罐罐。</cover-view>
+          <cover-view
+            class="camera-exit-action"
+            catchtap="returnHome"
+            aria-role="button"
+            aria-label="返回相遇"
+          >
+            <cover-image class="camera-exit-action-icon" src="/assets/icon-camera-white.svg" />
+          </cover-view>
+          <cover-view class="camera-exit-action-label">返回相遇</cover-view>
+        </cover-view>
       </cover-view>
 
       <cover-view wx:if="{{cameraError}}" class="camera-error-mask">

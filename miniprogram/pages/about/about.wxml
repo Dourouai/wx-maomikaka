@@ -1,0 +1,66 @@
+<!-- 关于页：按 city-cat-archive-v5 信息页设计落地。 -->
+<view class="info-page about-page">
+  <scroll-view class="info-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="info-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="info-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="info-back" bindtap="goBack" aria-role="button" aria-label="返回我的">
+          <image class="info-back-icon" src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="info-heading">
+          <text class="info-kicker">ABOUT · CITY CAT ARCHIVE</text>
+          <text class="info-title">关于猫咪咔咔</text>
+        </view>
+      </view>
+
+      <view class="about-lockup">
+        <image class="about-full-logo" src="/assets/maomi-kaka-logo.svg" mode="aspectFit" />
+        <text class="about-tagline">把街角的偶遇，收进一张小小的档案。</text>
+      </view>
+
+      <view class="info-section">
+        <view class="info-section-head">
+          <text class="info-section-head-title">我们相信</text>
+          <text class="info-section-head-code">OUR LITTLE RULES</text>
+        </view>
+        <view class="about-principles">
+          <view class="about-principle">
+            <text class="about-principle-index">01</text>
+            <text class="about-principle-title">先观察</text>
+            <text class="about-principle-subtitle">不打扰猫咪</text>
+          </view>
+          <view class="about-principle">
+            <text class="about-principle-index">02</text>
+            <text class="about-principle-title">再记录</text>
+            <text class="about-principle-subtitle">留住偶遇</text>
+          </view>
+          <view class="about-principle">
+            <text class="about-principle-index">03</text>
+            <text class="about-principle-title">再相遇</text>
+            <text class="about-principle-subtitle">回到街角</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="info-intro about-ai-note">
+        <view class="info-icon">
+          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="info-intro-copy">
+          <text class="info-intro-title">Ai创作声明</text>
+          <text>应用中所有图片与文案均有Ai参与二次创作</text>
+        </view>
+        <text class="info-ai-label">AI GENERATED</text>
+      </view>
+
+      <view class="about-meta">
+        <text>MAOMI KAKA · CITY CAT ARCHIVE</text>
+        <text class="about-meta-version">2026.09</text>
+      </view>
+
+      <view class="info-footnote">
+        <text>猫咪咔咔是一份轻轻记录城市猫咪的相遇档案：先观察，不打扰；再记录，留住偶遇；有机会，再回到街角。</text>
+      </view>
+      <view class="info-bottom-safe"></view>
+    </view>
+  </scroll-view>
+</view>

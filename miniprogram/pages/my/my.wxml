@@ -1,5 +1,6 @@
 <!-- 我的：城市猫咪观察手记 -->
 <view class="my-page">
+  <block wx:if="{{isLoggedIn}}">
   <scroll-view class="my-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="my-content" style="padding-top: {{pageHeaderTop}}px;">
       <view class="my-page-header" style="padding-right: {{headerRightInset}}px;">
@@ -12,7 +13,6 @@
             <text class="my-brand-sub">FIELD NOTES</text>
           </view>
         </view>
-        <text class="my-level">LV.{{memberLevel}}</text>
       </view>
 
       <text class="my-page-kicker">MY CAT JOURNAL</text>
@@ -73,6 +73,26 @@
         </view>
       </view>
 
+      <view
+        class="sync-card {{syncBusy ? 'sync-card-busy' : ''}}"
+        bindtap="onBindAccount"
+        aria-role="button"
+        aria-label="绑定当前微信账号并同步相遇记录"
+      >
+        <view class="sync-card-icon">
+          <image src="/assets/doodle-spark.svg" mode="aspectFit" />
+        </view>
+        <view class="sync-card-copy">
+          <text class="sync-card-kicker">{{syncKicker}}</text>
+          <text class="sync-card-title">{{syncTitle}}</text>
+          <text class="sync-card-subtitle">{{syncSubtitle}}</text>
+        </view>
+        <view class="sync-card-action">
+          <text>{{syncActionText}}</text>
+          <text class="sync-card-arrow">→</text>
+        </view>
+      </view>
+
       <view class="section-head">
         <text class="section-title">最近相遇</text>
         <view class="section-more" bindtap="goCollection" aria-role="button" aria-label="查看全部相遇">
@@ -102,13 +122,36 @@
         <text class="my-empty-sub">去拍一只猫，留下第一笔记录</text>
       </view>
 
+      <view class="ai-source-note" aria-label="Ai创作声明">
+        <view class="ai-source-icon">
+          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="ai-source-copy">
+          <text class="ai-source-title">Ai创作声明</text>
+          <text class="ai-source-subtitle">应用中所有图片与文案均有Ai参与二次创作</text>
+        </view>
+        <text class="ai-source-label">AI GENERATED</text>
+      </view>
+
       <view class="settings">
-        <view class="setting-row">
-          <text>提醒与隐私</text>
+        <view class="setting-row setting-row-link" bindtap="goPrivacy" aria-role="button" aria-label="打开隐私条款">
+          <view class="setting-icon">
+            <image src="/assets/paw.svg" mode="aspectFit" />
+          </view>
+          <view class="setting-copy">
+            <text class="setting-title">隐私条款</text>
+            <text class="setting-subtitle">了解图片、档案与权限如何处理</text>
+          </view>
           <text class="setting-arrow">›</text>
         </view>
-        <view class="setting-row">
-          <text>关于猫咪咔咔</text>
+        <view class="setting-row setting-row-link" bindtap="goAbout" aria-role="button" aria-label="打开关于猫咪咔咔">
+          <view class="setting-icon">
+            <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+          </view>
+          <view class="setting-copy">
+            <text class="setting-title">关于猫咪咔咔</text>
+            <text class="setting-subtitle">认识我们的街角猫咪档案</text>
+          </view>
           <text class="setting-arrow">›</text>
         </view>
       </view>
@@ -124,6 +167,97 @@
       <view class="my-bottom-safe"></view>
     </view>
   </scroll-view>
+  </block>
+
+  <block wx:else>
+  <scroll-view class="my-scroll my-login-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="my-login-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="my-login-topline">
+        <text>CAT ARCHIVE · ACCESS</text>
+        <text>AUTH / 01</text>
+      </view>
+
+      <view class="my-login-header">
+        <image class="my-login-full-logo" src="/assets/maomi-kaka-logo.svg" mode="aspectFit" />
+        <view class="my-login-badge">
+          <text>NEW</text>
+          <text>SPOTTER</text>
+        </view>
+      </view>
+
+      <view class="my-login-divider">
+        <text>WELCOME</text>
+        <view class="my-login-divider-line"></view>
+        <text>街角观察员</text>
+      </view>
+
+      <text class="my-login-kicker">START YOUR FIELD NOTES</text>
+      <view class="my-login-title">
+        <text>把每一次<text class="my-login-title-em">遇见</text></text>
+        <text>收进档案</text>
+      </view>
+      <text class="my-login-lead">登录后，猫咪相遇、成长经验与图鉴会跟着你。</text>
+
+      <view class="my-login-access-card">
+        <view class="my-login-card-head">
+          <text>登录后你可以</text>
+          <text>ACCESS GRANTED</text>
+        </view>
+        <view class="my-login-access-list">
+          <view class="my-login-access-row">
+            <view class="my-login-access-icon">
+              <image src="/assets/icon-user-coral.svg" mode="aspectFit" />
+            </view>
+            <view class="my-login-access-copy">
+              <text class="my-login-access-title">微信昵称、头像</text>
+              <text class="my-login-access-subtitle">建立你的观察员档案，展示相遇记录。</text>
+            </view>
+            <text class="my-login-access-status">必要</text>
+          </view>
+          <view class="my-login-access-row">
+            <view class="my-login-access-icon">
+              <image src="/assets/paw.svg" mode="aspectFit" />
+            </view>
+            <view class="my-login-access-copy">
+              <text class="my-login-access-title">相遇与成长记录</text>
+              <text class="my-login-access-subtitle">同步猫咪档案、猫爪经验与咔咔分。</text>
+            </view>
+            <text class="my-login-access-status">保存</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="my-login-scope-note">
+        <view class="my-login-scope-icon">
+          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="my-login-scope-copy">
+          <text class="my-login-scope-title">拍照与照片权限</text>
+          <text class="my-login-scope-subtitle">开始拍照时才会单独申请，登录时不会打开相机。</text>
+        </view>
+        <text class="my-login-scope-status">按需</text>
+      </view>
+
+      <view
+        class="my-login-primary {{syncBusy ? 'my-login-primary-busy' : ''}}"
+        bindtap="onBindAccount"
+        aria-role="button"
+        aria-label="微信授权登录"
+      >
+        <image src="/assets/icon-user-white.svg" mode="aspectFit" />
+        <text>{{syncBusy ? '正在登录' : '微信授权登录'}}</text>
+      </view>
+      <view class="my-login-skip" bindtap="goHome" aria-role="button" aria-label="先看看，不登录">
+        <text>先看看，不登录</text>
+      </view>
+      <view class="my-login-legal">
+        <text>继续即表示你同意 </text>
+        <text class="my-login-legal-link" bindtap="goPrivacy">《隐私条款》</text>
+        <text>。你可以随时在“我的”页面管理相关权益。</text>
+      </view>
+    </view>
+  </scroll-view>
+  </block>
 
   <exception-modal
     visible="{{showException}}"

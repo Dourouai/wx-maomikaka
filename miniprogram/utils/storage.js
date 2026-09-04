@@ -3,6 +3,12 @@
 // ============================================================
 const { ALL_CATS } = require('./catData');
 const { MEMBER_LEVEL_VERSION } = require('./memberLevel');
+const {
+  GLM_FEATURE_VECTOR_VERSION,
+  FEATURE_VECTOR_DIMENSION,
+  normalizeFeatureProfile,
+  encodeFeatureProfile,
+} = require('./catFeatureProfile');
 
 const KEY_COLLECTION = 'maomikaka_collection';
 const KEY_RECORDS = 'maomikaka_records';
@@ -38,6 +44,14 @@ function _getTimestamp(value) {
   if (Number.isFinite(numeric) && numeric > 0) return numeric;
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function _getFeatureProfile(data) {
+  const source = data && typeof data === 'object' ? data : {};
+  return normalizeFeatureProfile(
+    source.glmCatFeatureProfile
+      || (source.observation && source.observation.glmCatFeatureProfile)
+  );
 }
 
 function getDeviceId() {
@@ -111,6 +125,8 @@ function _createStats() {
     lastPhotoTime: null,
     // 猫爪是用户成长值，会员等级由 memberLevel.js 根据它计算。
     pawGrowth: 0,
+    // 咔咔分是可独立核对的积分余额，变动明细由云端奖励流水保存。
+    pointBalance: 0,
     memberLevelVersion: MEMBER_LEVEL_VERSION,
   };
 }
@@ -121,6 +137,18 @@ function _calculateRecordedPawGrowth() {
 
   return records.reduce((total, record) => {
     const reward = Number(record && record.pawReward);
+    return Number.isFinite(reward) && reward > 0
+      ? total + Math.round(reward)
+      : total;
+  }, 0);
+}
+
+function _calculateRecordedPointBalance() {
+  const records = _get(KEY_RECORDS);
+  if (!Array.isArray(records)) return 0;
+
+  return records.reduce((total, record) => {
+    const reward = Number(record && record.pointReward);
     return Number.isFinite(reward) && reward > 0
       ? total + Math.round(reward)
       : total;
@@ -265,8 +293,14 @@ function saveRecord(recordData) {
     || data.generatedDescription
     || (data.catData && (data.catData.story || data.catData.description))
     || null;
+  const glmCatFeatureProfile = _getFeatureProfile(data);
+  // 向量始终由当前版本的固定契约重新编码，不直接信任外部传入的数组。
+  const glmFeatureVector = encodeFeatureProfile(glmCatFeatureProfile);
   const pawReward = Number.isFinite(Number(data.pawReward))
     ? Math.max(0, Math.round(Number(data.pawReward)))
+    : 0;
+  const pointReward = Number.isFinite(Number(data.pointReward))
+    ? Math.max(0, Math.round(Number(data.pointReward)))
     : 0;
   const records = getAllRecords();
   const collection = getCollection();
@@ -284,6 +318,10 @@ function saveRecord(recordData) {
     syncError: null,
     serverEncounterId: null,
     catProfileId: data.catProfileId || null,
+    glmCatFeatureProfile,
+    glmFeatureVector,
+    glmFeatureVectorVersion: glmFeatureVector ? GLM_FEATURE_VECTOR_VERSION : null,
+    glmFeatureVectorDimension: glmFeatureVector ? FEATURE_VECTOR_DIMENSION : null,
     catId,
     catName,
     catDescription,
@@ -311,7 +349,7 @@ function saveRecord(recordData) {
     fateScore: typeof data.fateScore === 'number' ? data.fateScore : null,
     overallScore: typeof data.overallScore === 'number' ? data.overallScore : null,
     pawReward,
-    pointReward: typeof data.pointReward === 'number' ? data.pointReward : null,
+    pointReward: pointReward || null,
     scorePending: data.scorePending === true,
     scoreSource: data.scoreSource || null,
     scoreVersion: data.scoreVersion || null,
@@ -351,6 +389,7 @@ function saveRecord(recordData) {
   stats.unlockedCount = (stats.unlockedCount || 0) + (isNew ? 1 : 0);
   stats.lastPhotoTime = now;
   stats.pawGrowth = (stats.pawGrowth || 0) + pawReward;
+  stats.pointBalance = (stats.pointBalance || 0) + pointReward;
   _set(KEY_STATS, stats);
 
   return {
@@ -524,6 +563,8 @@ function _normalizeRemoteRecord(remote) {
   const score = source.score && typeof source.score === 'object' ? source.score : {};
   const display = source.display && typeof source.display === 'object' ? source.display : {};
   const recordId = source.localRecordId || `remote_${source.encounterId || _createLocalId('record')}`;
+  const glmCatFeatureProfile = normalizeFeatureProfile(observation.glmCatFeatureProfile);
+  const glmFeatureVector = encodeFeatureProfile(glmCatFeatureProfile);
 
   return {
     recordId,
@@ -533,6 +574,10 @@ function _normalizeRemoteRecord(remote) {
     syncError: null,
     serverEncounterId: source.encounterId || null,
     catProfileId: source.catProfileId || null,
+    glmCatFeatureProfile,
+    glmFeatureVector,
+    glmFeatureVectorVersion: glmFeatureVector ? GLM_FEATURE_VECTOR_VERSION : null,
+    glmFeatureVectorDimension: glmFeatureVector ? FEATURE_VECTOR_DIMENSION : null,
     catId: source.catalogCatId || 'cat_060',
     catName: display.name || source.catName || null,
     catDescription: display.description || source.catDescription || null,
@@ -602,9 +647,24 @@ function mergeRemoteRecords(remoteRecords) {
     if (existing) {
       const index = nextRecords.findIndex(record => record === existing);
       if (index < 0) return;
+      // 云端旧记录暂时不一定带特征档案，不能用空值覆盖本机已经生成的特征。
+      const identityFields = normalized.glmCatFeatureProfile
+        ? {
+          glmCatFeatureProfile: normalized.glmCatFeatureProfile,
+          glmFeatureVector: normalized.glmFeatureVector,
+          glmFeatureVectorVersion: normalized.glmFeatureVectorVersion,
+          glmFeatureVectorDimension: normalized.glmFeatureVectorDimension,
+        }
+        : {
+          glmCatFeatureProfile: existing.glmCatFeatureProfile || null,
+          glmFeatureVector: existing.glmFeatureVector || null,
+          glmFeatureVectorVersion: existing.glmFeatureVectorVersion || null,
+          glmFeatureVectorDimension: existing.glmFeatureVectorDimension || null,
+        };
       nextRecords[index] = {
         ...existing,
         ...normalized,
+        ...identityFields,
         // 临时 URL 只服务于当前设备，不能被云端空值覆盖。
         photoPath: normalized.photoPath || existing.photoPath || '',
         photo: normalized.photo || existing.photo || '',
@@ -660,11 +720,17 @@ function _rebuildDerivedState(records) {
     const reward = Number(record.pawReward);
     return Number.isFinite(reward) && reward > 0 ? total + Math.round(reward) : total;
   }, 0);
+  const pointBalance = safeRecords.reduce((total, record) => {
+    const reward = Number(record.pointReward);
+    return Number.isFinite(reward) && reward > 0 ? total + Math.round(reward) : total;
+  }, 0);
   const stats = getUserStats();
   stats.totalPhotos = safeRecords.length;
   stats.unlockedCount = Object.keys(collection).filter(catId => collection[catId].unlocked).length;
   stats.lastPhotoTime = lastPhotoTime;
-  stats.pawGrowth = pawGrowth;
+  // 成长值和积分是累计值；放归猫咪或刷新远端快照时不能因展示记录减少而倒退。
+  stats.pawGrowth = Math.max(Number(stats.pawGrowth) || 0, pawGrowth);
+  stats.pointBalance = Math.max(Number(stats.pointBalance) || 0, pointBalance);
   _set(KEY_STATS, stats);
 }
 
@@ -746,8 +812,41 @@ function getUserStats() {
       changed = true;
     }
   }
+  if (!Number.isFinite(Number(stats.pointBalance))) {
+    stats.pointBalance = _calculateRecordedPointBalance();
+    changed = true;
+  } else {
+    const normalizedPoints = Math.max(0, Math.floor(Number(stats.pointBalance)));
+    if (normalizedPoints !== stats.pointBalance) {
+      stats.pointBalance = normalizedPoints;
+      changed = true;
+    }
+  }
 
   if (changed) _set(KEY_STATS, stats);
+  return stats;
+}
+
+function mergeRemoteStats(remoteStats) {
+  const source = remoteStats && typeof remoteStats === 'object' ? remoteStats : null;
+  if (!source) return getUserStats();
+
+  const stats = getUserStats();
+  const totalPhotos = Number(source.totalPhotos);
+  const unlockedCount = Number(source.unlockedCount);
+  const pawGrowth = Number(source.pawGrowth);
+  const pointBalance = Number(source.pointBalance);
+
+  if (Number.isFinite(totalPhotos)) stats.totalPhotos = Math.max(0, Math.floor(totalPhotos));
+  if (Number.isFinite(unlockedCount)) stats.unlockedCount = Math.max(0, Math.floor(unlockedCount));
+  if (source.lastPhotoTime) stats.lastPhotoTime = source.lastPhotoTime;
+  if (Number.isFinite(pawGrowth)) {
+    stats.pawGrowth = Math.max(stats.pawGrowth || 0, Math.floor(pawGrowth));
+  }
+  if (Number.isFinite(pointBalance)) {
+    stats.pointBalance = Math.max(stats.pointBalance || 0, Math.floor(pointBalance));
+  }
+  _set(KEY_STATS, stats);
   return stats;
 }
 
@@ -805,4 +904,5 @@ module.exports = {
   markPendingSyncError,
   prepareRecordsForAccountRebind,
   mergeRemoteRecords,
+  mergeRemoteStats,
 };

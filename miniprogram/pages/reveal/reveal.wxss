@@ -339,7 +339,7 @@ page {
   margin-top: 4rpx;
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: 42rpx;
+  font-size: 48rpx;
   font-weight: 800;
   line-height: 1.15;
 }
@@ -353,20 +353,20 @@ page {
   flex-direction: column;
   margin-top: 12rpx;
   color: var(--muted-ink);
-  font-size: 22rpx;
+  font-size: 18rpx;
   line-height: 1.55;
 }
 
 .reveal-error-actions {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 14rpx;
   width: 100%;
-  margin-top: 26rpx;
+  margin-top: 34rpx;
 }
 
 .reveal-error-action {
   display: flex;
-  flex: 1;
   align-items: center;
   justify-content: center;
   min-height: 86rpx;
@@ -377,7 +377,6 @@ page {
 }
 
 .reveal-error-action-primary {
-  margin-right: 14rpx;
   color: var(--paper);
   background: var(--terracotta);
   box-shadow: 0 10rpx 0 rgba(75, 29, 18, 0.12);
@@ -844,7 +843,7 @@ page {
   height: 100rpx;
 }
 
-/* V5 相遇结果：主体照片、档案信息与奖励使用同一层级。 */
+/* V6 相遇结果：主体照片、档案信息与奖励使用同一层级。 */
 .result-stamp {
   display: block;
   margin: 0 8rpx 20rpx;
@@ -859,7 +858,7 @@ page {
 .result-card {
   padding: 14rpx 14rpx 22rpx;
   border: 2rpx solid var(--line);
-  border-radius: 30rpx;
+  border-radius: 36rpx;
   background: var(--paper);
   box-shadow: 0 14rpx 0 rgba(51, 40, 36, 0.08);
 }
@@ -869,9 +868,9 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 482rpx;
+  aspect-ratio: 3 / 4;
   overflow: hidden;
-  border-radius: 22rpx;
+  border-radius: 24rpx;
   background: linear-gradient(140deg, #bcb09e, #d8c5a8 50%, #617060);
 }
 
@@ -985,32 +984,27 @@ page {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 10rpx 14rpx;
+  gap: 8rpx;
+  padding: 12rpx 16rpx;
   color: var(--terracotta);
-  background: rgba(239, 210, 209, 0.52);
+  background: #f1cf84;
   font-family: "SFMono-Regular", Menlo, monospace;
-  font-size: 19rpx;
+  font-size: 20rpx;
   letter-spacing: 1rpx;
 }
 
-.result-rarity-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34rpx;
-  height: 34rpx;
-  margin-right: 8rpx;
-  border: 2rpx solid currentColor;
-  border-radius: 50%;
-  font-size: 16rpx;
-  font-weight: 700;
+.result-rarity-icon {
+  display: block;
+  flex-shrink: 0;
+  width: 26rpx;
+  height: 26rpx;
 }
 
-.result-rarity-C { color: #7f776c; background: rgba(213, 226, 207, 0.68); }
-.result-rarity-U { color: #9b6e3f; background: rgba(239, 224, 190, 0.72); }
-.result-rarity-R { color: #46859b; background: rgba(216, 231, 235, 0.82); }
-.result-rarity-SR { color: #8a6aa6; background: rgba(232, 220, 239, 0.78); }
-.result-rarity-UR { color: #9b442a; background: rgba(239, 210, 209, 0.78); }
+.result-rarity-C { color: #46604a; background: #dce8d5; }
+.result-rarity-U { color: #405c70; background: #d9e6ee; }
+.result-rarity-R { color: #684718; background: #f1cf84; }
+.result-rarity-SR { color: #873e30; background: #e8b2a7; }
+.result-rarity-UR { color: #f0b760; background: #3b2d2a; }
 
 .result-score {
   display: flex;
@@ -1024,7 +1018,7 @@ page {
 .result-score-value {
   margin-left: 8rpx;
   color: var(--terracotta);
-  font-size: 50rpx;
+  font-size: 28rpx;
   font-weight: 700;
   line-height: 1;
 }
@@ -1032,7 +1026,7 @@ page {
 .result-reward-row {
   display: flex;
   flex-direction: row;
-  margin-top: 30rpx;
+  margin: 38rpx 30rpx 0;
 }
 
 .result-reward {
@@ -1040,20 +1034,21 @@ page {
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  padding: 18rpx 16rpx 16rpx;
-  border: 2rpx solid var(--line);
-  background: rgba(255, 253, 248, 0.78);
+  padding: 0;
+  border: 0;
+  background: transparent;
   box-sizing: border-box;
 }
 
 .result-reward:first-child {
-  margin-right: 12rpx;
+  margin-right: 24rpx;
 }
 
 .result-reward-head {
   display: flex;
   flex-direction: row;
   align-items: center;
+  gap: 10rpx;
   min-width: 0;
 }
 
@@ -1062,9 +1057,9 @@ page {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 42rpx;
-  height: 42rpx;
-  margin-right: 8rpx;
+  width: 52rpx;
+  height: 52rpx;
+  margin-right: 0;
 }
 
 .result-reward-icon image {
@@ -1090,10 +1085,10 @@ page {
 
 .result-reward-value {
   display: block;
-  margin: 10rpx 0 0 50rpx;
+  margin: 6rpx 0 0 62rpx;
   color: var(--terracotta);
   font-family: "SFMono-Regular", Menlo, monospace;
-  font-size: 24rpx;
+  font-size: 30rpx;
   font-weight: 700;
 }
 
@@ -1134,24 +1129,20 @@ page {
 
 .result-release {
   display: block;
-  margin-top: 18rpx;
+  margin-top: 4rpx;
   color: var(--muted-ink);
-  font-size: 18rpx;
+  font-size: 20rpx;
   text-align: center;
 }
 
 @media (max-width: 350px) {
-  .result-photo {
-    height: 430rpx;
-  }
-
   .result-photo-name {
     font-size: 32rpx;
   }
 
   .result-reward {
-    padding-right: 10rpx;
-    padding-left: 10rpx;
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .result-reward-label {
@@ -1159,7 +1150,7 @@ page {
   }
 
   .result-reward-value {
-    margin-left: 42rpx;
+    margin-left: 50rpx;
     font-size: 21rpx;
   }
 }

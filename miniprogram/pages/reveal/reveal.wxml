@@ -48,8 +48,8 @@
 
       <view class="result-meta-row">
         <view class="result-rarity result-rarity-{{levelCode}}">
-          <view class="result-rarity-mark"><text>{{levelCode}}</text></view>
-          <text>{{levelLabel}}</text>
+          <image class="result-rarity-icon" src="/assets/rarity-{{levelCode}}.svg" mode="aspectFit" />
+          <text>{{levelCode}} · {{levelLabel}}</text>
         </view>
         <view class="result-score">
           <text class="result-score-label">咪咔</text>
@@ -78,7 +78,7 @@
 
       <view class="result-actions">
         <view class="result-action-primary" bindtap="goCollection" aria-role="button" aria-label="加入图鉴">
-          <image src="/assets/tab-album-active.svg" mode="aspectFit" />
+          <image src="/assets/icon-album-white.svg" mode="aspectFit" />
           <text>加入图鉴</text>
         </view>
       </view>

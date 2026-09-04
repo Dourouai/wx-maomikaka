@@ -21,7 +21,7 @@
 | 业务名称 | 模型名称 / ID | 供应商 | 类别 | 当前状态 | 计划用途 |
 |---|---|---|---|---|---|
 | HY3 | `Hy3`（API 实际 ID 待确认） | 腾讯混元 | 文本生成 / 推理 / Agent | 待接入 | 生成卡片文案、猫咪故事、标签和图像提示词 |
-| GLM 视觉识别 | `glm-5.3-flash` | TokenHub | 多模态理解 | 云函数已接入，待配置 Key | 判断是否为猫、猫数量、品种、短昵称、短描述和相遇评分 |
+| GLM 视觉识别 | `glm-5.3-flash` | TokenHub | 多模态理解 | 云函数已接入，待配置 Key | 判断是否为猫、猫数量、品种、短昵称、短描述、相遇评分和结构化猫咪特征 |
 
 Hy3 的公开模型资料见 [Tencent-Hunyuan/Hy3](https://github.com/Tencent-Hunyuan/Hy3)。
 
@@ -51,6 +51,7 @@ Hy3 的公开模型资料见 [Tencent-Hunyuan/Hy3](https://github.com/Tencent-Hu
 - `confidence` 和最多 3 个外观特征；
 - `name`：根据可见毛色、花纹、姿态或神态生成的有趣中文昵称，最多 5 个字符；
 - `description`：基于照片可见内容生成的轻松短描述，最多 50 个字符；
+- `glmCatFeatureProfile`：按 `glm-cat-feature.v0.1` 返回的固定特征槽位，用于后续同猫候选比较；客户端再编码为 83 维临时向量，不作为唯一生物特征；
 - `scoreEvidence`：魅力、机灵、灵气各自的可观察子项，均为 0–100 分；服务端按 `cat-score.v0.2` 固定权重计算 `scores`，再用于计算咪咔并映射相遇等级。
 
 当前通过 TokenHub OpenAI 兼容的 `/v1/chat/completions` 调用 `glm-5.3-flash`。图片以 Chat Completions 的 `image_url` 内容块传入 Base64 Data URI；TokenHub API Key 只保存在 `cat-vision` 云函数环境变量中，不进入小程序或代码库。TokenHub 的 GLM-5.3-Flash 多模态示例也使用该接口。
@@ -178,7 +179,7 @@ Hy3 后续可以负责更长的卡片文案，但当前版本不调用它。猫�
 
 当前代码已新增以下链路：
 
-- `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`name`、`description`、`traits` 和 `scoreEvidence`，服务端规范化后返回 `scores`；
+- `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`name`、`description`、`traits`、`glmCatFeatureProfile` 和 `scoreEvidence`，服务端规范化后返回 `scores`；
 - `miniprogram/cloudfunctions/cat-transform/`：使用 `wx-server-sdk@4.0.2` 保存图片，通过 `cloud.ai().createImageModel('hunyuan-image')` 调用 `HY-Image-v3.0-I2I-ToB-v1.0.1`，以 `images: [base64]` 传入一张原图并固定使用 `images/ar/generations`；
 - 小程序拍照后先调用现有 `content-security` 校验压缩图片，并保留通过检测的同一个 `fileID`；随后并行调用 `cat-vision` 判断是否为猫、映射品种并计算相遇评分，以及 `cat-transform` 的 `matting` 动作。两条链路都完成后才一次性展示和写入记录；任务提交后先扣除 1 个罐罐，非猫、多猫无法确认目标或图片不合格时会清理并不写入拍摄记录；识别服务不可用等产品侧异常时返还罐罐；
 - 云函数使用上一版 CloudBase 链路的三句主体处理提示并关闭提示词改写，CloudBase 图生图请求只传入 `footnote: '·'`，不传 `LogoAdd`；模型结果不做二次 `security.imgSecCheck`，直接保存到 `cat-album/cutout/`；

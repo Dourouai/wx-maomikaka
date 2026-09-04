@@ -162,6 +162,36 @@ GLM 不负责：
 - 每个观察都要带模型版本，便于以后重跑和比较；
 - `usableForIdentity=false` 时可以生成相遇失败或普通记录，但不应写入身份图库。
 
+### 3.2 前期 MVP：GLM 结构化特征指纹
+
+前期先不接入专用视觉 embedding，使用 GLM 5.3 输出一份受白名单约束的 `glmCatFeatureProfile`。它是“可解释观察 + 确定性编码”的临时方案，不能称为真正的猫咪生物识别向量，也不能单独生成现实猫咪的唯一 `catId`。
+
+当前契约固定为 `glm-cat-feature.v0.1`，包含 12 个特征槽位：
+
+| 槽位 | 含义 |
+| --- | --- |
+| `coatColor` / `pattern` / `coatLength` | 毛色、花纹、毛长 |
+| `faceShape` / `eyeColor` | 脸型、眼睛颜色 |
+| `faceMark` / `faceAsymmetry` | 脸部记号、左右不对称记号 |
+| `earFeature` / `tailFeature` | 耳部、尾部特征 |
+| `bodyBuild` / `noseColor` | 体型、鼻头颜色 |
+| `distinctiveMark` | 可见的明显记号 |
+
+每个槽位只能返回固定枚举；看不清统一返回 `unknown`，并为每个槽位返回 `confidence`。同时返回 `quality.visibility`、`quality.occlusion` 和 `quality.usableForMatch`，只有质量合格时才编码向量。
+
+代码链路为：
+
+```text
+cat-vision → glmCatFeatureProfile
+           → identify.js 白名单归一化
+           → glmFeatureVector（glm-cat-vector.v0.1，当前 83 维）
+           → 本地相遇记录
+```
+
+83 维向量由分类特征 one-hot、字段置信度和图片质量元数据组成；`unknown` 不产生匹配信号。它只用于同一用户范围内的候选排序和实验，当前不自动合并猫咪档案，也不通过分享链路下发。同步到云端时只保留白名单后的结构化特征，后续可以在服务端按版本重算。
+
+同一特征档案的比较结果必须同时看 `score`、`coverage` 和 `usableForMatch`；低质量、覆盖不足或第一候选不明显时，统一进入待确认流程。
+
 ## 4. 身份特征和猫咪档案结构
 
 ### 4.1 单次身份特征 `identityFeature`
@@ -291,11 +321,11 @@ confirmed ──人工纠错/后台任务──→ merged 或 rejected
 
 ### 第一阶段：现在可以做
 
-1. 将 `cat-vision` 的 JSON 扩展为 `observation.v0.1`，加入 `target`、`quality` 和稳定特征分组；
-2. 给每次观察保存 `observationId`、模型名和 `featureVersion`；
-3. 在 `storage.saveRecord` 中预留 `catProfileId`、`observationId`、`identityFeatureId`、`identityStatus` 字段；
-4. 将 `catData.id` 改名为概念上的 `catalogCatId`，避免继续把固定角色 ID 当现实猫 ID；
-5. 新建 `cat-identity` 云函数接口，但在没有真实 embedding provider 前只返回“未配置”，不做伪向量兜底。
+1. `cat-vision` 返回 `glmCatFeatureProfile`，并由客户端按固定版本生成 83 维临时向量；
+2. 在 `storage.saveRecord` 中保存白名单特征档案和向量版本，不保存自由文本特征；
+3. 同步到云端时只传结构化特征，不把本机向量数组放进分享数据；
+4. 继续预留 `catProfileId`、`observationId`、`identityFeatureId`、`identityStatus`，为真实身份层留接口；
+5. 将 `catData.id` 改名为概念上的 `catalogCatId`，避免继续把固定角色 ID 当现实猫 ID。
 
 ### 第二阶段：接入真实模型后做
 
@@ -324,7 +354,7 @@ confirmed ──人工纠错/后台任务──→ merged 或 rejected
 ## 8. 隐私与安全底线
 
 - API Key、原始向量和候选搜索都只在云端进行；
-- 小程序端只拿到 `catId`、匹配状态和用户可读的结论，不下发向量数组；
+- 正式身份向量只在云端保存和检索；当前 83 维临时向量仅作为本地实验数据，不进入卡面、分享或日志；
 - 不把精确 GPS、人物、建筑背景带入身份向量；
 - 地点只用于可选的弱候选排序，不作为“就是同一只”的证明；
 - 用户删除照片或档案时，应定义原图、裁剪图、观察结果、向量和索引的级联删除策略；

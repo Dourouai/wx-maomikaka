@@ -3,6 +3,7 @@ const storage = require('../../utils/storage');
 const { getCatById } = require('../../utils/catData');
 const memberLevel = require('../../utils/memberLevel');
 const deviceLayout = require('../../utils/deviceLayout');
+const cloudFiles = require('../../utils/cloudFiles');
 
 Page({
   data: {
@@ -49,7 +50,7 @@ Page({
 
   _syncTabBar() {
     const tabBar = this.getTabBar && this.getTabBar();
-    if (tabBar) tabBar.setData({ selected: 0 });
+    if (tabBar) tabBar.setData({ selected: 0, hidden: false });
   },
 
   _refreshData() {
@@ -79,6 +80,23 @@ Page({
         ? (latestRecord.catName || (latestCat && latestCat.name) || '')
         : '',
     });
+    this._refreshLatestPhotoURL(latestRecord);
+  },
+
+  async _refreshLatestPhotoURL(record) {
+    if (!record || storage.getRecordDisplayPath(record)) return;
+
+    for (const fileID of [record.cutoutFileID, record.originalFileID].filter(Boolean)) {
+      try {
+        const latestPhoto = await cloudFiles.getTempFileURL(fileID);
+        if (latestPhoto) {
+          this.setData({ latestPhoto });
+          return;
+        }
+      } catch (error) {
+        // 主体图地址失效时继续尝试原图。
+      }
+    }
   },
 
   _getDateKey(timestamp) {
@@ -115,5 +133,21 @@ Page({
 
   goCollection() {
     wx.switchTab({ url: '/pages/collection/collection' });
+  },
+
+  // 首页分享使用当前页面的默认截图，保留完整的“去遇见一只猫”视觉首屏；
+  // 不携带用户数据，也不把本机照片放进分享卡片。
+  onShareAppMessage() {
+    return {
+      title: '去遇见一只猫｜猫咪咔咔',
+      path: '/pages/index/index?from=share',
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: '去遇见一只猫｜把一场偶遇，变成一张相遇卡',
+      query: 'from=timeline',
+    };
   },
 });

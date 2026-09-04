@@ -33,7 +33,7 @@ App({
 
   // ── 全局数据 ─────────────────────────────────────────────
   globalData: {
-    /** 用户统计：{ totalPhotos, unlockedCount, lastPhotoTime, pawGrowth } */
+    /** 用户统计：{ totalPhotos, unlockedCount, lastPhotoTime, pawGrowth, pointBalance } */
     userStats: null,
     cloudReady: false,
   },

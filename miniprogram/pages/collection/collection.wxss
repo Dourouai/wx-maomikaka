@@ -33,61 +33,15 @@ page {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 42rpx;
+  margin-bottom: 30rpx;
   box-sizing: border-box;
 }
 
-.album-brand-mark {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
+.album-full-logo {
+  display: block;
+  width: 300rpx;
+  height: 94rpx;
   min-width: 0;
-}
-
-.album-brand-symbol {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56rpx;
-  height: 56rpx;
-  margin-right: 14rpx;
-  border: 2rpx solid var(--line);
-  border-radius: 16rpx;
-  background: var(--paper);
-}
-
-.album-brand-symbol image {
-  width: 34rpx;
-  height: 34rpx;
-}
-
-.album-brand-copy {
-  display: flex;
-  flex-direction: column;
-}
-
-.album-brand-name {
-  color: var(--ink);
-  font-size: 23rpx;
-  font-weight: 750;
-  line-height: 1.1;
-}
-
-.album-brand-sub {
-  margin-top: 5rpx;
-  color: var(--muted-ink);
-  font-size: 13rpx;
-  letter-spacing: 3rpx;
-  line-height: 1;
-}
-
-.album-level {
-  padding: 10rpx 14rpx;
-  border: 2rpx solid var(--line);
-  color: var(--stamp);
-  background: var(--paper);
-  font-size: 17rpx;
-  letter-spacing: 1rpx;
 }
 
 .album-page-kicker {
@@ -199,7 +153,8 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 266rpx;
+  /* 两列卡片的图片区按内容宽度计算为正方形，避免不同机型被固定高度拉扁。 */
+  height: calc((100vw - 84rpx) / 2 - 4rpx);
   overflow: hidden;
   /* 主体图使用透明画布时，让猫咪外部保持纯白，避免米色块抢视觉。 */
   background: #fff;

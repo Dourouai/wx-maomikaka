@@ -1,4 +1,4 @@
-<view class="custom-tabbar">
+<view class="custom-tabbar {{hidden ? 'custom-tabbar-hidden' : ''}}">
   <view class="custom-tabbar-line"></view>
   <view class="custom-tabbar-items">
     <view

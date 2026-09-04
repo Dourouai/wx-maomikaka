@@ -2,6 +2,8 @@
   "pages": [
     "pages/index/index",
     "pages/my/my",
+    "pages/privacy/privacy",
+    "pages/about/about",
     "pages/dev-mode/dev-mode",
     "pages/text-image/text-image",
     "pages/image-image/image-image",

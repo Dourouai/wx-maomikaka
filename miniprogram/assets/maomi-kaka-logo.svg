@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 112" role="img" aria-labelledby="logo-title logo-desc" focusable="false" shape-rendering="geometricPrecision">
+  <title id="logo-title">猫咪咔咔 CITY CAT ARCHIVE</title>
+  <desc id="logo-desc">一只完整的橙色胖猫抱着相机，搭配猫咪咔咔中文字标与 CITY CAT ARCHIVE 英文副标。</desc>
+  <g id="cat-mark" transform="translate(-7 -5) scale(.38)" stroke="#342923" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M245 199c31-39 65-25 56 10-5 20-21 38-45 46-13 4-27-2-34-13z" fill="#e97850"/>
+    <path d="M78 111 63 39l68 41c18-7 40-7 58 0l68-41-15 72c20 20 29 49 26 88-4 55-39 86-108 86S56 254 52 199c-3-39 6-68 26-88Z" fill="#e97850"/>
+    <path d="m77 61 48 29-28 9zM243 61l-48 29 28 9z" fill="#f8f0e6"/>
+    <ellipse cx="160" cy="224" rx="64" ry="57" fill="#f8f0e6" stroke="none"/>
+    <path d="M116 148c0-18 18-30 44-30s44 12 44 30c0 19-18 31-44 31s-44-12-44-31Z" fill="#f8f0e6" stroke="none"/>
+    <circle cx="124" cy="136" r="12" fill="#342923" stroke="none"/>
+    <circle cx="196" cy="136" r="12" fill="#342923" stroke="none"/>
+    <circle cx="120" cy="131" r="3.3" fill="#f8f0e6" stroke="none"/>
+    <circle cx="192" cy="131" r="3.3" fill="#f8f0e6" stroke="none"/>
+    <path d="m160 145 9 6-9 9-9-9z" fill="#e97850" stroke="none"/>
+    <path d="M160 160v7m0 0c-10 13-24 13-33 3m33-3c10 13 24 13 33 3" fill="none" stroke-width="5"/>
+    <path d="M111 156 80 150m31 17-34 2m165-13 31-6m-31 17 34 2" fill="none" stroke-width="4"/>
+    <path d="M91 177c-14 2-22 18-18 35 4 16 18 25 35 20 11-3 18-12 16-22-2-15-16-36-33-33Zm138 0c14 2 22 18 18 35-4 16-18 25-35 20-11-3-18-12-16-22-2-15-16-36-33-33Z" fill="#e97850"/>
+    <rect x="92" y="165" width="136" height="76" rx="14" fill="#f8f0e6"/>
+    <rect x="103" y="158" width="114" height="25" rx="7" fill="#f8f0e6"/>
+    <rect x="119" y="153" width="27" height="12" rx="4" fill="#342923" stroke="none"/>
+    <rect x="187" y="170" width="20" height="13" rx="3" fill="#342923" stroke="none"/>
+    <circle cx="160" cy="204" r="28" fill="#342923"/>
+    <circle cx="160" cy="204" r="19" fill="#e97850" stroke="none"/>
+    <circle cx="160" cy="204" r="4" fill="#f8f0e6" stroke="none"/>
+    <path d="M105 226c-9-9-25-7-31 3-7 11 0 26 14 30 12 4 25-3 28-14 3-8-3-15-11-19Zm110 0c9-9 25-7 31 3 7 11 0 26-14 30-12 4-25-3-28-14-3-8 3-15 11-19Z" fill="#f8f0e6"/>
+    <path d="M122 244c-3 20-6 31-19 40m95-40c3 20 6 31 19 40" fill="none" stroke-width="5"/>
+  </g>
+  <g fill="#342923">
+    <text x="143" y="52" font-family="Songti SC, STSong, Noto Serif CJK SC, serif" font-size="29" font-weight="800" letter-spacing="-1.8">猫咪咔咔</text>
+    <text x="145" y="73" font-family="-apple-system, BlinkMacSystemFont, PingFang SC, sans-serif" font-size="9" font-weight="700" letter-spacing="3.6">CITY CAT ARCHIVE</text>
+    <path d="M145 84h106" fill="none" stroke="#e97850" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="261" cy="84" r="2.2" fill="#e97850"/>
+  </g>
+</svg>

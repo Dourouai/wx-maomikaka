@@ -62,6 +62,7 @@ async function ensureUser(userId) {
             totalPhotos: 0,
             unlockedCount: 0,
             pawGrowth: 0,
+            pointBalance: 0,
           },
           createdAt: db.serverDate(),
           updatedAt: db.serverDate(),
@@ -88,6 +89,15 @@ async function ensureUser(userId) {
     updatedAt: db.serverDate(),
     lastSeenAt: db.serverDate(),
   };
+  const existingStats = existing && existing.stats && typeof existing.stats === 'object'
+    ? { ...existing.stats }
+    : {
+      totalPhotos: 0,
+      unlockedCount: 0,
+      pawGrowth: 0,
+    };
+  if (!Number.isFinite(Number(existingStats.pointBalance))) existingStats.pointBalance = 0;
+  updateData.stats = existingStats;
   await userRef.update({
     data: updateData,
   });

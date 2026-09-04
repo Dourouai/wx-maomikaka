@@ -22,6 +22,7 @@ const TAB_LIST = [
 Component({
   data: {
     selected: 0,
+    hidden: false,
     list: TAB_LIST,
     showException: false,
     exceptionPath: '',

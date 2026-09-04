@@ -4,6 +4,12 @@
 const catVision = require('./catVision');
 const storage = require('./storage');
 const { getCatById, getCatsByBreed } = require('./catData');
+const {
+  GLM_FEATURE_VECTOR_VERSION,
+  FEATURE_VECTOR_DIMENSION,
+  normalizeFeatureProfile,
+  encodeFeatureProfile,
+} = require('./catFeatureProfile');
 
 // 视觉识别服务不可用或做流程演示时，可用“未知品种”占位卡承接结果。
 // 正常拍摄流程会调用 identifyCat，只有显式使用本方法时才走占位数据。
@@ -119,6 +125,10 @@ function createPendingEncounter() {
     // 占位结果没有视觉评分，评分模块会用基础相遇分兜底。
     scores: null,
     detectedTraits: [],
+    glmCatFeatureProfile: null,
+    glmFeatureVector: null,
+    glmFeatureVectorVersion: null,
+    glmFeatureVectorDimension: null,
     detectionSource: 'pending-vision',
     catId: catData.id,
     catData,
@@ -152,6 +162,8 @@ async function identifyCat(photoPath, options) {
   const catalog = chooseCatalogCat(breedLabel);
   const catName = normalizeGeneratedName(detection.name, catalog.catData.name);
   const catDescription = normalizeGeneratedDescription(detection.description, catalog.catData.story);
+  const glmCatFeatureProfile = normalizeFeatureProfile(detection.glmCatFeatureProfile);
+  const glmFeatureVector = encodeFeatureProfile(glmCatFeatureProfile);
   const displayCatData = {
     ...catalog.catData,
     name: catName,
@@ -174,6 +186,10 @@ async function identifyCat(photoPath, options) {
     catDescription,
     copyVersion: detection.copyVersion || 'catalog-fallback',
     detectedTraits: Array.isArray(detection.traits) ? detection.traits : [],
+    glmCatFeatureProfile,
+    glmFeatureVector,
+    glmFeatureVectorVersion: glmFeatureVector ? GLM_FEATURE_VECTOR_VERSION : null,
+    glmFeatureVectorDimension: glmFeatureVector ? FEATURE_VECTOR_DIMENSION : null,
     detectionSource: 'tokenhub-glm-5.3-flash',
     ...catalog,
     catData: displayCatData,

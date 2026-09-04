@@ -11,9 +11,6 @@
             <text class="home-brand-sub">CITY CAT ARCHIVE</text>
           </view>
         </view>
-        <view class="home-level">
-          <text>LV.{{memberLevel}}</text>
-        </view>
       </view>
 
       <text class="home-kicker">CAT SPOTTER · PHOTO FIRST</text>

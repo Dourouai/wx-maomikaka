@@ -82,15 +82,6 @@ page {
   line-height: 1;
 }
 
-.home-level {
-  padding: 10rpx 14rpx;
-  border: 2rpx solid var(--line);
-  color: var(--stamp);
-  background: var(--paper);
-  font-size: 17rpx;
-  letter-spacing: 1rpx;
-}
-
 .home-kicker {
   display: block;
   margin-bottom: 16rpx;

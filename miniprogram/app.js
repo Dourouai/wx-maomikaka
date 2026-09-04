@@ -2,6 +2,7 @@
 // 猫咪咔咔 - App 全局入口
 // ============================================================
 const storage = require('./utils/storage');
+const userData = require('./utils/userData');
 
 // 固定使用已关联小程序的 CloudBase 环境，避免开发者工具或第三方托管
 // 的当前环境路由到其他环境，导致云函数/云存储调用落错位置。
@@ -16,11 +17,18 @@ App({
     storage.initStorage();
     // 将最新统计同步到 globalData
     this.globalData.userStats = storage.getUserStats();
+    // 只校验当前微信账号是否变化，不自动导入本地记录；数据绑定仍需用户确认。
+    userData.checkAccount().catch(error => {
+      console.warn('[App] 当前账号校验暂未完成:', error);
+    });
   },
 
   onShow() {
     // 每次前台显示时刷新统计（以防其他页面修改了数据）
     this.globalData.userStats = storage.getUserStats();
+    userData.checkAccount().catch(error => {
+      console.warn('[App] 当前账号校验暂未完成:', error);
+    });
   },
 
   // ── 全局数据 ─────────────────────────────────────────────

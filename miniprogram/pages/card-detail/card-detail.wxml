@@ -4,18 +4,31 @@
   <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="detail-content" style="padding-top: {{pageHeaderTop}}px;">
       <view class="file-header" style="padding-right: {{headerRightInset}}px;">
-        <view class="file-back" bindtap="goBack" aria-role="button" aria-label="返回图鉴">‹</view>
+        <view class="file-back" bindtap="goBack" aria-role="button" aria-label="返回图鉴">
+          <image class="file-back-icon" src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
+        </view>
         <view class="file-heading">
           <text class="file-kicker">CAT FILE · NO.{{archiveCode}}</text>
           <text class="file-title">猫档案</text>
         </view>
-        <view class="file-count">
-          <text class="file-count-level">{{bestLevelCode}} · {{bestLevelLabel}}</text>
-          <text>{{encounterCountLabel}}</text>
+      </view>
+
+      <view wx:if="{{shareLoading}}" class="shared-state shared-state-loading">
+        <text class="shared-state-kicker">CAT ARCHIVE · SHARED</text>
+        <text class="shared-state-title">正在打开猫咪档案</text>
+        <text class="shared-state-copy">把这次街角相遇整理好，很快就能看见了。</text>
+      </view>
+
+      <view wx:elif="{{shareError}}" class="shared-state shared-state-error">
+        <text class="shared-state-kicker">CAT ARCHIVE · UNAVAILABLE</text>
+        <text class="shared-state-title">{{shareError}}</text>
+        <text class="shared-state-copy">这份分享链接可能已经失效，或云端暂时没有响应。</text>
+        <view class="shared-state-action" bindtap="goCollection" aria-role="button" aria-label="返回图鉴">
+          <text>返回图鉴</text>
         </view>
       </view>
 
-      <block wx:if="{{catData}}">
+      <block wx:if="{{catData && !shareLoading}}">
         <view class="file-hero">
           <view class="file-photo">
             <view class="file-photo-corner"></view>
@@ -28,7 +41,7 @@
             <text class="file-photo-code">ARCHIVE #{{archiveCode}}</text>
             <view class="file-name-row">
               <text class="file-name">{{catData.name}}</text>
-              <text class="file-name-code">{{bestLevelCode}} FILE</text>
+              <text class="file-name-code">{{currentLevelCode}} FILE</text>
             </view>
             <text class="file-breed">CITY CAT · {{catData.breed}}</text>
           </view>
@@ -55,6 +68,42 @@
           </view>
         </view>
 
+        <view class="file-section score-section">
+          <view class="section-heading">
+            <text class="section-title">猫咪评分</text>
+            <text class="section-code">CAT SCORE</text>
+          </view>
+          <view class="score-card">
+            <view class="score-head">
+              <view class="score-context">
+                <text class="score-context-title">当前小猫评分</text>
+                <text class="score-context-level">{{currentLevelCode}} · {{currentLevelLabel}}</text>
+              </view>
+              <view class="score-total">
+                <text class="score-total-label">咪咔</text>
+                <text class="score-total-value">{{currentOverallScoreText}}</text>
+              </view>
+            </view>
+
+            <view wx:if="{{currentScoreItems.length > 0}}" class="score-list">
+              <view wx:for="{{currentScoreItems}}" wx:for-item="score" wx:key="key" class="score-row">
+                <text class="score-label">{{score.label}}</text>
+                <view class="score-track">
+                  <view class="score-fill score-fill-{{currentLevelCode}}" style="width: {{score.value}}%;"></view>
+                </view>
+                <text class="score-value">{{score.value}}</text>
+              </view>
+            </view>
+            <text wx:else class="score-empty">这次相遇暂未完成评分</text>
+
+            <view class="score-footer">
+              <text>当前猫咪 · 满分 100</text>
+              <text wx:if="{{currentPawReward !== null}}">猫爪 +{{currentPawReward}} · 积分 +{{currentPointReward}}</text>
+              <text wx:else>每次相遇单独计算</text>
+            </view>
+          </view>
+        </view>
+
         <view class="file-section field-notes">
           <view class="section-heading">
             <text class="section-title">相遇手记</text>
@@ -68,44 +117,8 @@
             <text class="field-note-copy">“{{fieldNoteText}}”</text>
             <view class="field-note-meta">
               <text>{{catData.breed}}</text>
-              <text>{{bestLevelCode}} · {{bestLevelLabel}}</text>
+              <text>{{currentLevelCode}} · {{currentLevelLabel}}</text>
               <text>已收入档案</text>
-            </view>
-          </view>
-        </view>
-
-        <view class="file-section score-section">
-          <view class="section-heading">
-            <text class="section-title">最佳相遇</text>
-            <text class="section-code">ENCOUNTER SCORE</text>
-          </view>
-          <view class="score-card">
-            <view class="score-head">
-              <view class="score-context">
-                <text class="score-context-title">最佳相遇记录</text>
-                <text class="score-context-level">{{bestLevelCode}} · {{bestLevelLabel}}</text>
-              </view>
-              <view class="score-total">
-                <text class="score-total-label">咪咔</text>
-                <text class="score-total-value">{{bestOverallScoreText}}</text>
-              </view>
-            </view>
-
-            <view wx:if="{{bestScoreItems.length > 0}}" class="score-list">
-              <view wx:for="{{bestScoreItems}}" wx:for-item="score" wx:key="key" class="score-row">
-                <text class="score-label">{{score.label}}</text>
-                <view class="score-track">
-                  <view class="score-fill score-fill-{{bestLevelCode}}" style="width: {{score.value}}%;"></view>
-                </view>
-                <text class="score-value">{{score.value}}</text>
-              </view>
-            </view>
-            <text wx:else class="score-empty">这次相遇暂未完成评分</text>
-
-            <view class="score-footer">
-              <text>咪咔 · 满分 100</text>
-              <text wx:if="{{bestPawReward !== null}}">猫爪 +{{bestPawReward}} · 积分 +{{bestPointReward}}</text>
-              <text wx:else>每次相遇单独计算</text>
             </view>
           </view>
         </view>
@@ -124,7 +137,7 @@
               bindtap="setFeatured"
               data-record-id="{{record.recordId}}"
               aria-role="button"
-              aria-label="将 {{record.timeText}} 的照片设为档案主图"
+              aria-label="{{isSharedArchive ? '查看相遇记录' : '设为档案主图'}}"
             >
               <text class="file-encounter-index">{{record.encounterIndex}}</text>
               <view class="file-encounter-copy">
@@ -144,7 +157,7 @@
             <text class="file-primary-icon">▣</text>
             <text>返回图鉴</text>
           </view>
-          <view class="file-release" bindtap="openDeleteConfirm" aria-role="button" aria-label="放归这只猫的档案">
+          <view wx:if="{{!isSharedArchive}}" class="file-release" bindtap="openDeleteConfirm" aria-role="button" aria-label="放归这只猫的档案">
             <image class="file-release-icon" src="/assets/icon-trash-coral.svg" mode="aspectFit" />
             <view class="file-release-copy">
               <text class="file-release-title">放归自由漫游</text>

@@ -283,6 +283,43 @@ function getRecordsForCat(catId) {
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
+/**
+ * 放归一只猫：从本地图鉴和相遇记录中移除它，但保留累计猫爪成长值。
+ * 云端图片文件不在这里删除，避免档案操作误删远端资源。
+ */
+function removeCatArchive(catId) {
+  const collection = getCollection();
+  const entry = collection[catId];
+  if (!entry) return { removedCount: 0, wasUnlocked: false };
+
+  const records = getAllRecords();
+  const removedRecords = records.filter(record => record.catId === catId);
+  const remainingRecords = records.filter(record => record.catId !== catId);
+  const wasUnlocked = entry.unlocked === true || removedRecords.length > 0;
+
+  _set(KEY_RECORDS, remainingRecords);
+
+  entry.unlocked = false;
+  entry.unlockedAt = null;
+  entry.photoCount = 0;
+  entry.featuredRecordId = null;
+  entry.displayName = null;
+  entry.displayDescription = null;
+  entry.copyVersion = null;
+  entry.records = [];
+  _set(KEY_COLLECTION, collection);
+
+  const stats = getUserStats();
+  stats.totalPhotos = Math.max(0, (stats.totalPhotos || 0) - removedRecords.length);
+  stats.unlockedCount = Math.max(0, (stats.unlockedCount || 0) - (wasUnlocked ? 1 : 0));
+  stats.lastPhotoTime = remainingRecords.reduce((latest, record) => {
+    return Math.max(latest, Number(record.createdAt) || 0);
+  }, 0) || null;
+  _set(KEY_STATS, stats);
+
+  return { removedCount: removedRecords.length, wasUnlocked };
+}
+
 function getUserStats() {
   const current = _get(KEY_STATS);
   const stats = current && typeof current === 'object' ? current : _createStats();
@@ -359,5 +396,6 @@ module.exports = {
   getRecordDisplayPath,
   getUserStats,
   setFeaturedRecord,
+  removeCatArchive,
   getUnlockedMap,
 };

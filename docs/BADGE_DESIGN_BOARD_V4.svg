@@ -1,0 +1,532 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" xml:space="preserve" width="1800" height="1400" viewBox="0 0 1800 1400" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="badge-v4-title badge-v4-desc" style="text-rendering:geometricPrecision">
+  <title id="badge-v4-title">猫咪咔咔 · 街角邮票收藏册</title>
+  <desc id="badge-v4-desc">一张纯 SVG 绘制的猫咪咔咔十二枚收藏卡设计板，以街角邮局为视觉主题，每枚勋章都是一张可复用的邮票贴纸卡。</desc>
+
+  <metadata>
+    <badge-system name="猫咪咔咔" version="0.1" visual-version="6">
+      <badge id="BADGE-FIRST-CAPTURE" name="第一声喵" category="初遇" condition="第 1 张有效相遇卡" reward="咔咔分 +3"/>
+      <badge id="BADGE-CAT-ARCHIVIST" name="猫咪档案员" category="初遇" condition="建立 3 个不同猫咪档案" reward="咔咔分 +5"/>
+      <badge id="BADGE-THREE-CANS" name="三罐开拍" category="罐罐" condition="首次在一天内成功使用 3 个罐罐" reward="咔咔分 +5"/>
+      <badge id="BADGE-CANS-NOT-EMPTY" name="罐罐不空" category="罐罐" condition="3 个不同日期完成当天 3 次有效拍摄" reward="咔咔分 +8"/>
+      <badge id="BADGE-CAT-BOOKLET" name="猫咪小册" category="图鉴" condition="建立 5 个不同猫咪档案" reward="咔咔分 +5"/>
+      <badge id="BADGE-STREET-ARCHIVE" name="街角成册" category="图鉴" condition="建立 20 个不同猫咪档案" reward="咔咔分 +13"/>
+      <badge id="BADGE-MIKA-GLOW" name="咪咔发光" category="咪咔高光" condition="首次获得咪咔 ≥ 80 的相遇卡" reward="咔咔分 +8"/>
+      <badge id="BADGE-MIKA-SPARKLE" name="咪咔闪闪" category="咪咔高光" condition="首次获得咪咔 ≥ 90 的相遇卡" reward="咔咔分 +13"/>
+      <badge id="BADGE-THREE-DAYS" name="三日有喵" category="连续" condition="连续 3 个自然日各有至少 1 张有效相遇卡" reward="咔咔分 +8"/>
+      <badge id="BADGE-SEVEN-DAYS" name="七日有喵" category="连续" condition="连续 7 个自然日各有至少 1 张有效相遇卡" reward="咔咔分 +13"/>
+      <badge id="BADGE-GENTLE-OBSERVER" name="不打扰观察员" category="温柔观察" condition="默认无闪光模式完成 10 次有效拍摄" reward="咔咔分 +8"/>
+      <badge id="BADGE-GENTLE-PRESS" name="轻轻按下" category="温柔观察" condition="10 次拍摄任务都只提交一次" reward="纯展示"/>
+    </badge-system>
+  </metadata>
+
+  <defs>
+    <pattern id="paper-grain" width="32" height="32" patternUnits="userSpaceOnUse">
+      <circle cx="5" cy="7" r="1.1" fill="#E7DCE1" opacity="0.32"/>
+      <circle cx="20" cy="23" r="0.9" fill="#E7DCE1" opacity="0.26"/>
+      <circle cx="27" cy="12" r="0.7" fill="#F4DFA9" opacity="0.32"/>
+    </pattern>
+    <linearGradient id="board-wash" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFDF9"/>
+      <stop offset="0.55" stop-color="#FFF9F2"/>
+      <stop offset="1" stop-color="#FFF4E9"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5A08D"/>
+      <stop offset="0.58" stop-color="#EB7D6F"/>
+      <stop offset="1" stop-color="#D86361"/>
+    </linearGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F9E7E2"/>
+      <stop offset="1" stop-color="#F2D7DE"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#DDEBE2"/>
+      <stop offset="0.55" stop-color="#B8D4C2"/>
+      <stop offset="1" stop-color="#91B6A7"/>
+    </linearGradient>
+    <linearGradient id="lavender" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EEE7F3"/>
+      <stop offset="0.55" stop-color="#D5CBE9"/>
+      <stop offset="1" stop-color="#BBAED3"/>
+    </linearGradient>
+    <linearGradient id="honey" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF1CA"/>
+      <stop offset="0.56" stop-color="#F4DFA9"/>
+      <stop offset="1" stop-color="#E7BC68"/>
+    </linearGradient>
+    <filter id="board-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#5D5260" flood-opacity="0.14"/>
+    </filter>
+    <filter id="badge-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#5D5260" flood-opacity="0.14"/>
+    </filter>
+    <filter id="icon-shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#5D5260" flood-opacity="0.16"/>
+    </filter>
+    <style><![CDATA[
+      .serif { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif; fill: #5D5260; }
+      .sans { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #5D5260; }
+      .eyebrow { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 3px; fill: #8F8190; }
+      .category { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif; font-size: 25px; font-weight: 600; letter-spacing: 3px; }
+      .badge-name { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; font-size: 17px; font-weight: 600; letter-spacing: 0.8px; fill: #5D5260; }
+      .serif-light { font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif; fill: #FFFDF9; }
+      .sans-light { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #FFFDF9; }
+      .eyebrow-light { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 3px; fill: #D7CBD2; }
+      .badge-name-light { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; font-size: 17px; font-weight: 600; letter-spacing: 0.8px; fill: #FFFDF9; }
+      .small-light { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; font-size: 13px; font-weight: 500; fill: #D7CBD2; }
+      .micro { font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; font-size: 12px; font-weight: 500; fill: #8F8190; }
+      .icon-line { stroke: #5D5260; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-thin { stroke: #8F8190; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    ]]></style>
+
+    <symbol id="mini-star" viewBox="-16 -16 32 32">
+      <path d="M0-14 4-4 14 0 4 4 0 14-4 4-14 0-4-4Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="mini-paw" viewBox="-20 -20 40 40">
+      <g fill="currentColor">
+        <ellipse cx="-10" cy="-7" rx="4.8" ry="6.5" transform="rotate(-28 -10 -7)"/>
+        <ellipse cx="0" cy="-12" rx="4.8" ry="6.5" transform="rotate(-8 0 -12)"/>
+        <ellipse cx="10" cy="-7" rx="4.8" ry="6.5" transform="rotate(28 10 -7)"/>
+        <ellipse cx="15" cy="3" rx="4.8" ry="6.5" transform="rotate(58 15 3)"/>
+        <path d="M0 1c-8 0-14 6-14 13 0 6 4 9 9 9 4 0 5-2 8-2s4 2 8 2c5 0 9-3 9-9C20 7 14 1 6 1c-2 0-4 1-6 1S2 1 0 1Z"/>
+      </g>
+    </symbol>
+
+    <!-- Shared paper-and-enamel medallion shell. -->
+    <symbol id="badge-shell" viewBox="0 0 260 260">
+      <g filter="url(#badge-shadow)">
+        <circle cx="130" cy="130" r="127" fill="currentColor" opacity="0.15"/>
+        <circle cx="130" cy="130" r="121" fill="#FFFDF9" stroke="currentColor" stroke-width="5"/>
+        <circle cx="130" cy="130" r="116" fill="none" stroke="currentColor" stroke-width="14" stroke-dasharray="2 10" stroke-linecap="round" opacity="0.46"/>
+        <circle cx="130" cy="130" r="107" fill="#FFF9F2" stroke="currentColor" stroke-width="3"/>
+        <circle cx="130" cy="130" r="96" fill="none" stroke="#E7DCE1" stroke-width="2"/>
+        <path d="M65 69c23-17 50-22 76-17M55 177c22 22 51 32 83 29" fill="none" stroke="#FFFDF9" stroke-width="4" opacity="0.95"/>
+        <path d="M51 126c1-28 10-51 29-68M211 135c-1 30-11 53-31 71" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 8" opacity="0.56"/>
+      </g>
+    </symbol>
+
+    <!-- 01 · 第一声喵 -->
+    <symbol id="icon-first-meow" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <path d="M73 112 66 58l41 31M187 112l7-54-41 31" fill="url(#coral)" class="icon-line"/>
+        <path d="m76 91 2-20 17 13M184 91l-2-20-17 13" fill="#F2D7DE" class="icon-thin"/>
+        <path d="M78 104c0-31 23-53 52-53s52 22 52 53c0 49-23 69-52 69s-52-20-52-69Z" fill="#FFFDF9" class="icon-line"/>
+        <path d="M83 92c8-26 24-35 43-38-5 20-4 33 6 45-16 10-32 8-49-7Z" fill="url(#coral)" opacity="0.9"/>
+        <path d="M177 98c-13-2-23-10-30-24 15-4 26 1 34 15Z" fill="#D5CBE9" opacity="0.9"/>
+        <ellipse cx="105" cy="112" rx="12" ry="16" fill="#FFFDF9" class="icon-line"/>
+        <ellipse cx="155" cy="112" rx="12" ry="16" fill="#FFFDF9" class="icon-line"/>
+        <ellipse cx="108" cy="114" rx="5" ry="8" fill="#5D5260"/>
+        <ellipse cx="152" cy="114" rx="5" ry="8" fill="#5D5260"/>
+        <path d="M126 127q4 5 8 0M130 133v5M119 143q11 10 22 0" fill="none" class="icon-line"/>
+        <path d="M85 136 57 130M86 145 54 146M175 136l28-6M174 145l32 1" fill="none" class="icon-thin"/>
+        <path d="M205 101q18 14 0 28M215 89q31 24 0 48" fill="none" stroke="#EB7D6F" stroke-width="4" stroke-linecap="round"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="111" y="168" width="38" height="38" style="color:#EB7D6F"/>
+      </g>
+    </symbol>
+
+    <!-- 02 · 猫咪档案员 -->
+    <symbol id="icon-archivist" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <path d="M68 69h111l18 20v107H68Z" fill="url(#mint)" class="icon-line"/>
+        <path d="M179 69v23h18" fill="#DDEBE2" class="icon-line"/>
+        <rect x="82" y="82" width="78" height="98" rx="6" fill="#FFFDF9" class="icon-line"/>
+        <path d="M96 91v-12c0-5 4-8 9-8h21c5 0 9 3 9 8v12" fill="#F4DFA9" class="icon-line"/>
+        <path d="M108 119 105 98l15 10 15-10-3 21" fill="#D5CBE9" class="icon-thin"/>
+        <ellipse cx="120" cy="128" rx="18" ry="14" fill="#D5CBE9" class="icon-line"/>
+        <circle cx="113" cy="127" r="2.8" fill="#5D5260"/>
+        <circle cx="127" cy="127" r="2.8" fill="#5D5260"/>
+        <path d="M96 153h43M96 163h52M96 173h28" fill="none" class="icon-thin"/>
+        <path d="M174 107h32v61h-32Z" fill="#F4DFA9" class="icon-line"/>
+        <path d="M180 116h20M180 125h13" class="icon-thin" fill="none"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="177" y="137" width="27" height="27" style="color:#5D5260"/>
+        <circle cx="188" cy="188" r="12" fill="#FFFDF9" class="icon-line"/>
+        <path d="m182 188 4 4 8-9" fill="none" stroke="#6E9C8B" stroke-width="3" stroke-linecap="round"/>
+      </g>
+    </symbol>
+
+    <!-- 03 · 三罐开拍 -->
+    <symbol id="icon-three-cans" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <g transform="translate(76 125)">
+          <path d="M-38-13h76v48c0 10-17 17-38 17S-38 45-38 35Z" fill="url(#pink)" class="icon-line"/>
+          <ellipse cy="-13" rx="38" ry="12" fill="#FFFDF9" class="icon-line"/>
+          <ellipse cy="-13" rx="28" ry="6" fill="#D5CBE9" class="icon-thin"/>
+          <path d="M-15 15q15-17 30 0-15 15-30 0Z" fill="#EB7D6F"/>
+          <circle cx="-7" cy="12" r="2.5" fill="#5D5260"/><circle cx="7" cy="12" r="2.5" fill="#5D5260"/>
+        </g>
+        <g transform="translate(164 125)">
+          <path d="M-38-13h76v48c0 10-17 17-38 17S-38 45-38 35Z" fill="url(#mint)" class="icon-line"/>
+          <ellipse cy="-13" rx="38" ry="12" fill="#FFFDF9" class="icon-line"/>
+          <ellipse cy="-13" rx="28" ry="6" fill="#F4DFA9" class="icon-thin"/>
+          <path d="M-15 15q15-17 30 0-15 15-30 0Z" fill="#FFFDF9"/>
+          <circle cx="-7" cy="12" r="2.5" fill="#5D5260"/><circle cx="7" cy="12" r="2.5" fill="#5D5260"/>
+        </g>
+        <g transform="translate(130 72)">
+          <path d="M-38-13h76v48c0 10-17 17-38 17S-38 45-38 35Z" fill="url(#honey)" class="icon-line"/>
+          <ellipse cy="-13" rx="38" ry="12" fill="#FFFDF9" class="icon-line"/>
+          <ellipse cy="-13" rx="28" ry="6" fill="#5D5260" class="icon-thin"/>
+          <path d="M-15 15q15-17 30 0-15 15-30 0Z" fill="#EB7D6F"/>
+          <circle cx="-7" cy="12" r="2.5" fill="#FFFDF9"/><circle cx="7" cy="12" r="2.5" fill="#FFFDF9"/>
+        </g>
+        <circle cx="130" cy="190" r="20" fill="#FFFDF9" class="icon-line"/>
+        <path d="M130 173 136 186 149 192 136 198 130 211 124 198 111 192 124 186Z" fill="#EB7D6F"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="54" y="51" width="22" height="22" style="color:#F4DFA9"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="189" y="48" width="18" height="18" style="color:#EB7D6F"/>
+      </g>
+    </symbol>
+
+    <!-- 04 · 罐罐不空 -->
+    <symbol id="icon-full-can" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <g transform="translate(81 145)">
+          <path d="M-38-15h76v49c0 10-17 17-38 17S-38 44-38 34Z" fill="url(#honey)" class="icon-line"/>
+          <ellipse cy="-15" rx="38" ry="12" fill="#FFFDF9" class="icon-line"/>
+          <ellipse cy="-15" rx="28" ry="6" fill="#5D5260" class="icon-thin"/>
+          <path d="M-15 14q15-17 30 0-15 15-30 0Z" fill="#EB7D6F"/>
+        </g>
+        <path d="M125 68h77v104h-77Z" fill="url(#lavender)" class="icon-line"/>
+        <path d="M125 93h77M141 58v20M186 58v20" fill="none" class="icon-line"/>
+        <path d="M138 111h22v22h-22ZM167 111h22v22h-22ZM138 141h22v22h-22ZM167 141h22v22h-22Z" fill="#FFFDF9" class="icon-thin"/>
+        <text x="164" y="92" text-anchor="middle" class="serif" font-size="17" font-weight="600">3 DAYS</text>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="138" y="110" width="22" height="22" style="color:#EB7D6F"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="167" y="110" width="22" height="22" style="color:#EB7D6F"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="138" y="140" width="22" height="22" style="color:#EB7D6F"/>
+        <path d="M53 79 44 66M210 50l8-12" stroke="#EB7D6F" stroke-width="3" stroke-linecap="round"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="38" y="46" width="19" height="19" style="color:#EB7D6F"/>
+      </g>
+    </symbol>
+
+    <!-- 05 · 猫咪小册 -->
+    <symbol id="icon-booklet" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <path d="M50 82c25-12 51-12 80 4v99c-29-16-55-16-80-3Z" fill="url(#lavender)" class="icon-line"/>
+        <path d="M210 82c-25-12-51-12-80 4v99c29-16 55-16 80-3Z" fill="#E8DDF0" class="icon-line"/>
+        <path d="M130 86v99" fill="none" stroke="#8574A0" stroke-width="3"/>
+        <path d="M69 108c17-5 33-3 47 3M69 122c17-5 33-3 47 3M144 111c16-6 32-8 47-4M144 126c16-6 32-8 47-4" fill="none" class="icon-thin"/>
+        <path d="M98 98 96 77l16 11 16-11-2 21" fill="#B8D4C2" class="icon-thin"/>
+        <ellipse cx="113" cy="109" rx="18" ry="14" fill="#B8D4C2" class="icon-line"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="68" y="144" width="26" height="26" style="color:#8574A0"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="101" y="151" width="22" height="22" style="color:#8574A0"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="143" y="145" width="26" height="26" style="color:#8574A0"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="175" y="151" width="22" height="22" style="color:#8574A0"/>
+        <path d="M130 183v24l10-8 10 8v-24" fill="#EB7D6F" class="icon-thin"/>
+        <path d="M59 78c18-13 37-18 57-12M143 66c21-7 40-2 58 11" fill="none" stroke="#FFFDF9" stroke-width="4" opacity=".8"/>
+      </g>
+    </symbol>
+
+    <!-- 06 · 街角成册 -->
+    <symbol id="icon-street-book" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <path d="M47 166 72 91l62 19 54-31 26 83-68 30Z" fill="#DDEBE2" class="icon-line"/>
+        <path d="M58 160c35-19 63-23 92-18 23 4 43 2 61-8M77 105c16 31 38 58 69 79M137 112c-6 28-5 56 3 82" fill="none" stroke="#91B6A7" stroke-width="3"/>
+        <path d="M124 73c-20 0-31 14-31 31 0 22 31 48 31 48s31-26 31-48c0-17-11-31-31-31Z" fill="url(#coral)" class="icon-line"/>
+        <circle cx="124" cy="103" r="13" fill="#FFFDF9"/>
+        <path d="M116 102 114 91l10 6 10-6-2 11" fill="#5D5260"/>
+        <ellipse cx="124" cy="109" rx="10" ry="8" fill="#5D5260"/>
+        <path d="M64 190h141M78 202h112" fill="none" class="icon-thin"/>
+        <path d="M76 186c16-13 31-19 47-20M152 164c17-1 31 4 43 12" fill="none" stroke="#EB7D6F" stroke-width="4" stroke-linecap="round"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="182" y="65" width="20" height="20" style="color:#F4DFA9"/>
+      </g>
+    </symbol>
+
+    <!-- 07 · 咪咔发光 -->
+    <symbol id="icon-mika-glow" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <path d="M42 126q40-48 88-48t88 48q-40 48-88 48t-88-48Z" fill="#FFFDF9" class="icon-line"/>
+        <path d="M71 126q29-34 59-34t59 34q-29 34-59 34t-59-34Z" fill="url(#pink)" class="icon-line"/>
+        <path d="m130 91 13 26-4 44-17-18-4-38Z" fill="url(#coral)"/>
+        <circle cx="130" cy="126" r="8" fill="#5D5260"/>
+        <path d="M130 53v-20M83 65 70 49M177 65l13-16M61 126H39M199 126h22M83 187l-13 16M177 187l13 16" fill="none" stroke="#EB7D6F" stroke-width="3" stroke-linecap="round"/>
+        <path d="M119 203q11 8 22 0" fill="none" stroke="#EB7D6F" stroke-width="3"/>
+        <text x="130" y="211" text-anchor="middle" class="serif" font-size="25" font-weight="600" fill="#EB7D6F">80</text>
+        <use xlink:href="#mini-star" href="#mini-star" x="48" y="73" width="19" height="19" style="color:#F4DFA9"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="194" y="75" width="16" height="16" style="color:#EB7D6F"/>
+      </g>
+    </symbol>
+
+    <!-- 08 · 咪咔闪闪 -->
+    <symbol id="icon-mika-sparkle" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <path d="M38 128q43-54 92-54t92 54q-43 54-92 54t-92-54Z" fill="url(#pink)" class="icon-line"/>
+        <path d="M79 128q24-31 51-31t51 31q-24 31-51 31t-51-31Z" fill="#FFFDF9" class="icon-line"/>
+        <path d="M130 94 143 117l-5 43-16-17-3-37Z" fill="url(#coral)"/>
+        <circle cx="130" cy="128" r="8" fill="#5D5260"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="44" y="61" width="26" height="26" style="color:#F4DFA9"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="190" y="57" width="31" height="31" style="color:#EB7D6F"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="204" y="177" width="19" height="19" style="color:#F4DFA9"/>
+        <use xlink:href="#mini-star" href="#mini-star" x="44" y="178" width="15" height="15" style="color:#EB7D6F"/>
+        <path d="M67 204q28 14 63 10 35 4 63-10" fill="none" stroke="#EB7D6F" stroke-width="3" stroke-linecap="round"/>
+        <text x="130" y="218" text-anchor="middle" class="serif" font-size="25" font-weight="600" fill="#EB7D6F">90</text>
+      </g>
+    </symbol>
+
+    <!-- 09 · 三日有喵 -->
+    <symbol id="icon-three-days" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <rect x="52" y="72" width="156" height="116" rx="13" fill="url(#mint)" class="icon-line"/>
+        <path d="M52 105h156M83 61v30M177 61v30" fill="none" class="icon-line"/>
+        <path d="M68 125h38v40H68ZM111 125h38v40h-38ZM154 125h38v40h-38Z" fill="#FFFDF9" class="icon-thin"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="75" y="130" width="28" height="28" style="color:#EB7D6F"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="118" y="130" width="28" height="28" style="color:#EB7D6F"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="161" y="130" width="28" height="28" style="color:#EB7D6F"/>
+        <path d="M202 189q18-12 26-29" fill="none" stroke="#EB7D6F" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="224" cy="158" r="8" fill="#FFFDF9" class="icon-line"/>
+        <path d="m220 158 3 3 6-7" fill="none" stroke="#EB7D6F" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+    </symbol>
+
+    <!-- 10 · 七日有喵 -->
+    <symbol id="icon-seven-days" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <rect x="52" y="72" width="156" height="116" rx="13" fill="url(#lavender)" class="icon-line"/>
+        <path d="M52 105h156M83 61v30M177 61v30" fill="none" class="icon-line"/>
+        <circle cx="130" cy="139" r="61" fill="none" stroke="#FFFDF9" stroke-width="3" opacity=".9"/>
+        <g style="color:#F4DFA9">
+          <use xlink:href="#mini-star" href="#mini-star" x="75" y="113" width="19" height="19"/>
+          <use xlink:href="#mini-star" href="#mini-star" x="101" y="113" width="19" height="19"/>
+          <use xlink:href="#mini-star" href="#mini-star" x="127" y="113" width="19" height="19"/>
+          <use xlink:href="#mini-star" href="#mini-star" x="153" y="113" width="19" height="19"/>
+          <use xlink:href="#mini-star" href="#mini-star" x="179" y="113" width="19" height="19"/>
+          <use xlink:href="#mini-star" href="#mini-star" x="101" y="145" width="19" height="19"/>
+          <use xlink:href="#mini-star" href="#mini-star" x="153" y="145" width="19" height="19"/>
+        </g>
+        <path d="M130 194c18 0 32 7 47 19M130 194c-18 0-32 7-47 19" fill="none" stroke="#8574A0" stroke-width="3" stroke-linecap="round"/>
+      </g>
+    </symbol>
+
+    <!-- 11 · 不打扰观察员 -->
+    <symbol id="icon-gentle-observer" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <path d="M41 95q39-42 89-42t89 42q-39 42-89 42t-89-42Z" fill="#FFFDF9" class="icon-line"/>
+        <ellipse cx="130" cy="95" rx="22" ry="28" fill="#D5CBE9" class="icon-line"/>
+        <circle cx="130" cy="95" r="8" fill="#5D5260"/>
+        <path d="M45 190h171M61 175c35-20 67-18 100-2 20 10 35 8 54-1" fill="none" stroke="#91B6A7" stroke-width="16" stroke-linecap="round"/>
+        <path d="M102 178 98 141l20 15 20-15-4 37" fill="#5D5260" class="icon-line"/>
+        <ellipse cx="116" cy="184" rx="22" ry="16" fill="#5D5260"/>
+        <g transform="translate(185 175)">
+          <rect x="-22" y="-17" width="44" height="35" rx="7" fill="#F4DFA9" class="icon-line"/>
+          <circle cy="1" r="11" fill="#FFFDF9" class="icon-line"/>
+          <path d="M-13-18-7-27H7l6 9" fill="none" class="icon-line"/>
+        </g>
+        <use xlink:href="#mini-star" href="#mini-star" x="191" y="48" width="17" height="17" style="color:#B8D4C2"/>
+        <path d="M73 152h25M162 152h16" fill="none" stroke="#FFFDF9" stroke-width="3" stroke-linecap="round"/>
+      </g>
+    </symbol>
+
+    <!-- 12 · 轻轻按下 -->
+    <symbol id="icon-gentle-press" viewBox="0 0 260 260">
+      <g filter="url(#icon-shadow)">
+        <circle cx="130" cy="169" r="43" fill="#FFFDF9" class="icon-line"/>
+        <circle cx="130" cy="169" r="30" fill="url(#pink)" class="icon-line"/>
+        <path d="m130 151 7 12 13 6-13 6-7 14-7-14-13-6 13-6Z" fill="#EB7D6F"/>
+        <path d="M89 92c-5-17 6-32 22-36 15-3 29 5 34 20l11 35c3 11-4 20-14 22-9 2-17-3-20-12l-7-23-2 26c-1 10-9 17-19 16-10-1-16-10-15-20l3-28Z" fill="#F2D7DE" class="icon-line"/>
+        <path d="M106 55c-2-11 5-22 16-25M121 57c0-12 9-21 20-21M137 64c2-10 12-17 22-14" fill="none" class="icon-line"/>
+        <path d="M64 165q-17-7-25-23M196 165q17-7 25-23" fill="none" stroke="#EB7D6F" stroke-width="3" stroke-linecap="round"/>
+        <path d="M72 201q-17 7-27 22M188 201q17 7 27 22" fill="none" stroke="#B8D4C2" stroke-width="3" stroke-linecap="round"/>
+        <use xlink:href="#mini-paw" href="#mini-paw" x="113" y="207" width="34" height="34" style="color:#EB7D6F"/>
+      </g>
+    </symbol>
+
+    <!-- A die-cut postcard / sticker shell: distinct from the old circular medal. -->
+    <symbol id="badge-card-shell" viewBox="0 0 270 330">
+      <g filter="url(#badge-shadow)">
+        <rect x="12" y="12" width="246" height="306" rx="27" fill="currentColor" opacity="0.22"/>
+        <rect x="6" y="6" width="258" height="318" rx="29" fill="currentColor" stroke="#FFFDF9" stroke-width="7" stroke-dasharray="1 13" stroke-linecap="round"/>
+        <rect x="12" y="12" width="246" height="306" rx="25" fill="currentColor" stroke="#FFFDF9" stroke-width="1.8"/>
+        <rect x="25" y="25" width="220" height="181" rx="19" fill="#FFF9F2" stroke="#FFFDF9" stroke-width="4"/>
+        <path d="M25 67h220" stroke="#FFFDF9" stroke-width="3" opacity="0.84"/>
+        <path d="M41 42h73M155 42h49" stroke="#FFFDF9" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+        <path d="M41 230h188M41 243h114" stroke="#FFFDF9" stroke-width="2" stroke-linecap="round" opacity="0.82"/>
+        <path d="M25 277c32 16 64 17 96 4 34-13 74-12 124 10v40H25Z" fill="#FFFDF9" opacity="0.18"/>
+        <circle cx="220" cy="42" r="10" fill="#FFFDF9" opacity="0.88"/>
+        <circle cx="220" cy="42" r="4" fill="currentColor"/>
+      </g>
+    </symbol>
+  </defs>
+
+  <!-- Board: dark archive wall + independent postage-card badges -->
+  <rect width="1800" height="1400" fill="#292832"/>
+  <rect x="34" y="34" width="1732" height="1332" rx="48" fill="#35323E" stroke="#716873" stroke-width="2" filter="url(#board-shadow)"/>
+  <rect x="54" y="54" width="1692" height="1292" rx="35" fill="url(#paper-grain)" opacity="0.12"/>
+  <path d="M104 199H1696" fill="none" stroke="#756B78" stroke-width="1.5" stroke-dasharray="2 12" opacity="0.65"/>
+  <path d="M900 221V1323" fill="none" stroke="#6A606D" stroke-width="1.5" stroke-dasharray="2 12" opacity="0.75"/>
+  <circle cx="900" cy="221" r="5" fill="#F4DFA9"/>
+  <circle cx="900" cy="581" r="5" fill="#EB7D6F"/>
+  <circle cx="900" cy="941" r="5" fill="#B8D4C2"/>
+  <circle cx="900" cy="1323" r="5" fill="#D5CBE9"/>
+  <g transform="translate(900 765) rotate(-90)" aria-label="邮局档案轴">
+    <text x="0" y="0" text-anchor="middle" class="eyebrow-light" font-size="10" letter-spacing="3.5" style="fill:#BDB0BB">CAT STREET POST · FIELD NOTES · 2026</text>
+    <path d="M-210 16H-128M128 16H210" stroke="#766B78" stroke-width="1.5"/>
+  </g>
+
+  <!-- Header -->
+  <g aria-label="设计板标题">
+    <text x="106" y="97" class="eyebrow-light" style="fill:#F2D7DE">猫咪咔咔 · MEOW POST OFFICE</text>
+    <text x="106" y="151" class="serif-light" font-size="47" font-weight="600" letter-spacing="7">每次遇见，都值得盖章</text>
+    <text x="108" y="181" class="sans-light" font-size="15" style="fill:#D7CBD2">十二枚首版收藏卡 · 把相遇、记录和陪伴，压成一张张可收藏的纸</text>
+    <g transform="translate(1452 83) rotate(2)">
+      <path d="M0 15Q0 0 15 0h205q15 0 15 15v49q0 15-15 15H15Q0 79 0 64Z" fill="#EB7D6F"/>
+      <path d="M9 15Q9 9 17 9h186q8 0 8 8v43q0 9-8 9H17q-8 0-8-8Z" fill="#FFFDF9" opacity="0.98"/>
+      <text x="116" y="36" text-anchor="middle" class="sans-light" font-size="14" font-weight="600" style="fill:#A85F67">首版 · 12 枚</text>
+      <text x="116" y="56" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" style="fill:#A85F67">FIRST EDITION / 12 STAMPS</text>
+    </g>
+  </g>
+
+  <!-- Row 01 labels -->
+  <g transform="translate(125 215)" aria-label="初遇">
+    <rect width="125" height="30" rx="15" fill="#D96563"/>
+    <text x="62.5" y="20" text-anchor="middle" class="sans-light" font-size="12" font-weight="700" letter-spacing="1">01 · 初遇</text>
+    <text x="145" y="20" class="eyebrow-light" style="fill:#CDBFC8">FIRST ENCOUNTER</text>
+    <path d="M393 15H610" stroke="#877A87" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(1015 215)" aria-label="罐罐">
+    <rect width="125" height="30" rx="15" fill="#C58C35"/>
+    <text x="62.5" y="20" text-anchor="middle" class="sans-light" font-size="12" font-weight="700" letter-spacing="1">02 · 罐罐</text>
+    <text x="145" y="20" class="eyebrow-light" style="fill:#CDBFC8">DAILY CANS</text>
+    <path d="M310 15H610" stroke="#877A87" stroke-width="1.5"/>
+  </g>
+
+  <!-- Row 01 cards -->
+  <g id="badge-first-capture" data-badge-id="BADGE-FIRST-CAPTURE" data-category="初遇" data-style="postage-card" transform="translate(125 250)" role="group" aria-label="第一声喵">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#D96563"/>
+    <use xlink:href="#icon-first-meow" href="#icon-first-meow" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 01</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">初遇</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">第一声喵</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">FIRST MEOW</text>
+  </g>
+
+  <g id="badge-cat-archivist" data-badge-id="BADGE-CAT-ARCHIVIST" data-category="初遇" data-style="postage-card" transform="translate(425 250)" role="group" aria-label="猫咪档案员">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#6E9C8B"/>
+    <use xlink:href="#icon-archivist" href="#icon-archivist" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 02</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">初遇</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">猫咪档案员</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">CAT ARCHIVIST</text>
+  </g>
+
+  <g id="badge-three-cans" data-badge-id="BADGE-THREE-CANS" data-category="罐罐" data-style="postage-card" transform="translate(1035 250)" role="group" aria-label="三罐开拍">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#C58C35"/>
+    <use xlink:href="#icon-three-cans" href="#icon-three-cans" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 03</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">罐罐</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">三罐开拍</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">THREE CANS</text>
+  </g>
+
+  <g id="badge-cans-not-empty" data-badge-id="BADGE-CANS-NOT-EMPTY" data-category="罐罐" data-style="postage-card" transform="translate(1335 250)" role="group" aria-label="罐罐不空">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#A97936"/>
+    <use xlink:href="#icon-full-can" href="#icon-full-can" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 04</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">罐罐</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">罐罐不空</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">FULL PANTRY</text>
+  </g>
+
+  <!-- Row 02 labels -->
+  <g transform="translate(125 578)" aria-label="图鉴">
+    <rect width="125" height="30" rx="15" fill="#8B78AD"/>
+    <text x="62.5" y="20" text-anchor="middle" class="sans-light" font-size="12" font-weight="700" letter-spacing="1">03 · 图鉴</text>
+    <text x="145" y="20" class="eyebrow-light" style="fill:#CDBFC8">CAT ARCHIVE</text>
+    <path d="M330 15H610" stroke="#877A87" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(1015 578)" aria-label="咪咔高光">
+    <rect width="165" height="30" rx="15" fill="#D96563"/>
+    <text x="82.5" y="20" text-anchor="middle" class="sans-light" font-size="12" font-weight="700" letter-spacing="1">04 · 咪咔高光</text>
+    <text x="186" y="20" class="eyebrow-light" style="fill:#CDBFC8">MIKA HIGHLIGHT</text>
+    <path d="M394 15H610" stroke="#877A87" stroke-width="1.5"/>
+  </g>
+
+  <!-- Row 02 cards -->
+  <g id="badge-cat-booklet" data-badge-id="BADGE-CAT-BOOKLET" data-category="图鉴" data-style="postage-card" transform="translate(125 615)" role="group" aria-label="猫咪小册">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#8B78AD"/>
+    <use xlink:href="#icon-booklet" href="#icon-booklet" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 05</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">图鉴</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">猫咪小册</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">CAT BOOKLET</text>
+  </g>
+
+  <g id="badge-street-archive" data-badge-id="BADGE-STREET-ARCHIVE" data-category="图鉴" data-style="postage-card" transform="translate(425 615)" role="group" aria-label="街角成册">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#5F8F84"/>
+    <use xlink:href="#icon-street-book" href="#icon-street-book" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 06</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">图鉴</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">街角成册</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">STREET ARCHIVE</text>
+  </g>
+
+  <g id="badge-mika-glow" data-badge-id="BADGE-MIKA-GLOW" data-category="咪咔高光" data-style="postage-card" transform="translate(1035 615)" role="group" aria-label="咪咔发光">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#D96563"/>
+    <use xlink:href="#icon-mika-glow" href="#icon-mika-glow" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 07</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">高光</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">咪咔发光</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">MIKA GLOW</text>
+  </g>
+
+  <g id="badge-mika-sparkle" data-badge-id="BADGE-MIKA-SPARKLE" data-category="咪咔高光" data-style="postage-card" transform="translate(1335 615)" role="group" aria-label="咪咔闪闪">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#C58C35"/>
+    <use xlink:href="#icon-mika-sparkle" href="#icon-mika-sparkle" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 08</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">高光</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">咪咔闪闪</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">MIKA SPARKLE</text>
+  </g>
+
+  <!-- Row 03 labels -->
+  <g transform="translate(125 943)" aria-label="连续">
+    <rect width="125" height="30" rx="15" fill="#6E9C8B"/>
+    <text x="62.5" y="20" text-anchor="middle" class="sans-light" font-size="12" font-weight="700" letter-spacing="1">05 · 连续</text>
+    <text x="145" y="20" class="eyebrow-light" style="fill:#CDBFC8">KEEP SHOWING UP</text>
+    <path d="M337 15H610" stroke="#877A87" stroke-width="1.5"/>
+  </g>
+  <g transform="translate(1015 943)" aria-label="温柔观察">
+    <rect width="165" height="30" rx="15" fill="#5F8F9A"/>
+    <text x="82.5" y="20" text-anchor="middle" class="sans-light" font-size="12" font-weight="700" letter-spacing="1">06 · 温柔观察</text>
+    <text x="186" y="20" class="eyebrow-light" style="fill:#CDBFC8">GENTLE OBSERVATION</text>
+    <path d="M440 15H610" stroke="#877A87" stroke-width="1.5"/>
+  </g>
+
+  <!-- Row 03 cards -->
+  <g id="badge-three-days" data-badge-id="BADGE-THREE-DAYS" data-category="连续" data-style="postage-card" transform="translate(125 980)" role="group" aria-label="三日有喵">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#6E9C8B"/>
+    <use xlink:href="#icon-three-days" href="#icon-three-days" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 09</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">连续</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">三日有喵</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">THREE DAYS</text>
+  </g>
+
+  <g id="badge-seven-days" data-badge-id="BADGE-SEVEN-DAYS" data-category="连续" data-style="postage-card" transform="translate(425 980)" role="group" aria-label="七日有喵">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#8B78AD"/>
+    <use xlink:href="#icon-seven-days" href="#icon-seven-days" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 10</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">连续</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">七日有喵</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">SEVEN DAYS</text>
+  </g>
+
+  <g id="badge-gentle-observer" data-badge-id="BADGE-GENTLE-OBSERVER" data-category="温柔观察" data-style="postage-card" transform="translate(1035 980)" role="group" aria-label="不打扰观察员">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#5F8F9A"/>
+    <use xlink:href="#icon-gentle-observer" href="#icon-gentle-observer" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 11</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">观察</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="16">不打扰观察员</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">GENTLE OBSERVER</text>
+  </g>
+
+  <g id="badge-gentle-press" data-badge-id="BADGE-GENTLE-PRESS" data-category="温柔观察" data-style="postage-card" transform="translate(1335 980)" role="group" aria-label="轻轻按下">
+    <use xlink:href="#badge-card-shell" href="#badge-card-shell" width="270" height="330" style="color:#D96563"/>
+    <use xlink:href="#icon-gentle-press" href="#icon-gentle-press" x="54" y="70" width="162" height="162"/>
+    <text x="36" y="51" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">NO. 12</text>
+    <text x="234" y="51" text-anchor="end" class="eyebrow" font-size="9" letter-spacing="1.6" fill="#FFFDF9">观察</text>
+    <text x="135" y="265" text-anchor="middle" class="badge-name-light" font-size="17">轻轻按下</text>
+    <text x="135" y="287" text-anchor="middle" class="eyebrow-light" font-size="8" letter-spacing="2" opacity="0.82" style="fill:#FFFDF9">GENTLE PRESS</text>
+  </g>
+
+  <!-- Footer -->
+  <line x1="104" y1="1330" x2="1696" y2="1330" stroke="#756B78" stroke-width="1.5" stroke-dasharray="5 9"/>
+  <text x="108" y="1358" class="small-light">勋章不是排名，是一张张被认真看见的邮票。</text>
+  <text x="1692" y="1358" text-anchor="end" class="eyebrow-light">PURE SVG · OPEN SOURCE FRIENDLY</text>
+</svg>

@@ -129,8 +129,8 @@ function createPendingEncounter() {
  * 先做猫咪检测，再把视觉模型的品种标签映射到图鉴角色。
  * 视觉模型返回事实层与受约束的展示文案；游戏角色、稀有度和唯一性仍由本地图鉴数据决定。
  */
-async function identifyCat(photoPath) {
-  const detection = await catVision.inspectCat(photoPath);
+async function identifyCat(photoPath, options) {
+  const detection = await catVision.inspectCat(photoPath, options);
   if (!detection || detection.ok !== true) {
     throw createError(
       (detection && detection.code) || 'VISION_UNAVAILABLE',

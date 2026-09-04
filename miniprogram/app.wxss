@@ -4,12 +4,27 @@
 
 /* ── CSS 变量 ── */
 page {
-  --color-primary: #EF745E;
-  --color-orange: #E6A45F;
-  --color-cream: #FFF9F1;
-  --color-brown: #4A3728;
-  --color-gray: #927E70;
-  --color-light-gray: #F3EBE3;
+  /* city-cat-archive-v5 视觉基线 */
+  --color-paper: #F8F1E7;
+  --color-paper-deep: #EEE1D0;
+  --color-surface: #FFFDF8;
+  --color-ink: #332824;
+  --color-muted: #8C7569;
+  --color-line: #D7C5B3;
+  --color-stamp: #9B442A;
+  --color-coral: #E67E5F;
+  --color-moss: #4A6549;
+  --color-moss-soft: #CDE1C8;
+  --color-gold: #C99A49;
+  --color-blush: #EFD2D1;
+
+  /* 兼容现有页面的语义别名 */
+  --color-primary: var(--color-coral);
+  --color-orange: var(--color-gold);
+  --color-cream: var(--color-paper);
+  --color-brown: var(--color-ink);
+  --color-gray: var(--color-muted);
+  --color-light-gray: var(--color-paper-deep);
 
   /* 稀有度颜色 */
   --color-n: #999999;
@@ -38,12 +53,12 @@ page {
   --shadow-lg: 0 8rpx 32rpx rgba(74, 55, 40, 0.16);
 
   /* 背景 & 字体 */
-  background-color: var(--color-cream);
+  background-color: var(--color-paper);
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
                "Microsoft YaHei", sans-serif;
-  --font-display: "Kaiti SC", "STKaiti", "KaiTi", "DFKai-SB", "Songti SC", serif;
-  color: var(--color-brown);
+  --font-display: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+  color: var(--color-ink);
   line-height: 1.5;
 }
 

@@ -1,151 +1,119 @@
-<!-- 我的：相遇记录 -->
-<navigation-bar title="我的" back="{{false}}" color="#4A3728" background="#FFF9F1" />
-
+<!-- 我的：城市猫咪观察手记 -->
 <view class="my-page">
   <scroll-view class="my-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="my-content">
-      <view class="profile-head">
-        <image class="profile-avatar" src="/assets/maomi-kaka-icon.png" mode="aspectFill" />
-        <view class="profile-copy">
-          <text class="profile-kicker">MY CAT LOG</text>
-          <text class="profile-title">我的相遇记录</text>
-          <text class="profile-subtitle">每一次遇见，都值得被记住</text>
+    <view class="my-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="my-page-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="my-brand-mark">
+          <view class="my-brand-symbol">
+            <image src="/assets/tab-profile.svg" mode="aspectFit" />
+          </view>
+          <view class="my-brand-copy">
+            <text class="my-brand-name">我的相遇</text>
+            <text class="my-brand-sub">FIELD NOTES</text>
+          </view>
+        </view>
+        <text class="my-level">LV.{{memberLevel}}</text>
+      </view>
+
+      <text class="my-page-kicker">MY CAT JOURNAL</text>
+      <view class="my-title">
+        <text>留下每一次</text><text class="my-title-em">遇见</text>
+      </view>
+
+      <view class="profile-card">
+        <view class="profile-top">
+          <view class="profile-avatar-wrap">
+            <image class="profile-avatar" src="/assets/cat-illustration.svg" mode="aspectFit" />
+          </view>
+          <view class="profile-copy">
+            <text class="profile-name">猫咪观察员</text>
+            <text class="profile-role">街角漫游者 · 记录生活里的猫</text>
+          </view>
+          <text class="profile-level-badge">LV.{{memberLevel}}</text>
+        </view>
+
+        <view class="growth-module">
+          <view class="growth-head">
+            <view class="growth-label">
+              <text class="growth-label-title">猫爪成长经验</text>
+              <text class="growth-label-sub">距离下一等级 {{nextMemberName}}</text>
+            </view>
+            <text class="growth-value">{{pawGrowth}} <text class="growth-value-total">/ {{nextGrowth}}</text></text>
+          </view>
+          <view class="growth-track">
+            <view class="growth-track-fill" style="width: {{memberProgress}}%;"></view>
+            <view
+              class="growth-marker"
+              style="left: {{memberProgress}}%; transform: translate(-{{memberProgress}}%, -50%);"
+            >
+              <image src="/assets/paw.svg" mode="aspectFit" />
+            </view>
+          </view>
+          <view class="growth-foot">
+            <text>当前 LV.{{memberLevel}}</text>
+            <text class="growth-percent">{{memberProgress}}% · 猫爪进度</text>
+            <text wx:if="{{!memberIsMax}}">还差 {{growthToNext}} 猫爪</text>
+            <text wx:else>继续城市冒险</text>
+          </view>
         </view>
       </view>
 
-      <view class="stats-board">
+      <view class="stat-grid">
         <view class="stat-item">
           <text class="stat-value">{{unlockedCount}}</text>
-          <text class="stat-label">已收录</text>
+          <text class="stat-label">已发现</text>
         </view>
-        <view class="stat-divider"></view>
         <view class="stat-item">
           <text class="stat-value">{{totalPhotos}}</text>
           <text class="stat-label">相遇次数</text>
         </view>
-        <view class="stat-divider"></view>
         <view class="stat-item">
-          <text class="stat-value">{{todayCount}}</text>
-          <text class="stat-label">今日记录</text>
+          <text class="stat-value">{{streakDays}}</text>
+          <text class="stat-label">连续记录天数</text>
         </view>
       </view>
 
-      <view class="member-card">
-        <view class="member-head">
-          <view class="member-copy">
-            <text class="member-kicker">CAT WALKER LEVEL</text>
-            <text class="member-title">{{memberName}}</text>
-          </view>
-          <view class="member-badge">
-            <text>Lv.{{memberLevel}}</text>
-          </view>
-        </view>
-        <view class="member-growth-row">
-          <text>猫爪成长值 {{pawGrowth}}</text>
-          <text wx:if="{{!memberIsMax}}">距 {{nextMemberName}} 还差 {{growthToNext}}</text>
-          <text wx:else>已抵达当前最高等级</text>
-        </view>
-        <view class="member-line">
-          <view class="member-line-fill" style="width: {{memberProgress}}%;"></view>
-        </view>
-        <view class="member-foot">
-          <text>Lv.{{memberLevel}} · {{memberName}}</text>
-          <text wx:if="{{!memberIsMax}}">下一等级 {{nextGrowth}}</text>
-          <text wx:else>继续城市冒险</text>
+      <view class="section-head">
+        <text class="section-title">最近相遇</text>
+        <view class="section-more" bindtap="goCollection" aria-role="button" aria-label="查看全部相遇">
+          <text>VIEW ALL →</text>
         </view>
       </view>
 
-      <view class="section-heading">
-        <text class="section-title">最近遇见</text>
-        <view class="section-more" bindtap="goCollection">
-          <text>看图鉴</text>
-          <image src="/assets/icon-arrow-up-right-coral.svg" mode="aspectFit" />
-        </view>
-      </view>
-
-      <view wx:if="{{recentRecords.length > 0}}" class="recent-list">
-        <view wx:for="{{recentRecords}}" wx:for-item="record" wx:key="recordId" class="recent-item">
-          <block wx:if="{{record.photoPath}}">
-            <image class="recent-photo" src="{{record.photoPath}}" mode="aspectFit" />
-          </block>
-          <block wx:else>
-            <view class="recent-photo recent-photo-fallback">
-              <image src="{{record.fallbackIcon}}" mode="aspectFit" />
-            </view>
-          </block>
-          <view class="recent-copy">
-            <text class="recent-name">{{record.catName}}</text>
-            <text class="recent-time">{{record.timeText}}</text>
+      <view wx:if="{{recentRecords.length > 0}}" class="record-list">
+        <view wx:for="{{recentRecords}}" wx:for-item="record" wx:key="recordId" class="record-row">
+          <view class="record-dot">
+            <block wx:if="{{record.photoPath}}">
+              <image src="{{record.photoPath}}" mode="aspectFill" />
+            </block>
+            <image wx:else src="{{record.fallbackIcon}}" mode="aspectFit" />
           </view>
-          <image class="recent-arrow" src="/assets/icon-chevron-right.svg" mode="aspectFit" />
+          <view class="record-copy">
+            <text class="record-name">{{record.catName}}</text>
+            <text class="record-meta">{{record.levelCode}} · {{record.levelLabel}} · 猫爪 +{{record.pawReward || 0}}</text>
+          </view>
+          <text class="record-date">{{record.timeText}}</text>
         </view>
       </view>
 
       <view wx:else class="my-empty">
-        <image class="my-empty-mark" src="/assets/paw.svg" mode="aspectFit" />
+        <image class="my-empty-mark" src="/assets/cat-placeholder.svg" mode="aspectFit" />
         <text class="my-empty-title">还没有相遇记录</text>
         <text class="my-empty-sub">去拍一只猫，留下第一笔记录</text>
       </view>
 
-      <view class="my-journey">
-        <image class="journey-stamp" src="/assets/paw.svg" mode="aspectFit" />
-        <view class="journey-head">
-          <view class="journey-copy">
-            <text class="journey-kicker">CAT JOURNEY</text>
-            <text class="journey-title">我的猫咪旅程</text>
-          </view>
-          <view class="journey-count">
-            <text class="journey-count-value">{{unlockedCount}}</text>
-          </view>
+      <view class="settings">
+        <view class="setting-row">
+          <text>提醒与隐私</text>
+          <text class="setting-arrow">›</text>
         </view>
-        <view class="journey-line">
-          <view class="journey-line-fill" style="width: {{journeyPercent}}%;"></view>
-        </view>
-        <view class="journey-foot">
-          <text>已收录 {{unlockedCount}} 只</text>
-          <text>继续去遇见</text>
+        <view class="setting-row">
+          <text>关于猫咪咔咔</text>
+          <text class="setting-arrow">›</text>
         </view>
       </view>
 
-      <view class="dev-mode-entry" bindtap="goDevMode">
-        <view class="dev-mode-entry-icon">
-          <image src="/assets/doodle-spark.svg" mode="aspectFit" />
-        </view>
-        <view class="dev-mode-entry-copy">
-          <text class="dev-mode-entry-kicker">DEVELOPER MODE</text>
-          <text class="dev-mode-entry-title">开发模式</text>
-          <text class="dev-mode-entry-subtitle">文生图 · 猫咪图生图测试工具</text>
-        </view>
-        <image class="dev-mode-entry-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
-      </view>
-
-      <view class="coming-section-heading">
-        <text class="section-title">更多内容</text>
-        <text class="coming-section-note">陆续开放</text>
-      </view>
-
-      <view class="coming-grid">
-        <view class="coming-item">
-          <image class="coming-icon" src="/assets/paw.svg" mode="aspectFit" />
-          <text class="coming-title">相遇足迹</text>
-          <text class="coming-subtitle">记录城市路线</text>
-        </view>
-        <view class="coming-item">
-          <image class="coming-icon" src="/assets/icon-heart.svg" mode="aspectFit" />
-          <text class="coming-title">猫咪偏好</text>
-          <text class="coming-subtitle">慢慢生成</text>
-        </view>
-        <view class="coming-item">
-          <image class="coming-icon" src="/assets/tab-album.svg" mode="aspectFit" />
-          <text class="coming-title">相遇徽章</text>
-          <text class="coming-subtitle">继续收集</text>
-        </view>
-      </view>
-
-      <view class="my-link" bindtap="goCamera">
-        <view class="my-link-icon">
-          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
-        </view>
+      <view class="my-link" bindtap="goCamera" aria-role="button" aria-label="去遇见一只猫">
         <view class="my-link-copy">
           <text class="my-link-title">去遇见一只猫</text>
           <text class="my-link-sub">继续收集你的城市猫咪</text>

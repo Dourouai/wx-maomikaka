@@ -24,7 +24,12 @@
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "prefix",
+        "value": "._"
+      }
+    ],
     "include": []
   },
   "cloudfunctionRoot": "cloudfunctions/",

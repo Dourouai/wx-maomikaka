@@ -180,7 +180,7 @@ Hy3 后续可以负责更长的卡片文案，但当前版本不调用它。猫�
 
 - `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`name`、`description`、`traits` 和 `scoreEvidence`，服务端规范化后返回 `scores`；
 - `miniprogram/cloudfunctions/cat-transform/`：使用 `wx-server-sdk@4.0.2` 保存图片，通过 `cloud.ai().createImageModel('hunyuan-image')` 调用 `HY-Image-v3.0-I2I-ToB-v1.0.1`，以 `images: [base64]` 传入一张原图并固定使用 `images/ar/generations`；
-- 小程序拍照后先调用现有 `content-security` 校验原图，再调用 `cat-vision` 判断是否为猫、映射品种并计算相遇评分，之后调用 `cat-transform` 的 `matting` 动作；任务提交后先扣除 1 个罐罐，非猫、多猫无法确认目标或图片不合格时不写入拍摄记录且不返还罐罐；识别服务不可用等产品侧异常时返还罐罐；
+- 小程序拍照后先调用现有 `content-security` 校验压缩图片，并保留通过检测的同一个 `fileID`；随后并行调用 `cat-vision` 判断是否为猫、映射品种并计算相遇评分，以及 `cat-transform` 的 `matting` 动作。两条链路都完成后才一次性展示和写入记录；任务提交后先扣除 1 个罐罐，非猫、多猫无法确认目标或图片不合格时会清理并不写入拍摄记录；识别服务不可用等产品侧异常时返还罐罐；
 - 云函数使用上一版 CloudBase 链路的三句主体处理提示并关闭提示词改写，CloudBase 图生图请求只传入 `footnote: '·'`，不传 `LogoAdd`；模型结果不做二次 `security.imgSecCheck`，直接保存到 `cat-album/cutout/`；
 - 本地记录同时保存安全校验后的原图 `fileID`、主体图 `fileID` 和主体处理元数据；图鉴与详情页优先展示主体图，主体处理失败时不把原图伪装成主体图；
 - 主体图临时访问地址过期后，图鉴和详情页会根据持久化 `fileID` 重新换取地址；页面不展示模型提示词、生成标签或模型说明。

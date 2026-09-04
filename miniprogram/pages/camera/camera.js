@@ -1,4 +1,6 @@
 // 拍照页 camera.js
+const deviceLayout = require('../../utils/deviceLayout');
+
 Page({
   data: {
     isTakingPhoto: false,
@@ -8,6 +10,34 @@ Page({
     cameraIssueTitle: '需要使用相机',
     cameraIssueSubtitle: '请在权限设置中允许相机访问',
     cameraIssueAction: '打开设置',
+    cameraHeaderTop: 48,
+    cameraHeaderRightInset: 36,
+    cameraFrameTop: 116,
+    cameraControlsHeight: 152,
+    cameraFrameBottom: 172,
+    cameraHintBottom: 182,
+    safeBottom: 34,
+  },
+
+  onLoad() {
+    this._syncDeviceLayout();
+  },
+
+  onResize() {
+    this._syncDeviceLayout();
+  },
+
+  _syncDeviceLayout() {
+    const layout = deviceLayout.getDeviceLayout();
+    this.setData({
+      cameraHeaderTop: layout.pageHeaderTop,
+      cameraHeaderRightInset: layout.cameraHeaderRight,
+      cameraFrameTop: layout.cameraFrameTop,
+      cameraControlsHeight: layout.cameraControlsHeight,
+      cameraFrameBottom: layout.cameraFrameBottom,
+      cameraHintBottom: layout.cameraHintBottom,
+      safeBottom: layout.safeBottom,
+    });
   },
 
   onReady() {
@@ -121,6 +151,13 @@ Page({
 
   // 返回上一页
   goBack() {
-    wx.navigateBack();
+    wx.navigateBack({
+      delta: 1,
+      fail: () => wx.switchTab({ url: '/pages/index/index' }),
+    });
+  },
+
+  goCollection() {
+    wx.switchTab({ url: '/pages/collection/collection' });
   },
 });

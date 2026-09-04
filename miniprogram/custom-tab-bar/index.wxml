@@ -1,25 +1,28 @@
 <view class="custom-tabbar">
   <view class="custom-tabbar-line"></view>
-  <view
-    wx:for="{{list}}"
-    wx:for-item="item"
-    wx:for-index="tabIndex"
-    wx:key="pagePath"
-    class="custom-tabbar-item {{selected === tabIndex ? 'custom-tabbar-item-selected' : ''}}"
-    catchtap="switchTab"
-    hover-class="custom-tabbar-item-hover"
-    hover-stay-time="100"
-    aria-role="button"
-    aria-label="{{item.text}}"
-    data-path="{{item.pagePath}}"
-    data-index="{{tabIndex}}"
-  >
-    <image
-      class="custom-tabbar-icon"
-      src="{{selected === tabIndex ? item.selectedIconPath : item.iconPath}}"
-      mode="aspectFit"
+  <view class="custom-tabbar-items">
+    <view
+      wx:for="{{list}}"
+      wx:for-item="item"
+      wx:for-index="tabIndex"
+      wx:key="pagePath"
+      class="custom-tabbar-item {{selected === tabIndex ? 'custom-tabbar-item-selected' : ''}}"
+      catchtap="switchTab"
+      hover-class="custom-tabbar-item-hover"
+      hover-stay-time="100"
+      aria-role="button"
       aria-label="{{item.text}}"
-    />
+      data-path="{{item.pagePath}}"
+      data-index="{{tabIndex}}"
+    >
+      <image
+        class="custom-tabbar-icon"
+        src="{{selected === tabIndex ? item.selectedIconPath : item.iconPath}}"
+        mode="aspectFit"
+        aria-label="{{item.text}}"
+      />
+      <text class="custom-tabbar-label">{{item.text}}</text>
+    </view>
   </view>
 
   <exception-modal

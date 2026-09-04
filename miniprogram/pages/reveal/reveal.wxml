@@ -1,101 +1,131 @@
 <!-- 揭示页：轻量收录结果 -->
 <view class="reveal-page">
-  <view wx:if="{{showLoading}}" class="loading-state">
-    <view class="loading-mark">
-      <image class="loading-icon" src="/assets/paw.svg" mode="aspectFit" />
+  <view wx:if="{{showLoading}}" class="loading-state" style="padding-top: {{loadingTop}}px;">
+    <text class="loading-brand">CAT ARCHIVE · PROCESSING</text>
+    <text class="loading-status">{{loadingSubtitle}}</text>
+    <view class="loading-illustration" aria-label="猫咪相片正在被收进档案">
+      <text class="loading-heart">♥</text>
+      <text class="loading-star">✦</text>
+      <view class="loading-photo">
+      <image class="loading-cat" src="/assets/cat-illustration.svg" mode="aspectFit" />
+      </view>
     </view>
     <text class="loading-title">{{loadingTitle}}</text>
-    <text class="loading-subtitle">{{loadingSubtitle}}</text>
+    <text class="loading-copy">猫猫马上就要出现啦</text>
     <view class="loading-dots">
       <view></view><view></view><view></view>
     </view>
+    <text class="loading-footer">识别特征 · 整理档案 · 准备揭晓</text>
   </view>
 
   <scroll-view wx:if="{{showCard}}" class="reveal-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="reveal-content">
-      <view class="reveal-close" bindtap="goCamera">
-        <image src="/assets/icon-close.svg" mode="aspectFit" />
+    <view class="reveal-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="reveal-page-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="reveal-brand-mark">
+          <view class="reveal-brand-symbol">
+            <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+          </view>
+          <view class="reveal-brand-copy">
+            <text class="reveal-brand-name">相遇结果</text>
+            <text class="reveal-brand-sub">ONE SHOT · ONE ENCOUNTER</text>
+          </view>
+        </view>
       </view>
-      <view class="reveal-topline">
-        <text class="reveal-kicker">NEW ENCOUNTER</text>
-        <text class="reveal-date">{{capturedAtText}}</text>
+      <text class="result-stamp">✦ CAT FOUND ✦</text>
+
+      <view class="result-card">
+        <view class="result-photo result-photo-{{levelCode}}">
+          <view class="result-photo-wash"></view>
+          <image wx:if="{{photo}}" class="result-photo-image" src="{{photo}}" mode="aspectFit" />
+          <image wx:else class="result-photo-placeholder" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+          <view class="result-photo-caption">
+            <text class="result-photo-code">ARCHIVE #{{archiveCode}}</text>
+            <text class="result-photo-name">{{catData.name}}</text>
+          </view>
+        </view>
+        <text class="result-quote">“{{resultQuote}}”</text>
       </view>
 
-      <view wx:if="{{isNew}}" class="new-note">新发现 · 第一次遇见</view>
-
-      <view class="found-sheet">
-        <view class="found-photo-wrap found-photo-wrap-{{levelCode}}">
-          <view class="found-photo-backdrop"></view>
-          <image wx:if="{{photo}}" class="found-photo" src="{{photo}}" mode="aspectFit" />
-          <image wx:else class="found-icon" src="/assets/cat-placeholder.svg" mode="aspectFit" />
-          <view class="found-level-badge found-level-badge-{{levelCode}}">
-            <text class="found-level-code">{{levelCode}}</text>
-            <text class="found-level-label">{{levelLabel}}</text>
-          </view>
+      <view class="result-meta-row">
+        <view class="result-rarity result-rarity-{{levelCode}}">
+          <view class="result-rarity-mark"><text>{{levelCode}}</text></view>
+          <text>{{levelLabel}}</text>
         </view>
-
-        <view class="found-label">
-          <text class="found-name">{{catData.name}}</text>
-          <view class="breed-tag">
-            <text class="breed-tag-key">品种标签</text>
-            <text class="breed-tag-value">{{breedLabel || catData.breed}}</text>
-          </view>
-        </view>
-
-        <view class="trait-list">
-          <view wx:for="{{catData.trait}}" wx:for-item="trait" wx:key="index" class="trait-pill">{{trait}}</view>
-        </view>
-
-        <view class="encounter-score-card">
-          <view class="encounter-score-head">
-            <view class="encounter-score-title-wrap">
-              <text class="encounter-score-title">这次相遇</text>
-              <text class="encounter-score-subtitle">{{levelShortLabel}}</text>
-            </view>
-            <view class="encounter-score-total">
-              <text class="encounter-score-total-value">{{overallScore}}</text>
-              <text class="encounter-score-total-label">综合分</text>
-            </view>
-          </view>
-
-          <view class="score-list">
-            <view wx:for="{{scoreItems}}" wx:for-item="score" wx:key="key" class="score-item">
-              <view class="score-item-head">
-                <text>{{score.label}}</text>
-                <text>{{score.value}}</text>
-              </view>
-              <view class="score-track">
-                <view class="score-track-fill score-track-fill-{{levelCode}}" style="width: {{score.value}}%;"></view>
-              </view>
-            </view>
-          </view>
-
-          <view class="reward-row">
-            <text>猫爪 +{{pawReward}}</text>
-            <text>积分 +{{pointReward}}</text>
-          </view>
-          <text wx:if="{{scoreNote}}" class="score-pending-note">{{scoreNote}}</text>
-        </view>
-
-        <view class="story-note">
-          <text class="story-note-title">关于它</text>
-          <text class="story-note-text">{{catData.story}}</text>
+        <view class="result-score">
+          <text class="result-score-label">咪咔</text>
+          <text class="result-score-value">{{overallScore}}</text>
         </view>
       </view>
 
-      <view class="reveal-actions">
-        <view class="action-secondary" bindtap="goCamera">
-          <text>再遇见一只</text>
+      <view class="result-reward-row">
+        <view class="result-reward result-reward-paw">
+          <view class="result-reward-head">
+            <view class="result-reward-icon"><image src="/assets/paw.svg" mode="aspectFit" /></view>
+            <text class="result-reward-label">PAW EXPERIENCE</text>
+          </view>
+          <text class="result-reward-value">猫爪 +{{pawReward}}</text>
         </view>
-        <view class="action-primary" bindtap="goCollection">
-          <text>收进图鉴</text>
-          <image class="action-arrow" src="/assets/icon-arrow-right-white.svg" mode="aspectFit" />
+        <view class="result-reward result-reward-point">
+          <view class="result-reward-head">
+            <view class="result-reward-icon result-reward-icon-kaka"><text>✦</text></view>
+            <text class="result-reward-label">ENCOUNTER POINTS</text>
+          </view>
+          <text class="result-reward-value">咔咔分 +{{pointReward}}</text>
         </view>
       </view>
 
+      <text wx:if="{{scoreNote}}" class="result-score-note">{{scoreNote}}</text>
+
+      <view class="result-actions">
+        <view class="result-action-primary" bindtap="goCollection" aria-role="button" aria-label="加入图鉴">
+          <image src="/assets/tab-album-active.svg" mode="aspectFit" />
+          <text>加入图鉴</text>
+        </view>
+      </view>
+      <text class="result-release">放回街角 · 等待下一次相遇</text>
       <view class="reveal-bottom-safe"></view>
     </view>
   </scroll-view>
+
+  <view
+    wx:if="{{showErrorPage}}"
+    class="reveal-error-context"
+    style="padding-top: {{pageHeaderTop}}px;"
+  >
+    <view class="reveal-error-header" style="padding-right: {{headerRightInset}}px;">
+      <view class="reveal-brand-mark">
+        <view class="reveal-brand-symbol">
+          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="reveal-brand-copy">
+          <text class="reveal-brand-name">相遇记录</text>
+          <text class="reveal-brand-sub">CAT ARCHIVE · RETRY</text>
+        </view>
+      </view>
+    </view>
+    <text class="reveal-error-stamp">✦ ENCOUNTER MISSED ✦</text>
+    <view class="reveal-error-scene">
+      <view class="reveal-error-photo">
+        <image src="/assets/cat-placeholder.svg" mode="aspectFit" />
+      </view>
+      <text class="reveal-error-mark">?</text>
+    </view>
+    <text class="reveal-error-title">{{errorTitle}}<text wx:if="{{errorTitleEm}}" class="reveal-error-title-em">{{errorTitleEm}}</text></text>
+    <view class="reveal-error-lead">
+      <text>{{errorLeadLineOne}}</text>
+      <text wx:if="{{errorLeadLineTwo}}">{{errorLeadLineTwo}}</text>
+    </view>
+    <text class="reveal-error-note">{{errorNote}}</text>
+    <view class="reveal-error-actions">
+      <view class="reveal-error-action reveal-error-action-primary" bindtap="goCamera" aria-role="button" aria-label="重新拍照">
+        <image src="/assets/icon-camera-white.svg" mode="aspectFit" />
+        <text>重新拍照</text>
+      </view>
+      <view class="reveal-error-action reveal-error-action-secondary" bindtap="goHome" aria-role="button" aria-label="回到相遇">
+        <text>回到相遇</text>
+      </view>
+    </view>
+  </view>
 
   <exception-modal
     visible="{{showException}}"

@@ -1,5 +1,5 @@
 <!-- 文字生图测试页：仅用于测试文生图模型，不写入猫咪图鉴。 -->
-<navigation-bar title="文字生图实验室" back="{{true}}" color="#4A3728" background="#FFF9F1" />
+<navigation-bar title="文字生图实验室" back="{{true}}" color="#332824" background="#FFFDF8" />
 
 <view class="text-image-page">
   <scroll-view class="text-image-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -10,7 +10,7 @@
         <text class="text-image-title">让一句话长出画面</text>
         <text class="text-image-subtitle">输入描述，试试看它会画出什么</text>
         <view class="text-image-note">
-          <text>仅供模型测试，图片可能带平台 AI 标识，不会写入猫咪图鉴。</text>
+          <text>仅供开发测试，不会写入猫咪图鉴。</text>
         </view>
       </view>
 

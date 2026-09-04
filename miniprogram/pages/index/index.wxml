@@ -1,73 +1,50 @@
-<!-- 首页：相遇 -->
-<navigation-bar title="猫咪咔咔" back="{{false}}" color="#4A3728" background="#FFF9F1" />
-
 <view class="home-page">
   <scroll-view class="home-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="home-content">
-      <view class="home-heading">
-        <view class="home-heading-copy">
-          <text class="home-kicker">今日的相遇</text>
-          <text class="home-title">去遇见一只猫</text>
-          <text class="home-subtitle">把偶然的相遇，收进你的图鉴</text>
-        </view>
-        <view class="home-heading-stamp">
-          <image src="/assets/paw.svg" mode="aspectFit" />
-        </view>
-      </view>
-
-      <!-- 首页只保留一个核心动作：拍猫 -->
-      <view class="camera-stage" bindtap="goCamera">
-        <view class="camera-stage-tape camera-stage-tape-left"></view>
-        <view class="camera-stage-tape camera-stage-tape-right"></view>
-        <view class="camera-stage-top-note">
-          <image src="/assets/paw.svg" mode="aspectFit" />
-          <text>街角观察中</text>
-        </view>
-        <block wx:if="{{latestPhoto}}">
-          <image class="camera-stage-photo" src="{{latestPhoto}}" mode="aspectFill" />
-          <view class="camera-stage-shade"></view>
-        </block>
-        <block wx:else>
-          <view class="camera-stage-empty">
-            <view class="camera-stage-empty-icon">
-              <image class="camera-stage-mark" src="/assets/maomi-kaka-icon-master.png" mode="aspectFit" />
-            </view>
-            <text class="camera-stage-empty-title">相机已准备好</text>
-            <text class="camera-stage-empty-sub">看到猫咪，就轻轻按下快门</text>
+    <view class="home-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="home-page-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="home-brand-mark">
+          <view class="home-brand-symbol">
+            <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
           </view>
-        </block>
-
-        <view class="finder finder-tl"></view>
-        <view class="finder finder-tr"></view>
-        <view class="finder finder-bl"></view>
-        <view class="finder finder-br"></view>
-
-        <view class="camera-stage-caption">
-          <image src="/assets/paw.svg" mode="aspectFit" />
-          <text wx:if="{{latestPhoto}}">最近遇见：{{latestName}}</text>
-          <text wx:else>还没有今天的相遇</text>
+          <view class="home-brand-copy">
+            <text class="home-brand-name">猫咪咔咔</text>
+            <text class="home-brand-sub">CITY CAT ARCHIVE</text>
+          </view>
+        </view>
+        <view class="home-level">
+          <text>LV.{{memberLevel}}</text>
         </view>
       </view>
 
-      <view class="primary-action" bindtap="goCamera">
+      <text class="home-kicker">CAT SPOTTER · PHOTO FIRST</text>
+      <view class="home-title">
+        <text>去遇见</text><text class="home-title-em">一只猫</text>
+      </view>
+      <text class="home-subtitle">带上罐罐，去街角走走吧</text>
+      <text class="home-subtitle home-subtitle-line">把一场偶遇，变成一张相遇卡。</text>
+
+      <view class="home-can-strip">
+        <view class="home-can-copy">
+          <text class="home-can-label">今日剩余罐罐</text>
+          <view class="home-cans">
+            <view wx:for="{{canSlots}}" wx:for-item="can" wx:key="index" class="home-can {{can ? '' : 'home-can-used'}}"></view>
+          </view>
+        </view>
+        <text class="home-can-count">{{remainingCans}} / {{dailyCanLimit}}</text>
+      </view>
+
+      <view class="home-lens" bindtap="goCamera" aria-role="button" aria-label="进入拍照">
+        <image class="home-lens-camera" src="/assets/icon-leica.svg" mode="aspectFit" />
+        <text class="home-lens-label">把镜头对准街角</text>
+      </view>
+
+      <view class="primary-action" bindtap="goCamera" aria-role="button" aria-label="开始拍照">
         <image class="primary-action-camera" src="/assets/icon-camera-white.svg" mode="aspectFit" />
-        <text class="primary-action-title">拍猫</text>
+        <text class="primary-action-title">开始拍照</text>
       </view>
 
-      <view class="home-status">
-        <view class="home-status-item">
-          <text class="home-status-value">{{todayCount}}</text>
-          <text class="home-status-label">今日相遇</text>
-        </view>
-        <view class="home-status-divider"></view>
-        <view class="home-status-item">
-          <text class="home-status-value">{{unlockedCount}}</text>
-          <text class="home-status-label">图鉴收录</text>
-        </view>
-        <view class="home-status-link" bindtap="goCollection">
-          <text>看图鉴</text>
-          <image src="/assets/icon-arrow-up-right-coral.svg" mode="aspectFit" />
-        </view>
+      <view class="home-note">
+        <text>使用 1 个罐罐</text>
       </view>
 
       <view class="home-bottom-safe"></view>

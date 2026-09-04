@@ -50,6 +50,7 @@ maomi-kaka/
 - [猫咪身份特征与视觉向量方案](./docs/CAT_IDENTITY_FEATURES_V0_1.md)
 - [相遇卡基础规则与五级卡面样式 v0.2](./docs/CARD_SYSTEM_V0_1.md)
 - [五级相遇卡 Canvas 分层与版式规则](./docs/CARD_CANVAS_LAYOUT_V0_1.md)
+- [五级卡面样式对照板 V10](./docs/CARD_STYLES_BOARD_V10.png)
 - [五级卡面样式对照板 V9](./docs/CARD_STYLES_BOARD_V9.png)
 - [五级卡面样式对照板 V8](./docs/CARD_STYLES_BOARD_V8.png)
 - [五级卡面样式对照板 V7](./docs/CARD_STYLES_BOARD_V7.png)

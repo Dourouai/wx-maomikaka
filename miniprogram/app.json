@@ -12,10 +12,10 @@
   ],
   "tabBar": {
     "custom": true,
-    "color": "#999",
-    "selectedColor": "#EF745E",
-    "backgroundColor": "#FFF9F1",
-    "borderStyle": "white",
+    "color": "#8C7569",
+    "selectedColor": "#9B442A",
+    "backgroundColor": "#FFFDF8",
+    "borderStyle": "black",
     "list": [
       {
         "pagePath": "pages/index/index",
@@ -34,7 +34,7 @@
   "window": {
     "navigationBarTextStyle": "black",
     "navigationStyle": "custom",
-    "backgroundColor": "#FFF8F0"
+    "backgroundColor": "#FFFDF8"
   },
   "style": "v2",
   "renderer": "webview",

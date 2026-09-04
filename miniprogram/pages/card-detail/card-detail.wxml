@@ -1,119 +1,183 @@
-<!-- 猫咪详情：单只猫的相遇记录 -->
-<navigation-bar title="猫咪档案" back="{{true}}" color="#4A3728" background="#FFF9F1" />
+<!-- 猫档案：city-cat-archive-v5 -->
 
 <view class="detail-page">
   <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="detail-content">
-      <view class="detail-heading">
-        <view>
-          <text class="detail-kicker">CAT NOTE · {{bestLevelLabel}}</text>
-          <text class="detail-title">{{catData.name}}</text>
+    <view class="detail-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="file-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="file-back" bindtap="goBack" aria-role="button" aria-label="返回图鉴">‹</view>
+        <view class="file-heading">
+          <text class="file-kicker">CAT FILE · NO.{{archiveCode}}</text>
+          <text class="file-title">猫档案</text>
         </view>
-        <image class="detail-heart" src="/assets/icon-heart.svg" mode="aspectFit" />
-      </view>
-
-      <view class="detail-sheet">
-        <view class="detail-photo-wrap detail-photo-wrap-{{bestLevelCode}}">
-          <view class="detail-photo-backdrop"></view>
-          <image wx:if="{{featuredPhoto}}" class="detail-photo" src="{{featuredPhoto}}" mode="aspectFit" />
-          <image wx:else class="detail-icon" src="/assets/cat-placeholder.svg" mode="aspectFit" />
-          <view class="detail-level-badge detail-level-badge-{{bestLevelCode}}">
-            <text class="detail-level-code">{{bestLevelCode}}</text>
-            <text>{{bestLevelLabel}}</text>
-          </view>
-        </view>
-
-        <view class="detail-name-label">
-          <text>{{catData.name}}</text>
-          <text class="detail-name-meta">{{catData.breed}}</text>
-        </view>
-
-        <view class="detail-traits">
-          <view wx:for="{{catData.trait}}" wx:for-item="trait" wx:key="index" class="detail-trait">{{trait}}</view>
+        <view class="file-count">
+          <text class="file-count-level">{{bestLevelCode}} · {{bestLevelLabel}}</text>
+          <text>{{encounterCountLabel}}</text>
         </view>
       </view>
 
-      <view class="detail-facts">
-        <view class="fact-item">
-          <text class="fact-value">{{encounterCount}}</text>
-          <text class="fact-label">遇见次数</text>
-        </view>
-        <view class="fact-item">
-          <text class="fact-value fact-date">{{firstSeenText}}</text>
-          <text class="fact-label">第一次遇见</text>
-        </view>
-        <view class="fact-item">
-          <text class="fact-value fact-date">{{lastSeenText}}</text>
-          <text class="fact-label">最近遇见</text>
-        </view>
-      </view>
+      <block wx:if="{{catData}}">
+        <view class="file-hero">
+          <view class="file-photo">
+            <view class="file-photo-corner"></view>
+            <text class="file-photo-stamp">CAT ARCHIVE</text>
+            <image wx:if="{{featuredPhoto}}" class="file-photo-image" src="{{featuredPhoto}}" mode="aspectFit" />
+            <image wx:else class="file-photo-placeholder" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+          </view>
 
-      <view wx:if="{{bestScoreItems.length > 0}}" class="detail-score-card">
-        <view class="detail-score-head">
-          <view class="detail-score-title-wrap">
-            <text class="detail-score-title">最高相遇等级</text>
-            <text class="detail-score-subtitle">{{bestLevelShortLabel}}</text>
-          </view>
-          <view class="detail-score-total">
-            <text class="detail-score-total-value">{{bestOverallScore}}</text>
-            <text class="detail-score-total-label">综合分</text>
-          </view>
-        </view>
-        <view class="detail-score-list">
-          <view wx:for="{{bestScoreItems}}" wx:for-item="score" wx:key="key" class="detail-score-item">
-            <view class="detail-score-item-head">
-              <text>{{score.label}}</text>
-              <text>{{score.value}}</text>
+          <view class="file-photo-label">
+            <text class="file-photo-code">ARCHIVE #{{archiveCode}}</text>
+            <view class="file-name-row">
+              <text class="file-name">{{catData.name}}</text>
+              <text class="file-name-code">{{bestLevelCode}} FILE</text>
             </view>
-            <view class="detail-score-track">
-              <view class="detail-score-fill detail-score-fill-{{bestLevelCode}}" style="width: {{score.value}}%;"></view>
+            <text class="file-breed">CITY CAT · {{catData.breed}}</text>
+          </view>
+
+          <view class="file-tags" aria-label="相遇标签">
+            <text class="file-tag">{{catData.breed}}</text>
+            <text wx:for="{{catData.trait}}" wx:for-item="trait" wx:key="index" class="file-tag">{{trait}}</text>
+            <text class="file-tag">相遇 {{encounterCount}} 次</text>
+          </view>
+
+          <view class="file-data">
+            <view class="file-data-item">
+              <text>首次遇见</text>
+              <text class="file-data-value">{{firstSeenText}}</text>
+            </view>
+            <view class="file-data-item">
+              <text>档案状态</text>
+              <text class="file-data-value">已建立</text>
+            </view>
+            <view class="file-data-item">
+              <text>相遇次数</text>
+              <text class="file-data-value">{{encounterCountText}} 次</text>
             </view>
           </view>
         </view>
-        <view wx:if="{{bestPawReward !== null}}" class="detail-reward-row">
-          <text>猫爪 +{{bestPawReward}}</text>
-          <text>积分 +{{bestPointReward}}</text>
-        </view>
-        <text wx:if="{{bestScorePending}}" class="detail-score-pending">这条记录暂未完成评分</text>
-      </view>
 
-      <view class="detail-note">
-        <text class="detail-note-title">关于它</text>
-        <text class="detail-note-text">{{catData.story}}</text>
-      </view>
-
-      <view wx:if="{{records.length > 0}}" class="records-section">
-        <view class="records-heading">
-          <text>我的相遇</text>
-          <text>{{records.length}} 次</text>
+        <view class="file-section field-notes">
+          <view class="section-heading">
+            <text class="section-title">相遇手记</text>
+            <text class="section-code">FIELD NOTES · {{encounterCountText}}</text>
+          </view>
+          <view class="field-note-card">
+            <view class="field-note-head">
+              <text>{{fieldNoteEncounterTitle}}</text>
+              <text>{{fieldNoteDate}}</text>
+            </view>
+            <text class="field-note-copy">“{{fieldNoteText}}”</text>
+            <view class="field-note-meta">
+              <text>{{catData.breed}}</text>
+              <text>{{bestLevelCode}} · {{bestLevelLabel}}</text>
+              <text>已收入档案</text>
+            </view>
+          </view>
         </view>
-        <view class="records-list">
-          <view
-            wx:for="{{records}}"
-            wx:for-item="record"
-            wx:key="recordId"
-            class="record-row {{record.recordId === featuredRecordId ? 'record-row-featured' : ''}}"
-            bindtap="setFeatured"
-            data-record-id="{{record.recordId}}"
-          >
-            <block wx:if="{{record.photoPath}}">
-              <image class="record-thumb" src="{{record.photoPath}}" mode="aspectFit" />
-            </block>
-            <block wx:else>
-              <view class="record-thumb record-thumb-fallback">
-                <image class="record-fallback-icon" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+
+        <view class="file-section score-section">
+          <view class="section-heading">
+            <text class="section-title">最佳相遇</text>
+            <text class="section-code">ENCOUNTER SCORE</text>
+          </view>
+          <view class="score-card">
+            <view class="score-head">
+              <view class="score-context">
+                <text class="score-context-title">最佳相遇记录</text>
+                <text class="score-context-level">{{bestLevelCode}} · {{bestLevelLabel}}</text>
               </view>
-            </block>
-            <view class="record-copy">
-              <text class="record-date">{{record.timeText}}</text>
-              <text class="record-location">{{record.levelCode}} · {{record.levelLabel}}</text>
+              <view class="score-total">
+                <text class="score-total-label">咪咔</text>
+                <text class="score-total-value">{{bestOverallScoreText}}</text>
+              </view>
             </view>
-            <text wx:if="{{record.recordId === featuredRecordId}}" class="record-mark">主图</text>
+
+            <view wx:if="{{bestScoreItems.length > 0}}" class="score-list">
+              <view wx:for="{{bestScoreItems}}" wx:for-item="score" wx:key="key" class="score-row">
+                <text class="score-label">{{score.label}}</text>
+                <view class="score-track">
+                  <view class="score-fill score-fill-{{bestLevelCode}}" style="width: {{score.value}}%;"></view>
+                </view>
+                <text class="score-value">{{score.value}}</text>
+              </view>
+            </view>
+            <text wx:else class="score-empty">这次相遇暂未完成评分</text>
+
+            <view class="score-footer">
+              <text>咪咔 · 满分 100</text>
+              <text wx:if="{{bestPawReward !== null}}">猫爪 +{{bestPawReward}} · 积分 +{{bestPointReward}}</text>
+              <text wx:else>每次相遇单独计算</text>
+            </view>
           </view>
         </view>
-      </view>
+
+        <view wx:if="{{records.length > 0}}" class="file-section records-section">
+          <view class="section-heading">
+            <text class="section-title">相遇记录</text>
+            <text class="section-code">{{encounterCountText}} ENCOUNTERS</text>
+          </view>
+          <view class="file-timeline">
+            <view
+              wx:for="{{records}}"
+              wx:for-item="record"
+              wx:key="recordId"
+              class="file-encounter {{record.recordId === featuredRecordId ? 'file-encounter-featured' : ''}}"
+              bindtap="setFeatured"
+              data-record-id="{{record.recordId}}"
+              aria-role="button"
+              aria-label="将 {{record.timeText}} 的照片设为档案主图"
+            >
+              <text class="file-encounter-index">{{record.encounterIndex}}</text>
+              <view class="file-encounter-copy">
+                <text class="file-encounter-title">{{record.encounterTitle}}</text>
+                <text class="file-encounter-meta">{{record.levelCode}} · {{record.levelLabel}} · {{record.recordId === featuredRecordId ? '档案主图' : '轻轻记录'}}</text>
+              </view>
+              <view class="file-encounter-side">
+                <text>{{record.timeShort}}</text>
+                <text wx:if="{{record.recordId === featuredRecordId}}" class="file-featured-mark">主图</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view class="file-actions">
+          <view class="file-primary" bindtap="goCollection" aria-role="button" aria-label="返回图鉴">
+            <text class="file-primary-icon">▣</text>
+            <text>返回图鉴</text>
+          </view>
+          <view class="file-release" bindtap="openDeleteConfirm" aria-role="button" aria-label="放归这只猫的档案">
+            <image class="file-release-icon" src="/assets/icon-trash-coral.svg" mode="aspectFit" />
+            <view class="file-release-copy">
+              <text class="file-release-title">放归自由漫游</text>
+              <text class="file-release-subtitle">RELEASE TO WILD · 删除档案</text>
+            </view>
+          </view>
+          <text class="file-action-note">CITY CAT ARCHIVE · NO.{{archiveCode}}</text>
+        </view>
+      </block>
 
       <view class="detail-bottom-safe"></view>
     </view>
   </scroll-view>
+
+  <view wx:if="{{showDeleteConfirm}}" class="delete-overlay" catchtap="stopDeletePropagation">
+    <view class="delete-dim"></view>
+    <view class="delete-dialog" catchtap="stopDeletePropagation" aria-role="alertdialog" aria-label="删除相遇卡确认">
+      <view class="delete-symbol">
+        <image src="/assets/icon-trash-coral.svg" mode="aspectFit" />
+      </view>
+      <text class="delete-eyebrow">ARCHIVE ACTION · DELETE</text>
+      <text class="delete-title">要放归这只猫吗？</text>
+      <text class="delete-message">确认后，这张相遇卡会从你的图鉴中移除。</text>
+      <text class="delete-detail">之后仍可以再次遇见它</text>
+      <text wx:if="{{deleteError}}" class="delete-error">{{deleteError}}</text>
+      <view class="delete-actions">
+        <view class="delete-button delete-button-cancel" bindtap="cancelDelete">
+          <text>保留档案</text>
+        </view>
+        <view class="delete-button delete-button-confirm" bindtap="confirmDelete">
+          <text>{{deleteBusy ? '正在放归…' : '放归'}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
 </view>

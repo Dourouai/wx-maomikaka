@@ -92,16 +92,21 @@ function getResult(response) {
   return response && response.result ? response.result : response;
 }
 
-async function cutoutCat(filePath) {
+async function cutoutCat(filePath, options = {}) {
   assertCloudAvailable();
-  let sourceFileID = '';
+  const providedSourceFileID = String(options.fileID || options.sourceFileID || '').trim();
+  const contentType = options.contentType || getContentType(filePath);
+  const ownsSourceFile = !providedSourceFileID;
+  let sourceFileID = providedSourceFileID;
 
   try {
-    const uploaded = await uploadSource(filePath);
-    sourceFileID = uploaded && uploaded.fileID ? uploaded.fileID : '';
+    if (!sourceFileID) {
+      const uploaded = await uploadSource(filePath);
+      sourceFileID = uploaded && uploaded.fileID ? uploaded.fileID : '';
+    }
     if (!sourceFileID) throw createError('SOURCE_UPLOAD_FAILED', '原始图片上传失败');
 
-    const response = await callTransform(sourceFileID, getContentType(filePath));
+    const response = await callTransform(sourceFileID, contentType);
     const result = getResult(response);
     if (!result || result.ok !== true || !result.cutoutFileID) {
       const code = result && result.code ? String(result.code) : 'MATTING_UNAVAILABLE';
@@ -133,14 +138,19 @@ async function cutoutCat(filePath) {
     };
   } catch (error) {
     // 抠图失败时不回退到原图，避免图鉴把带背景的照片误当成主体图。
-    await deleteSourceFile(sourceFileID);
+    if (ownsSourceFile) await deleteSourceFile(sourceFileID);
     if (error && !error.sourceFileID) error.sourceFileID = sourceFileID;
     if (error && error.code) throw error;
     throw createError('MATTING_UNAVAILABLE', '猫咪主体抠图失败');
   }
 }
 
+function deleteFile(fileID) {
+  return deleteSourceFile(fileID);
+}
+
 module.exports = {
   cutoutCat,
+  deleteFile,
   getTempFileURL,
 };

@@ -1,16 +1,18 @@
 /* pages/text-image/text-image.wxss */
 page {
-  --ink: #4a3728;
-  --muted-ink: #927e70;
-  --line: #eadfd4;
-  --coral: #ef745e;
-  --cream: #fff9f1;
-  background: var(--cream);
+  --ink: #332824;
+  --muted-ink: #8c7569;
+  --line: #d7c5b3;
+  --coral: #e67e5f;
+  --cream: #fffdf8;
+  background-color: var(--cream);
+  background-image: radial-gradient(rgba(155, 68, 42, 0.13) 1.4rpx, transparent 1.4rpx);
+  background-size: 32rpx 32rpx;
 }
 
 .text-image-page {
   min-height: 100vh;
-  background: var(--cream);
+  background: transparent;
 }
 
 .text-image-scroll {

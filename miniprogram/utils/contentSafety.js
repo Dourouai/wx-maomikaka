@@ -161,28 +161,41 @@ async function checkImage(filePath) {
   assertCloudAvailable();
   const checkedPath = await prepareImage(filePath);
   let uploadedFile;
+  let keepUploadedFile = false;
 
   try {
     uploadedFile = await uploadForCheck(checkedPath);
+    const fileID = uploadedFile && uploadedFile.fileID;
+    if (!fileID) throw createError('CHECK_UPLOAD_FAILED', '安全检测图片上传失败');
+
+    const contentType = getContentType(checkedPath);
     const response = await callCheckFunction({
       action: 'image',
-      fileID: uploadedFile && uploadedFile.fileID,
-      contentType: getContentType(checkedPath),
+      fileID,
+      contentType,
     });
     const result = getCheckResult(response);
 
     if (!result || result.ok !== true) throw toCheckError(result);
+    // 识别和主体处理会复用这份已经通过安全检测的图片，交给调用方在流程结束后决定是否删除。
+    keepUploadedFile = true;
     return {
       safe: true,
       photoPath: checkedPath,
+      fileID,
+      contentType,
       traceId: result.traceId || '',
     };
   } catch (error) {
     if (error && error.code) throw error;
     throw createError('CHECK_UNAVAILABLE', '内容安全检测暂时不可用');
   } finally {
-    await deleteCheckFile(uploadedFile && uploadedFile.fileID);
+    if (!keepUploadedFile) await deleteCheckFile(uploadedFile && uploadedFile.fileID);
   }
+}
+
+function releaseImage(fileID) {
+  return deleteCheckFile(fileID);
 }
 
 async function checkText(content, scene) {
@@ -199,5 +212,6 @@ async function checkText(content, scene) {
 
 module.exports = {
   checkImage,
+  releaseImage,
   checkText,
 };

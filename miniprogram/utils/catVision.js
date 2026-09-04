@@ -67,14 +67,18 @@ function deleteInput(fileID) {
   });
 }
 
-async function inspectCat(photoPath) {
+async function inspectCat(photoPath, options = {}) {
   assertCloudAvailable();
-  const contentType = getContentType(photoPath);
+  const sharedFileID = String(options.fileID || options.sourceFileID || '').trim();
+  const contentType = options.contentType || getContentType(photoPath);
   let uploaded;
+  let fileID = sharedFileID;
 
   try {
-    uploaded = await uploadForVision(photoPath, contentType);
-    const fileID = uploaded && uploaded.fileID;
+    if (!fileID) {
+      uploaded = await uploadForVision(photoPath, contentType);
+      fileID = uploaded && uploaded.fileID;
+    }
     if (!fileID) throw createError('VISION_UPLOAD_FAILED', '识别图片上传失败');
 
     const response = await callVision(fileID, contentType);

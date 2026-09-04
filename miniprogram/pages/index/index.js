@@ -1,10 +1,16 @@
 // pages/index/index.js
 const storage = require('../../utils/storage');
 const { getCatById } = require('../../utils/catData');
+const memberLevel = require('../../utils/memberLevel');
+const deviceLayout = require('../../utils/deviceLayout');
 
 Page({
   data: {
     todayCount: 0,
+    dailyCanLimit: 3,
+    remainingCans: 3,
+    canSlots: [1, 1, 1],
+    memberLevel: 1,
     unlockedCount: 0,
     totalCount: 60,
     latestPhoto: '',
@@ -15,11 +21,30 @@ Page({
     exceptionTitle: '',
     exceptionMessage: '',
     exceptionPrimaryText: '再试一次',
+    pageHeaderTop: 48,
+    headerRightInset: 0,
+  },
+
+  onLoad() {
+    this._syncDeviceLayout();
   },
 
   onShow() {
+    this._syncDeviceLayout();
     this._syncTabBar();
     this._refreshData();
+  },
+
+  onResize() {
+    this._syncDeviceLayout();
+  },
+
+  _syncDeviceLayout() {
+    const layout = deviceLayout.getDeviceLayout();
+    this.setData({
+      pageHeaderTop: layout.pageHeaderTop,
+      headerRightInset: layout.headerRightInset,
+    });
   },
 
   _syncTabBar() {
@@ -30,6 +55,7 @@ Page({
   _refreshData() {
     const records = storage.getAllRecords();
     const collection = storage.getCollection();
+    const membership = memberLevel.getMemberLevel(storage.getUserStats().pawGrowth);
     const today = this._getDateKey(Date.now());
     const todayCount = records.filter(record =>
       this._getDateKey(record.createdAt) === today
@@ -42,6 +68,9 @@ Page({
 
     this.setData({
       todayCount,
+      remainingCans: Math.max(0, 3 - todayCount),
+      canSlots: [0, 1, 2].map(index => index < Math.max(0, 3 - todayCount) ? 1 : 0),
+      memberLevel: membership.level,
       unlockedCount,
       latestPhoto: latestRecord
         ? storage.getRecordDisplayPath(latestRecord)

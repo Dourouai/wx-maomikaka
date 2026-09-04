@@ -1,5 +1,5 @@
 <!-- 开发模式：模型测试入口，不写入猫咪图鉴。 -->
-<navigation-bar title="开发模式" back="{{true}}" color="#4A3728" background="#FFF9F1" />
+<navigation-bar title="开发模式" back="{{true}}" color="#332824" background="#FFFDF8" />
 
 <view class="dev-mode-page">
   <scroll-view class="dev-mode-scroll" scroll-y enhanced show-scrollbar="{{false}}">
@@ -15,7 +15,7 @@
       </view>
 
       <view class="dev-tool-list">
-        <view class="dev-tool-card dev-tool-card-text" bindtap="goTextImage">
+        <view class="dev-tool-card dev-tool-card-text" bindtap="goTextImage" aria-role="button" aria-label="打开文字生图测试">
           <view class="dev-tool-icon dev-tool-icon-text">
             <image src="/assets/doodle-spark.svg" mode="aspectFit" />
           </view>
@@ -30,7 +30,7 @@
           <image class="dev-tool-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
         </view>
 
-        <view class="dev-tool-card dev-tool-card-image" bindtap="goImageImage">
+        <view class="dev-tool-card dev-tool-card-image" bindtap="goImageImage" aria-role="button" aria-label="打开猫咪图生图测试">
           <view class="dev-tool-icon dev-tool-icon-image">
             <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
           </view>

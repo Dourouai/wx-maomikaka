@@ -7,10 +7,10 @@
   z-index: 9999;
   display: flex;
   flex-direction: row;
-  height: calc(132rpx + env(safe-area-inset-bottom));
+  height: calc(130rpx + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   box-sizing: border-box;
-  background: #fffaf4;
+  background: var(--color-surface);
   box-shadow: 0 -8rpx 24rpx rgba(74, 55, 40, 0.06);
 }
 
@@ -20,17 +20,29 @@
   right: 0;
   left: 0;
   height: 2rpx;
-  background: #eadfd4;
+  background: var(--color-line);
+}
+
+.custom-tabbar-items {
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  min-width: 0;
+  height: 130rpx;
 }
 
 .custom-tabbar-item {
   position: relative;
   z-index: 1;
   display: flex;
-  flex: 1;
+  width: 33.3333%;
+  min-width: 0;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 132rpx;
+  justify-content: flex-start;
+  height: 130rpx;
+  padding-top: 28rpx;
+  box-sizing: border-box;
 }
 
 .custom-tabbar-item-hover {
@@ -39,6 +51,24 @@
 
 .custom-tabbar-icon {
   display: block;
-  width: 104rpx;
-  height: 104rpx;
+  width: 44rpx;
+  height: 44rpx;
+  /* PNG 画布的可见图形整体偏左、略偏上，校正后与文字共用中心线。 */
+  transform: translate(4rpx, 2rpx);
+}
+
+.custom-tabbar-label {
+  display: block;
+  width: 100%;
+  height: 22rpx;
+  margin-top: 4rpx;
+  color: var(--color-muted);
+  font-size: 18rpx;
+  line-height: 22rpx;
+  text-align: center;
+}
+
+.custom-tabbar-item-selected .custom-tabbar-label {
+  color: var(--color-stamp);
+  font-weight: 700;
 }

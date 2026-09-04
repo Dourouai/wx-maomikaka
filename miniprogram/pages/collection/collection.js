@@ -3,6 +3,7 @@ const storage = require('../../utils/storage');
 const { ALL_CATS } = require('../../utils/catData');
 const cloudFiles = require('../../utils/cloudFiles');
 const catScoring = require('../../utils/catScoring');
+const deviceLayout = require('../../utils/deviceLayout');
 
 const FILTER_OPTIONS = [
   { value: 'all', label: '全部' },
@@ -21,11 +22,30 @@ Page({
     exceptionTitle: '',
     exceptionMessage: '',
     exceptionPrimaryText: '去遇见猫',
+    pageHeaderTop: 48,
+    headerRightInset: 0,
+  },
+
+  onLoad() {
+    this._syncDeviceLayout();
   },
 
   onShow() {
+    this._syncDeviceLayout();
     this._syncTabBar();
     this._refreshData();
+  },
+
+  onResize() {
+    this._syncDeviceLayout();
+  },
+
+  _syncDeviceLayout() {
+    const layout = deviceLayout.getDeviceLayout();
+    this.setData({
+      pageHeaderTop: layout.pageHeaderTop,
+      headerRightInset: layout.headerRightInset,
+    });
   },
 
   _syncTabBar() {

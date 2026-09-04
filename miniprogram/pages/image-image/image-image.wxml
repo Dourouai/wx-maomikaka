@@ -1,5 +1,5 @@
 <!-- 猫咪图生图测试页：只验证主体 PNG 处理，不写入猫咪图鉴。 -->
-<navigation-bar title="猫咪图生图" back="{{true}}" color="#4A3728" background="#FFF9F1" />
+<navigation-bar title="猫咪图生图" back="{{true}}" color="#332824" background="#FFFDF8" />
 
 <view class="image-image-page">
   <scroll-view class="image-image-scroll" scroll-y enhanced show-scrollbar="{{false}}">

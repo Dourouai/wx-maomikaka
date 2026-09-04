@@ -2,6 +2,7 @@
 const storage = require('../../utils/storage');
 const { ALL_CATS, getCatById } = require('../../utils/catData');
 const memberLevel = require('../../utils/memberLevel');
+const deviceLayout = require('../../utils/deviceLayout');
 
 Page({
   data: {
@@ -9,6 +10,7 @@ Page({
     totalCount: ALL_CATS.length,
     totalPhotos: 0,
     todayCount: 0,
+    streakDays: 0,
     journeyPercent: 0,
     journeyRemaining: 0,
     memberLevel: 1,
@@ -27,11 +29,30 @@ Page({
     exceptionTitle: '',
     exceptionMessage: '',
     exceptionPrimaryText: '再试一次',
+    pageHeaderTop: 48,
+    headerRightInset: 0,
+  },
+
+  onLoad() {
+    this._syncDeviceLayout();
   },
 
   onShow() {
+    this._syncDeviceLayout();
     this._syncTabBar();
     this._refreshData();
+  },
+
+  onResize() {
+    this._syncDeviceLayout();
+  },
+
+  _syncDeviceLayout() {
+    const layout = deviceLayout.getDeviceLayout();
+    this.setData({
+      pageHeaderTop: layout.pageHeaderTop,
+      headerRightInset: layout.headerRightInset,
+    });
   },
 
   _syncTabBar() {
@@ -65,6 +86,7 @@ Page({
       unlockedCount,
       totalPhotos: records.length,
       todayCount: records.filter(record => this._dateKey(record.createdAt) === today).length,
+      streakDays: this._getStreakDays(records),
       journeyPercent: totalCount ? Math.min((unlockedCount / totalCount) * 100, 100) : 0,
       journeyRemaining: Math.max(totalCount - unlockedCount, 0),
       memberLevel: membership.level,
@@ -83,6 +105,24 @@ Page({
   _dateKey(timestamp) {
     const date = new Date(timestamp || Date.now());
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  },
+
+  _getStreakDays(records) {
+    const days = Array.from(new Set(records.map(record => this._dateKey(record.createdAt))))
+      .sort()
+      .reverse();
+    if (!days.length) return 0;
+
+    let streak = 1;
+    for (let index = 1; index < days.length; index += 1) {
+      const previous = days[index - 1].split('-').map(Number);
+      const current = days[index].split('-').map(Number);
+      const previousTime = Date.UTC(previous[0], previous[1] - 1, previous[2]);
+      const currentTime = Date.UTC(current[0], current[1] - 1, current[2]);
+      if (previousTime - currentTime !== 86400000) break;
+      streak += 1;
+    }
+    return streak;
   },
 
   _formatDate(timestamp) {

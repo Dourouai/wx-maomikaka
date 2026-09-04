@@ -1,26 +1,28 @@
-<!-- 图鉴：轻量收集册 -->
-<navigation-bar title="猫咪咔咔" back="{{false}}" color="#4A3728" background="#FFF9F1" />
-
+<!-- 图鉴：街角猫档案索引 -->
 <view class="collection-page">
   <scroll-view class="collection-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="collection-content">
-      <view class="album-heading">
-        <view class="album-heading-copy">
-          <text class="album-kicker">CAT ALBUM</text>
-          <text class="album-title">猫咪图鉴</text>
-          <text class="album-subtitle">把遇见过的猫，留在这里</text>
+    <view class="collection-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="album-page-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="album-brand-mark">
+          <view class="album-brand-symbol">
+            <image src="/assets/tab-album.svg" mode="aspectFit" />
+          </view>
+          <view class="album-brand-copy">
+            <text class="album-brand-name">猫咪咔咔</text>
+            <text class="album-brand-sub">CITY CAT ARCHIVE</text>
+          </view>
         </view>
-        <view class="album-heading-stamp">
-          <image src="/assets/doodle-leaf.svg" mode="aspectFit" />
-        </view>
+        <text class="album-level">{{unlockedCount}} ENTRIES</text>
       </view>
 
-      <view class="album-summary">
-        <view class="album-count">
-          <text class="album-count-title">已收集</text>
-          <text class="album-count-number">{{unlockedCount}}</text>
-        </view>
-        <text class="album-count-note">把城市里的猫，慢慢收进来</text>
+      <text class="album-page-kicker">ARCHIVE INDEX · LIVING INDEX</text>
+      <view class="album-title">
+        <text>我的</text><text class="album-title-em">图鉴</text>
+      </view>
+
+      <view class="album-count-row">
+        <text class="album-count-value">已发现 {{unlockedCount}} 只</text>
+        <text class="album-count-code">NO FIXED TOTAL</text>
       </view>
 
       <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
@@ -32,6 +34,8 @@
             class="filter-chip {{activeFilter === filter.value ? 'filter-chip-active' : ''}}"
             bindtap="switchFilter"
             data-value="{{filter.value}}"
+            aria-role="button"
+            aria-label="{{filter.label}} {{filter.count}}"
           >
             <text>{{filter.label}}</text>
             <text class="filter-count">{{filter.count}}</text>
@@ -48,11 +52,14 @@
           bindtap="goDetail"
           data-cat-id="{{cat.id}}"
           data-unlocked="{{cat.unlocked}}"
+          aria-role="button"
+          aria-label="打开 {{cat.displayName}}"
         >
           <view class="cat-portrait cat-portrait-{{cat.levelCode}}">
             <block wx:if="{{cat.photoPath}}">
               <image class="cat-photo" src="{{cat.photoPath}}" mode="aspectFit" />
             </block>
+            <image wx:else class="cat-photo-fallback" src="/assets/cat-placeholder.svg" mode="aspectFit" />
 
             <view class="level-mark level-mark-{{cat.levelCode}}">
               <text class="level-mark-code">{{cat.levelCode}}</text>
@@ -63,15 +70,15 @@
 
           <view class="cat-label">
             <text class="cat-label-name">{{cat.displayName}}</text>
-            <text class="cat-label-meta">{{cat.metaText}}</text>
+            <text class="cat-label-meta">{{cat.levelCode}} · {{cat.levelLabel}} · {{cat.metaText}}</text>
           </view>
         </view>
       </view>
 
       <view wx:if="{{filteredList.length === 0}}" class="empty-album">
-        <image class="empty-album-mark" src="/assets/paw.svg" mode="aspectFit" />
+        <image class="empty-album-mark" src="/assets/cat-placeholder.svg" mode="aspectFit" />
         <text class="empty-album-title">这里还没有猫咪</text>
-        <text class="empty-album-sub">去相遇，收进第一只猫吧</text>
+        <text class="empty-album-sub">去相遇，留下第一张档案</text>
       </view>
 
       <view class="album-footnote">轻轻滑动，继续发现城市里的猫</view>

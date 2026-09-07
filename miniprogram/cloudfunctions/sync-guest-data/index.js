@@ -2,6 +2,8 @@ const cloud = require('wx-server-sdk');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
+  // 首次绑定会按小批次写入相遇、猫卡和奖励流水，给云端事务留出余量。
+  timeout: 60000,
 });
 
 const db = cloud.database();
@@ -12,26 +14,11 @@ const REWARD_LEDGER_COLLECTION = 'user_reward_ledger';
 const USER_SCHEMA_VERSION = 1;
 const DATA_SCHEMA_VERSION = 1;
 const REWARD_SCHEMA_VERSION = 1;
+const POSTER_RESULT_SCHEMA_VERSION = 1;
 const MAX_IMPORT_RECORDS = 20;
 const MAX_QUERY_RECORDS = 1000;
 const VALID_EVIDENCE_GROUPS = ['charm', 'cleverness', 'aura'];
-const GLM_FEATURE_PROFILE_VERSION = 'glm-cat-feature.v0.1';
-const GLM_FEATURE_UNKNOWN = 'unknown';
-const GLM_FEATURE_SCHEMA = {
-  coatColor: ['orange', 'white', 'black', 'gray', 'brown', 'cream', 'silver', 'mixed', GLM_FEATURE_UNKNOWN],
-  pattern: ['solid', 'tabby', 'bicolor', 'calico', 'tortoiseshell', 'pointed', 'spotted', 'mixed', GLM_FEATURE_UNKNOWN],
-  coatLength: ['hairless', 'short', 'medium', 'long', GLM_FEATURE_UNKNOWN],
-  faceShape: ['round', 'oval', 'long', 'wedge', GLM_FEATURE_UNKNOWN],
-  eyeColor: ['yellow', 'green', 'blue', 'copper', 'hazel', 'odd', 'dark', GLM_FEATURE_UNKNOWN],
-  faceMark: ['none', 'm_mark', 'blaze', 'eye_patch_left', 'eye_patch_right', 'eye_patch_both', 'muzzle_mark', GLM_FEATURE_UNKNOWN],
-  faceAsymmetry: ['none', 'left_mark', 'right_mark', 'bilateral', GLM_FEATURE_UNKNOWN],
-  earFeature: ['upright', 'folded', 'curled', 'left_notch', 'right_notch', 'bilateral_notch', GLM_FEATURE_UNKNOWN],
-  tailFeature: ['long', 'short', 'ringed', 'dark_tip', 'bent', 'fluffy', GLM_FEATURE_UNKNOWN],
-  bodyBuild: ['slim', 'medium', 'sturdy', GLM_FEATURE_UNKNOWN],
-  noseColor: ['pink', 'black', 'brown', 'brick', GLM_FEATURE_UNKNOWN],
-  distinctiveMark: ['none', 'white_chin', 'white_chest', 'white_paws', 'ear_notch', 'tail_tip', 'other', GLM_FEATURE_UNKNOWN],
-};
-const GLM_FEATURE_KEYS = Object.keys(GLM_FEATURE_SCHEMA);
+const ARCHIVE_CODE_PATTERN = /^\d{8}[0-9A-Z]{6}$/;
 
 function createError(code, message) {
   const error = new Error(message || code);
@@ -78,65 +65,14 @@ function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, number));
 }
 
-function normalizeFeatureProfile(value) {
-  if (!value || typeof value !== 'object') return null;
-
-  const source = value.features && typeof value.features === 'object'
-    ? value.features
-    : {};
-  const sourceConfidence = value.confidence && typeof value.confidence === 'object'
-    ? value.confidence
-    : {};
-  const sourceQuality = value.quality && typeof value.quality === 'object'
-    ? value.quality
-    : {};
-  const features = {};
-  const confidence = {};
-  let hasRecognizedFeature = false;
-
-  GLM_FEATURE_KEYS.forEach(key => {
-    const input = String(source[key] || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, '_');
-    const normalized = GLM_FEATURE_SCHEMA[key].includes(input)
-      ? input
-      : GLM_FEATURE_UNKNOWN;
-    const confidenceValue = normalized === GLM_FEATURE_UNKNOWN
-      ? 0
-      : clampNumber(sourceConfidence[key], 0, 1) || 0;
-    features[key] = normalized;
-    confidence[key] = confidenceValue;
-    if (normalized !== GLM_FEATURE_UNKNOWN) hasRecognizedFeature = true;
-  });
-
-  if (!hasRecognizedFeature) return null;
-
-  const visibility = clampNumber(sourceQuality.visibility, 0, 1) || 0;
-  const occlusion = clampNumber(sourceQuality.occlusion, 0, 1);
-  const safeOcclusion = occlusion === null ? 1 : occlusion;
-  const usableForMatch = Boolean(
-    sourceQuality.usableForMatch === true
-    && Object.keys(confidence).some(key => features[key] !== GLM_FEATURE_UNKNOWN && confidence[key] > 0)
-    && visibility >= 0.5
-    && safeOcclusion <= 0.6
-  );
-
-  return {
-    version: GLM_FEATURE_PROFILE_VERSION,
-    features,
-    confidence,
-    quality: {
-      visibility,
-      occlusion: safeOcclusion,
-      usableForMatch,
-    },
-  };
-}
-
 function normalizeCatalogCatId(value) {
   const id = trimString(value, 64);
   return /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : '';
+}
+
+function normalizeArchiveCode(value) {
+  const code = trimString(value, 32).toUpperCase();
+  return ARCHIVE_CODE_PATTERN.test(code) ? code : '';
 }
 
 function normalizeDate(value) {
@@ -154,6 +90,29 @@ function normalizeDate(value) {
 function toISOString(value) {
   const date = normalizeDate(value);
   return date ? date.toISOString() : null;
+}
+
+function normalizeLocation(value, fallbackCapturedAt) {
+  const source = value && typeof value === 'object' ? value : {};
+  const latitude = clampNumber(source.latitude, -90, 90);
+  const longitude = clampNumber(source.longitude, -180, 180);
+  if (latitude === null || longitude === null) return null;
+
+  return {
+    source: trimString(source.source || 'wx.getFuzzyLocation', 80),
+    coordinateSystem: source.coordinateSystem === 'gcj02' ? 'gcj02' : 'wgs84',
+    latitude: Number(latitude.toFixed(3)),
+    longitude: Number(longitude.toFixed(3)),
+    locationText: trimString(source.locationText || source.label || source.name, 40),
+    capturedAt: toISOString(source.capturedAt || fallbackCapturedAt),
+  };
+}
+
+function normalizeLocationStatus(value, location) {
+  const status = trimString(value, 20);
+  if (status === 'captured' && !location) return 'unavailable';
+  if (['captured', 'skipped', 'denied', 'unavailable'].includes(status)) return status;
+  return location ? 'captured' : 'unavailable';
 }
 
 function normalizeEvidence(value) {
@@ -183,12 +142,99 @@ function normalizeCoverage(value) {
   return Object.keys(result).length ? result : null;
 }
 
+function normalizePosterImage(value, options = {}) {
+  const source = value && typeof value === 'object' ? value : {};
+  const image = {
+    kind: trimString(source.kind, 20),
+    fileID: trimString(source.fileID || source.coverFileID, 512),
+    width: clampNumber(source.width, 0, 10000) || 0,
+    height: clampNumber(source.height, 0, 10000) || 0,
+    version: trimString(source.version, 120),
+  };
+  if (source.originalFileID || source.originalContentType) {
+    image.originalFileID = trimString(source.originalFileID, 512);
+    image.originalContentType = trimString(source.originalContentType, 64);
+  }
+  if (source.cutoutFileID) image.cutoutFileID = trimString(source.cutoutFileID, 512);
+
+  if (options.includeCoverMetadata === true) {
+    image.contentType = trimString(source.contentType, 64);
+    image.provider = trimString(source.provider, 80);
+    image.model = trimString(source.model, 160);
+    image.operation = trimString(source.operation, 120);
+    image.promptVersion = trimString(source.promptVersion, 120);
+    image.targetRatio = trimString(source.targetRatio, 20);
+    image.status = trimString(source.status, 20);
+    image.requestId = trimString(source.requestId, 160);
+    image.createdAt = toISOString(source.createdAt);
+  }
+  return image;
+}
+
+function normalizePosterResult(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const sourceArchiveId = normalizeCatalogCatId(source.sourceArchiveId || source.catalogCatId);
+  const sourceRecordId = trimString(source.sourceRecordId || source.clientRecordId, 128);
+  if (!sourceArchiveId || !sourceRecordId) return null;
+
+  const scores = source.scores && typeof source.scores === 'object' ? source.scores : {};
+  const traits = Array.isArray(source.traits)
+    ? source.traits.slice(0, 3).map(trait => trimString(trait, 40)).filter(Boolean)
+    : [];
+  const coverSource = source.coverImage && typeof source.coverImage === 'object'
+    ? {
+      kind: 'cover',
+      ...source.coverImage,
+      fileID: source.coverImage.fileID || source.coverFileID,
+      status: source.coverImage.status || source.coverStatus,
+      promptVersion: source.coverImage.promptVersion || source.coverPromptVersion,
+    }
+    : null;
+  const coverImage = coverSource
+    ? normalizePosterImage(coverSource, { includeCoverMetadata: true })
+    : null;
+
+  return {
+    schemaVersion: POSTER_RESULT_SCHEMA_VERSION,
+    status: source.status === 'failed' ? 'failed' : 'ready',
+    posterJobId: trimString(source.posterJobId || source.jobId, 128),
+    templateVersion: trimString(source.templateVersion, 120),
+    posterCacheVersion: trimString(source.posterCacheVersion, 120),
+    sourceArchiveId,
+    sourceRecordId,
+    archiveCode: normalizeArchiveCode(source.archiveCode),
+    levelCode: trimString(source.levelCode, 20),
+    levelLabel: trimString(source.levelLabel, 40),
+    levelShortLabel: trimString(source.levelShortLabel, 80),
+    name: trimString(source.name, 40),
+    breed: trimString(source.breed, 80),
+    traits,
+    copy: trimString(source.copy, 52),
+    scores: {
+      mika: clampNumber(scores.mika, 0, 100) || 0,
+      charm: clampNumber(scores.charm, 0, 100) || 0,
+      cleverness: clampNumber(scores.cleverness, 0, 100) || 0,
+      aura: clampNumber(scores.aura, 0, 100) || 0,
+    },
+    sourceImage: normalizePosterImage(source.sourceImage),
+    coverImage,
+    coverStatus: trimString(source.coverStatus || (coverImage && coverImage.status), 20),
+    coverRejectReason: trimString(source.coverRejectReason, 240),
+    posterImage: normalizePosterImage({
+      ...(source.posterImage || {}),
+      fileID: source.posterImage && source.posterImage.fileID || '',
+    }),
+    shareId: trimString(source.shareId, 96),
+    generatedAt: toISOString(source.generatedAt || source.createdAt),
+  };
+}
+
 function normalizeRecord(input) {
   const source = input && typeof input === 'object' ? input : {};
   const clientRecordId = trimString(source.clientRecordId || source.recordId, 128);
   const catalogCatId = normalizeCatalogCatId(source.catalogCatId || source.catId);
   if (!clientRecordId) return { error: '缺少本地记录编号' };
-  if (!catalogCatId) return { error: '缺少有效的图鉴角色编号' };
+  if (!catalogCatId) return { error: '缺少有效的猫卡角色编号' };
 
   const display = source.display && typeof source.display === 'object' ? source.display : {};
   const media = source.media && typeof source.media === 'object' ? source.media : {};
@@ -197,22 +243,27 @@ function normalizeRecord(input) {
     : {};
   const score = source.score && typeof source.score === 'object' ? source.score : {};
   const catCount = Math.max(1, Math.min(10, Math.round(Number(observation.catCount || source.catCount) || 1)));
-  const glmCatFeatureProfile = catCount === 1
-    ? normalizeFeatureProfile(observation.glmCatFeatureProfile || source.glmCatFeatureProfile)
-    : null;
   const createdAt = normalizeDate(source.createdAt || source.capturedAt);
   const capturedAt = toISOString(source.capturedAt || source.createdAt) || (createdAt && createdAt.toISOString());
+  const location = normalizeLocation(source.location, capturedAt);
 
   return {
     clientRecordId,
+    captureId: trimString(source.captureId, 128),
     catalogCatId,
+    archiveCode: normalizeArchiveCode(source.archiveCode),
     display: {
       name: trimString(display.name || source.catName, 40),
       description: trimString(display.description || source.catDescription, 240),
+      posterCopy: trimString(display.posterCopy || source.posterCopy, 52),
       copyVersion: trimString(display.copyVersion || source.copyVersion, 80),
     },
     media: {
       originalFileID: trimString(media.originalFileID || source.originalFileID, 512),
+      originalContentType: trimString(
+        media.originalContentType || source.originalContentType,
+        64,
+      ),
       cutoutFileID: trimString(media.cutoutFileID || source.cutoutFileID, 512),
       cutoutContentType: trimString(media.cutoutContentType || source.cutoutContentType, 64),
       cutoutProvider: trimString(media.cutoutProvider || source.cutoutProvider, 80),
@@ -220,6 +271,18 @@ function normalizeRecord(input) {
       cutoutRequestId: trimString(media.cutoutRequestId || source.cutoutRequestId, 160),
       cutoutCheckerboardRemoved: media.cutoutCheckerboardRemoved === true
         || source.cutoutCheckerboardRemoved === true,
+      coverFileID: trimString(media.coverFileID || source.coverFileID, 512),
+      coverContentType: trimString(media.coverContentType || source.coverContentType, 64),
+      coverProvider: trimString(media.coverProvider || source.coverProvider, 80),
+      coverModel: trimString(media.coverModel || source.coverModel, 160),
+      coverOperation: trimString(media.coverOperation || source.coverOperation, 120),
+      coverPromptVersion: trimString(media.coverPromptVersion || source.coverPromptVersion, 120),
+      coverTargetRatio: trimString(media.coverTargetRatio || source.coverTargetRatio, 20),
+      coverStatus: trimString(media.coverStatus || source.coverStatus, 20),
+      coverRequestId: trimString(media.coverRequestId || source.coverRequestId, 160),
+      coverCreatedAt: trimString(media.coverCreatedAt || source.coverCreatedAt, 80),
+      coverRejectReason: trimString(media.coverRejectReason || source.coverRejectReason, 240),
+      posterResult: normalizePosterResult(media.posterResult || source.posterResult),
     },
     observation: {
       breed: trimString(observation.breed || source.detectedBreed, 80),
@@ -238,7 +301,6 @@ function normalizeRecord(input) {
         : [],
       catCount,
       source: trimString(observation.source || source.detectionSource, 100),
-      glmCatFeatureProfile,
     },
     score: {
       levelCode: trimString(score.levelCode || source.levelCode, 20),
@@ -262,6 +324,8 @@ function normalizeRecord(input) {
       scoreEvidence: normalizeEvidence(score.scoreEvidence || source.scoreEvidence),
       scoreCoverage: normalizeCoverage(score.scoreCoverage || source.scoreCoverage),
     },
+    location,
+    locationStatus: normalizeLocationStatus(source.locationStatus, location),
     createdAt,
     capturedAt,
   };
@@ -335,7 +399,13 @@ async function createProfile(userId, record) {
       catalogCatId: record.catalogCatId,
       displayName: record.display.name || null,
       displayDescription: record.display.description || null,
+      displayPosterCopy: record.display.posterCopy || null,
       encounterCount: 0,
+      locationSummary: {
+        firstLocation: null,
+        latestLocation: null,
+        locationCount: 0,
+      },
       firstSeenAt,
       lastSeenAt: firstSeenAt,
       createdAt: db.serverDate(),
@@ -350,7 +420,13 @@ async function createProfile(userId, record) {
     catalogCatId: record.catalogCatId,
     displayName: record.display.name || null,
     displayDescription: record.display.description || null,
+    displayPosterCopy: record.display.posterCopy || null,
     encounterCount: 0,
+    locationSummary: {
+      firstLocation: null,
+      latestLocation: null,
+      locationCount: 0,
+    },
   };
 }
 
@@ -479,10 +555,14 @@ async function createEncounter(userId, deviceId, clientRecordKey, record, profil
       status: 'active',
       catProfileId: profile._id,
       catalogCatId: record.catalogCatId,
+      archiveCode: record.archiveCode || null,
+      captureId: record.captureId || null,
       display: record.display,
       media: record.media,
       observation: record.observation,
       score: record.score,
+      location: record.location || null,
+      locationStatus: record.locationStatus,
       createdAt: record.createdAt || db.serverDate(),
       capturedAt: record.capturedAt || null,
       importedAt: db.serverDate(),
@@ -494,19 +574,57 @@ async function createEncounter(userId, deviceId, clientRecordKey, record, profil
   return encounterId;
 }
 
-async function updateProfilesAfterImport(profileCounts, profileLatestRecords) {
-  const increment = db.command && db.command.inc;
+function normalizeLocationSummary(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const firstLocation = normalizeLocation(source.firstLocation);
+  const latestLocation = normalizeLocation(source.latestLocation);
+  const locationCount = Math.max(0, Math.floor(Number(source.locationCount) || 0));
+  return { firstLocation, latestLocation, locationCount };
+}
+
+function getLocationTimestamp(location) {
+  const timestamp = Date.parse(location && location.capturedAt);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function chooseEarlierLocation(current, candidate) {
+  if (!current) return candidate || null;
+  if (!candidate) return current;
+  return getLocationTimestamp(candidate) < getLocationTimestamp(current) ? candidate : current;
+}
+
+function chooseLaterLocation(current, candidate) {
+  if (!current) return candidate || null;
+  if (!candidate) return current;
+  return getLocationTimestamp(candidate) >= getLocationTimestamp(current) ? candidate : current;
+}
+
+async function updateProfilesAfterImport(profileCounts, profileLatestRecords, profileLocationStats, profileCache) {
   await Promise.all(Object.keys(profileCounts).map(async profileId => {
     const latest = profileLatestRecords[profileId];
+    const profile = profileCache[profileId] || {};
+    const existingSummary = normalizeLocationSummary(profile.locationSummary);
+    const incoming = profileLocationStats[profileId] || {
+      count: 0,
+      first: null,
+      latest: null,
+    };
     const data = {
       updatedAt: db.serverDate(),
       lastSeenAt: latest && latest.createdAt ? latest.createdAt : db.serverDate(),
+      locationSummary: {
+        firstLocation: chooseEarlierLocation(existingSummary.firstLocation, incoming.first),
+        latestLocation: chooseLaterLocation(existingSummary.latestLocation, incoming.latest),
+        locationCount: existingSummary.locationCount + incoming.count,
+      },
     };
+    const increment = db.command && db.command.inc;
     if (increment) data.encounterCount = increment(profileCounts[profileId]);
-    else data.encounterCount = profileCounts[profileId];
+    else data.encounterCount = (Number(profile.encounterCount) || 0) + profileCounts[profileId];
     if (latest && latest.display) {
       if (latest.display.name) data.displayName = latest.display.name;
       if (latest.display.description) data.displayDescription = latest.display.description;
+      if (latest.display.posterCopy) data.displayPosterCopy = latest.display.posterCopy;
     }
     await db.collection(PROFILES_COLLECTION).doc(profileId).update({ data });
   }));
@@ -583,28 +701,47 @@ async function updateUserStats(userId) {
 }
 
 function toClientProfile(profile) {
+  const locationSummary = normalizeLocationSummary(profile.locationSummary);
   return {
     catProfileId: profile._id,
     catalogCatId: profile.catalogCatId,
     identityStatus: profile.identityStatus || 'catalog-role',
     displayName: profile.displayName || null,
     displayDescription: profile.displayDescription || null,
-    encounterCount: Number(profile.encounterCount) || 0,
+    displayPosterCopy: profile.displayPosterCopy || null,
+    locationSummary,
     firstSeenAt: toISOString(profile.firstSeenAt || profile.createdAt),
     lastSeenAt: toISOString(profile.lastSeenAt || profile.updatedAt),
   };
 }
 
+function toClientObservation(observation) {
+  const source = observation && typeof observation === 'object' ? observation : {};
+  return {
+    breed: source.breed || '',
+    breedConfidence: source.breedConfidence === undefined ? null : source.breedConfidence,
+    traits: Array.isArray(source.traits) ? source.traits.slice(0, 3) : [],
+    catCount: Number(source.catCount) || 1,
+    source: source.source || '',
+  };
+}
+
 function toClientEncounter(encounter) {
+  const location = normalizeLocation(encounter.location, encounter.capturedAt || encounter.createdAt);
   return {
     encounterId: encounter._id,
     localRecordId: encounter.clientRecordId || null,
+    captureId: encounter.captureId || null,
     catProfileId: encounter.catProfileId || null,
     catalogCatId: encounter.catalogCatId || '',
+    archiveCode: normalizeArchiveCode(encounter.archiveCode),
     display: encounter.display || {},
     media: encounter.media || {},
-    observation: encounter.observation || {},
+    // 特征向量和 GLM 结构化参数仅停留在数据库内部，不回传给小程序。
+    observation: toClientObservation(encounter.observation),
     score: encounter.score || {},
+    location,
+    locationStatus: normalizeLocationStatus(encounter.locationStatus, location),
     createdAt: toISOString(encounter.createdAt || encounter.capturedAt || encounter.importedAt),
     capturedAt: encounter.capturedAt || toISOString(encounter.createdAt),
   };
@@ -670,6 +807,7 @@ async function importRecords(userId, event) {
   const profileCache = {};
   const profileCounts = {};
   const profileLatestRecords = {};
+  const profileLocationStats = {};
   const mappings = [];
   const rejected = [];
   let importedCount = 0;
@@ -723,6 +861,29 @@ async function importRecords(userId, event) {
       && profileLatestRecords[profile._id].createdAt > record.createdAt
       ? profileLatestRecords[profile._id]
       : record;
+    if (record.location) {
+      const locationStats = profileLocationStats[profile._id] || {
+        count: 0,
+        first: null,
+        latest: null,
+      };
+      locationStats.count += 1;
+      if (!locationStats.first || (
+        record.createdAt
+        && locationStats.first.createdAt
+        && record.createdAt < locationStats.first.createdAt
+      )) {
+        locationStats.first = record;
+      }
+      if (!locationStats.latest || (
+        record.createdAt
+        && locationStats.latest.createdAt
+        && record.createdAt >= locationStats.latest.createdAt
+      )) {
+        locationStats.latest = record;
+      }
+      profileLocationStats[profile._id] = locationStats;
+    }
     mappings.push({
       localRecordId: record.clientRecordId,
       encounterId,
@@ -732,7 +893,12 @@ async function importRecords(userId, event) {
     });
   }
 
-  await updateProfilesAfterImport(profileCounts, profileLatestRecords);
+  await updateProfilesAfterImport(
+    profileCounts,
+    profileLatestRecords,
+    profileLocationStats,
+    profileCache
+  );
   const stats = await updateUserStats(userId);
 
   return {
@@ -745,9 +911,96 @@ async function importRecords(userId, event) {
   };
 }
 
+async function findPosterEncounter(userId, deviceId, sourceRecordId, catalogCatId) {
+  const normalizedDeviceId = trimString(deviceId, 128);
+  const normalizedRecordId = trimString(sourceRecordId, 128);
+  const normalizedCatId = normalizeCatalogCatId(catalogCatId);
+  if (!normalizedRecordId || !normalizedCatId) return null;
+
+  if (normalizedDeviceId) {
+    const byDevice = await findExistingEncounter(
+      userId,
+      `${normalizedDeviceId}:${normalizedRecordId}`,
+    );
+    if (byDevice && byDevice.catalogCatId === normalizedCatId) return byDevice;
+  }
+
+  const result = await safeGet(db.collection(ENCOUNTERS_COLLECTION)
+    .where({
+      ownerOpenId: userId,
+      clientRecordId: normalizedRecordId,
+      catalogCatId: normalizedCatId,
+      status: 'active',
+    })
+    .limit(1)
+  );
+  return result && Array.isArray(result.data) ? result.data[0] || null : null;
+}
+
+async function savePosterResult(userId, event) {
+  const catalogCatId = normalizeCatalogCatId(event.catalogCatId);
+  const sourceRecordId = trimString(event.sourceRecordId || event.clientRecordId, 128);
+  const posterResult = normalizePosterResult(event.posterResult);
+  if (!catalogCatId || !sourceRecordId || !posterResult) {
+    throw createError('POSTER_RESULT_INVALID', '海报结果数据不完整');
+  }
+  if (
+    posterResult.sourceArchiveId !== catalogCatId
+    || posterResult.sourceRecordId !== sourceRecordId
+  ) {
+    throw createError('POSTER_RESULT_SOURCE_MISMATCH', '海报结果来源校验失败');
+  }
+  if (posterResult.status !== 'ready') {
+    throw createError('POSTER_RESULT_NOT_READY', '只能保存已完成的海报结果');
+  }
+
+  const encounter = await findPosterEncounter(
+    userId,
+    event.deviceId,
+    sourceRecordId,
+    catalogCatId,
+  );
+  if (!encounter || !encounter._id) {
+    // 生成可能发生在首次档案导入之前；本地结果会继续保留，下一次生成或同步时重试。
+    return {
+      ok: true,
+      saved: false,
+      reason: 'POSTER_SOURCE_NOT_SYNCED',
+      sourceRecordId,
+      catalogCatId,
+    };
+  }
+
+  const media = encounter.media && typeof encounter.media === 'object'
+    ? encounter.media
+    : {};
+  if (media.posterResult && media.posterResult.posterImage && media.posterResult.posterImage.fileID) {
+    return { ok: true, saved: true, reused: true, posterResult: media.posterResult };
+  }
+  await db.collection(ENCOUNTERS_COLLECTION).doc(encounter._id).update({
+    data: {
+      // 仅替换 media 中的派生 posterResult，保留原图、主体图和既有封面字段。
+      media: {
+        ...media,
+        posterResult,
+      },
+      updatedAt: db.serverDate(),
+    },
+  });
+
+  return {
+    ok: true,
+    saved: true,
+    encounterId: encounter._id,
+    sourceRecordId,
+    catalogCatId,
+    posterResult,
+  };
+}
+
 async function deleteCatalogArchive(userId, catalogCatId) {
   const normalizedCatId = normalizeCatalogCatId(catalogCatId);
-  if (!normalizedCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少图鉴角色编号');
+  if (!normalizedCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少猫卡角色编号');
 
   const now = db.serverDate();
   const encounterResult = await db.collection(ENCOUNTERS_COLLECTION)
@@ -799,6 +1052,11 @@ exports.main = async (event = {}) => {
   if (action === 'pull') {
     const snapshot = await getSnapshot(userId);
     return { ok: true, ...snapshot };
+  }
+  if (action === 'save-poster-result') return savePosterResult(userId, event);
+  if (action === 'get-poster-result') {
+    const encounter = await findPosterEncounter(userId, event.deviceId, event.sourceRecordId, event.catalogCatId);
+    return { ok: true, posterResult: encounter && encounter.media && encounter.media.posterResult || null };
   }
   if (action === 'delete-catalog-archive') {
     return deleteCatalogArchive(userId, event.catalogCatId);

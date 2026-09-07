@@ -10,7 +10,10 @@
     "pages/camera/camera",
     "pages/reveal/reveal",
     "pages/collection/collection",
-    "pages/card-detail/card-detail"
+    "pages/card-detail/card-detail",
+    "pages/poster-loading/poster-loading",
+    "pages/poster-preview/poster-preview",
+    "pages/profile/profile"
   ],
   "tabBar": {
     "custom": true,
@@ -25,7 +28,7 @@
       },
       {
         "pagePath": "pages/collection/collection",
-        "text": "图鉴"
+        "text": "猫卡"
       },
       {
         "pagePath": "pages/my/my",
@@ -38,6 +41,17 @@
     "navigationStyle": "custom",
     "backgroundColor": "#FFFDF8"
   },
+  "permission": {
+    "scope.userFuzzyLocation": {
+      "desc": "用于记录本次猫咪相遇的大概位置"
+    },
+    "scope.writePhotosAlbum": {
+      "desc": "用于保存用户主动生成的猫咪海报"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getFuzzyLocation"
+  ],
   "style": "v2",
   "renderer": "webview",
   "componentFramework": "glass-easel",

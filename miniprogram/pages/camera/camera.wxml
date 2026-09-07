@@ -4,7 +4,7 @@
     <view class="camera-count">
       <view class="camera-count-can"></view>
       <text>今日剩余罐罐</text>
-      <text class="camera-count-value">3 / 3</text>
+      <text class="camera-count-value">{{remainingCans}} / {{dailyCanLimit}}</text>
     </view>
   </view>
 
@@ -59,24 +59,6 @@
 
       </cover-view>
 
-      <cover-view wx:if="{{showExitPrompt}}" class="camera-exit-prompt">
-        <cover-view class="camera-exit-dim"></cover-view>
-        <cover-view class="camera-exit-sheet" catchtap="stopExitPromptPropagation">
-          <cover-view class="camera-exit-state">STATE / CAMERA EXIT</cover-view>
-          <cover-view class="camera-exit-title">已退出拍照</cover-view>
-          <cover-view class="camera-exit-message">这次没有记录，不会消耗罐罐。</cover-view>
-          <cover-view
-            class="camera-exit-action"
-            catchtap="returnHome"
-            aria-role="button"
-            aria-label="返回相遇"
-          >
-            <cover-image class="camera-exit-action-icon" src="/assets/icon-camera-white.svg" />
-          </cover-view>
-          <cover-view class="camera-exit-action-label">返回相遇</cover-view>
-        </cover-view>
-      </cover-view>
-
       <cover-view wx:if="{{cameraError}}" class="camera-error-mask">
         <cover-view class="camera-error-card">
           <cover-view class="camera-error-icon"><cover-view>!</cover-view></cover-view>
@@ -84,6 +66,27 @@
           <cover-view class="camera-error-title">{{cameraIssueTitle}}</cover-view>
           <cover-view class="camera-error-subtitle">{{cameraIssueSubtitle}}</cover-view>
           <cover-view class="camera-error-button" bindtap="handleCameraIssue">{{cameraIssueAction}}</cover-view>
+        </cover-view>
+      </cover-view>
+
+      <cover-view wx:if="{{showLocationPrompt}}" class="location-consent-mask">
+        <cover-view class="location-consent-card">
+          <cover-view class="location-consent-eyebrow">OPTIONAL · LOCATION NOTE</cover-view>
+          <cover-view class="location-consent-title">记录这次相遇的位置？</cover-view>
+          <cover-view class="location-consent-subtitle">
+            <cover-view>只记录本次相遇的大概位置</cover-view>
+            <cover-view>不持续定位，也不参与猫咪识别。</cover-view>
+          </cover-view>
+          <cover-view class="location-consent-actions">
+            <cover-view
+              class="location-consent-button location-consent-primary {{locationConsentBusy ? 'location-consent-button-busy' : ''}}"
+              catchtap="chooseLocationConsent"
+            >{{locationConsentBusy ? '正在获取位置' : '记录大概位置'}}</cover-view>
+            <cover-view
+              class="location-consent-button location-consent-secondary"
+              catchtap="skipLocationConsent"
+            >暂不记录</cover-view>
+          </cover-view>
         </cover-view>
       </cover-view>
     </view>

@@ -1,21 +1,17 @@
 // ============================================================
-// 猫咪咔咔 - 猫咪视觉识别与图鉴映射
+// 猫咪咔咔 - 猫咪视觉识别与猫卡映射
 // ============================================================
 const catVision = require('./catVision');
 const storage = require('./storage');
 const { getCatById, getCatsByBreed } = require('./catData');
-const {
-  GLM_FEATURE_VECTOR_VERSION,
-  FEATURE_VECTOR_DIMENSION,
-  normalizeFeatureProfile,
-  encodeFeatureProfile,
-} = require('./catFeatureProfile');
 
 // 视觉识别服务不可用或做流程演示时，可用“未知品种”占位卡承接结果。
 // 正常拍摄流程会调用 identifyCat，只有显式使用本方法时才走占位数据。
 const PENDING_ENCOUNTER_CAT_ID = 'cat_060';
 const MAX_CAT_NAME_LENGTH = 5;
 const MAX_CAT_DESCRIPTION_LENGTH = 50;
+const MIN_POSTER_COPY_LENGTH = 16;
+const MAX_POSTER_COPY_LENGTH = 52;
 
 const BREED_ALIASES = [
   ['英国短毛猫', ['英短', '英国短毛']],
@@ -88,11 +84,18 @@ function normalizeGeneratedDescription(value, fallback) {
   return normalizeCopyText(fallback, MAX_CAT_DESCRIPTION_LENGTH);
 }
 
+function normalizeGeneratedPosterCopy(value, fallback) {
+  const generated = normalizeCopyText(value, MAX_POSTER_COPY_LENGTH);
+  if (generated.length >= MIN_POSTER_COPY_LENGTH) return generated;
+  const fallbackText = normalizeCopyText(fallback, MAX_POSTER_COPY_LENGTH);
+  return fallbackText.length >= MIN_POSTER_COPY_LENGTH ? fallbackText : '';
+}
+
 function chooseCatalogCat(breedLabel) {
   const candidates = getCatsByBreed(breedLabel);
   const fallbackCandidates = candidates.length ? candidates : getCatsByBreed('未知品种');
   if (!fallbackCandidates.length) {
-    throw createError('CAT_CATALOG_UNAVAILABLE', '暂时找不到对应的图鉴条目');
+    throw createError('CAT_CATALOG_UNAVAILABLE', '暂时找不到对应的猫卡条目');
   }
 
   const collection = storage.getCollection();
@@ -114,7 +117,7 @@ function chooseCatalogCat(breedLabel) {
 function createPendingEncounter() {
   const catData = getCatById(PENDING_ENCOUNTER_CAT_ID);
   if (!catData) {
-    throw createError('CAT_CATALOG_UNAVAILABLE', '暂时找不到图鉴占位条目');
+    throw createError('CAT_CATALOG_UNAVAILABLE', '暂时找不到猫卡占位条目');
   }
 
   return {
@@ -125,10 +128,7 @@ function createPendingEncounter() {
     // 占位结果没有视觉评分，评分模块会用基础相遇分兜底。
     scores: null,
     detectedTraits: [],
-    glmCatFeatureProfile: null,
-    glmFeatureVector: null,
-    glmFeatureVectorVersion: null,
-    glmFeatureVectorDimension: null,
+    posterCopy: '',
     detectionSource: 'pending-vision',
     catId: catData.id,
     catData,
@@ -136,8 +136,8 @@ function createPendingEncounter() {
 }
 
 /**
- * 先做猫咪检测，再把视觉模型的品种标签映射到图鉴角色。
- * 视觉模型返回事实层与受约束的展示文案；游戏角色、稀有度和唯一性仍由本地图鉴数据决定。
+ * 先做猫咪检测，再把视觉模型的品种标签映射到猫卡角色。
+ * 视觉模型返回事实层与受约束的展示文案；游戏角色、稀有度和唯一性仍由本地猫卡数据决定。
  */
 async function identifyCat(photoPath, options) {
   const detection = await catVision.inspectCat(photoPath, options);
@@ -162,8 +162,7 @@ async function identifyCat(photoPath, options) {
   const catalog = chooseCatalogCat(breedLabel);
   const catName = normalizeGeneratedName(detection.name, catalog.catData.name);
   const catDescription = normalizeGeneratedDescription(detection.description, catalog.catData.story);
-  const glmCatFeatureProfile = normalizeFeatureProfile(detection.glmCatFeatureProfile);
-  const glmFeatureVector = encodeFeatureProfile(glmCatFeatureProfile);
+  const posterCopy = normalizeGeneratedPosterCopy(detection.posterCopy, catDescription);
   const displayCatData = {
     ...catalog.catData,
     name: catName,
@@ -184,12 +183,9 @@ async function identifyCat(photoPath, options) {
     scoreVersion: detection.scoreVersion || null,
     catName,
     catDescription,
+    posterCopy,
     copyVersion: detection.copyVersion || 'catalog-fallback',
     detectedTraits: Array.isArray(detection.traits) ? detection.traits : [],
-    glmCatFeatureProfile,
-    glmFeatureVector,
-    glmFeatureVectorVersion: glmFeatureVector ? GLM_FEATURE_VECTOR_VERSION : null,
-    glmFeatureVectorDimension: glmFeatureVector ? FEATURE_VECTOR_DIMENSION : null,
     detectionSource: 'tokenhub-glm-5.3-flash',
     ...catalog,
     catData: displayCatData,

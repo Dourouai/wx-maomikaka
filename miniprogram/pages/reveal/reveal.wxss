@@ -49,6 +49,7 @@ page {
 .loading-title,
 .loading-copy,
 .loading-dots,
+.loading-knowledge-card,
 .loading-footer {
   position: relative;
 }
@@ -172,6 +173,47 @@ page {
 
 .loading-dots view:nth-child(2) { animation-delay: 0.16s; }
 .loading-dots view:nth-child(3) { animation-delay: 0.32s; }
+
+.loading-knowledge-card {
+  width: 100%;
+  margin-top: 34rpx;
+  padding: 18rpx 22rpx 20rpx;
+  border: 2rpx solid rgba(215, 197, 179, 0.9);
+  background: rgba(248, 241, 231, 0.72);
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.loading-knowledge-head {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2rpx dashed rgba(215, 197, 179, 0.72);
+  padding-bottom: 12rpx;
+}
+
+.loading-knowledge-title {
+  color: var(--terracotta);
+  font-size: 19rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.loading-knowledge-source {
+  color: var(--terracotta);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  letter-spacing: 2rpx;
+}
+
+.loading-knowledge-text {
+  display: block;
+  margin-top: 14rpx;
+  color: var(--ink);
+  font-size: 20rpx;
+  line-height: 1.55;
+}
 
 @keyframes loadingCatBob {
   0%, 100% { transform: translateY(2rpx) rotate(-1deg); }
@@ -871,7 +913,7 @@ page {
   aspect-ratio: 3 / 4;
   overflow: hidden;
   border-radius: 24rpx;
-  background: linear-gradient(140deg, #bcb09e, #d8c5a8 50%, #617060);
+  background: #fff;
 }
 
 .result-photo-wash {
@@ -880,39 +922,20 @@ page {
   right: 0;
   bottom: 0;
   left: 0;
-  background: linear-gradient(90deg, rgba(51, 40, 36, 0.2), transparent 42%), radial-gradient(circle at 80% 18%, rgba(255, 253, 248, 0.4), transparent 15%);
+  background: transparent;
 }
 
 .result-photo::after {
-  position: absolute;
-  right: -64rpx;
-  bottom: -90rpx;
-  width: 300rpx;
-  height: 300rpx;
-  border: 2rpx solid rgba(255, 253, 248, 0.22);
-  border-radius: 50%;
-  box-shadow: 0 0 0 42rpx rgba(255, 253, 248, 0.08), 0 0 0 84rpx rgba(255, 253, 248, 0.05);
+  display: none;
   content: '';
 }
 
-.result-photo-UR {
-  background: linear-gradient(140deg, #a78c70, #d4aa6c 50%, #534b3e);
-}
-
-.result-photo-SR {
-  background: linear-gradient(140deg, #b29a92, #d6b2a8 50%, #766475);
-}
-
-.result-photo-R {
-  background: linear-gradient(140deg, #afa89b, #d8c5a8 50%, #718174);
-}
-
-.result-photo-U {
-  background: linear-gradient(140deg, #b9ae9d, #ded0b8 50%, #89927b);
-}
-
+.result-photo-UR,
+.result-photo-SR,
+.result-photo-R,
+.result-photo-U,
 .result-photo-C {
-  background: linear-gradient(140deg, #c0b7a9, #e2d7c5 50%, #8d9484);
+  background: #fff;
 }
 
 .result-photo-image,
@@ -954,12 +977,12 @@ page {
 
 .result-photo-name {
   margin-top: 8rpx;
-  color: var(--paper);
+  color: var(--ink);
   font-family: var(--font-display);
   font-size: 38rpx;
   font-weight: 700;
   line-height: 1.1;
-  text-shadow: 0 4rpx 8rpx rgba(51, 40, 36, 0.28);
+  text-shadow: none;
 }
 
 .result-quote {
@@ -1102,22 +1125,34 @@ page {
 
 .result-actions {
   display: flex;
-  margin-top: 28rpx;
+  flex-direction: column;
+  align-items: center;
+  gap: 22rpx;
+  margin-top: 36rpx;
+}
+
+.result-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48rpx;
+  padding: 8rpx 20rpx;
+  color: var(--terracotta);
+  box-sizing: border-box;
+  font-size: 25rpx;
+  font-weight: 700;
+  letter-spacing: 3rpx;
 }
 
 .result-action-primary {
-  display: flex;
-  flex: 1;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
   min-height: 88rpx;
+  padding: 0;
   border-radius: 999rpx;
   color: var(--paper);
   background: var(--coral);
   box-shadow: 0 12rpx 0 rgba(155, 68, 42, 0.17);
-  font-size: 25rpx;
-  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .result-action-primary image {
@@ -1127,12 +1162,16 @@ page {
   filter: brightness(0) invert(1);
 }
 
-.result-release {
-  display: block;
-  margin-top: 4rpx;
+.result-action:active {
+  opacity: 0.62;
+  transform: translateY(1rpx);
+}
+
+.result-action-secondary {
   color: var(--muted-ink);
   font-size: 20rpx;
-  text-align: center;
+  font-weight: 400;
+  letter-spacing: 1rpx;
 }
 
 @media (max-width: 350px) {

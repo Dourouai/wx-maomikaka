@@ -33,15 +33,53 @@ page {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 30rpx;
+  margin-bottom: 42rpx;
   box-sizing: border-box;
 }
 
-.album-full-logo {
-  display: block;
-  width: 300rpx;
-  height: 94rpx;
+.album-brand-mark {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   min-width: 0;
+}
+
+.album-brand-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+  margin-right: 14rpx;
+  border: 2rpx solid var(--line);
+  border-radius: 16rpx;
+  background: var(--paper);
+}
+
+.album-brand-symbol image {
+  width: 34rpx;
+  height: 34rpx;
+}
+
+.album-brand-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.album-brand-name {
+  color: var(--ink);
+  font-size: 23rpx;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.album-brand-sub {
+  margin-top: 5rpx;
+  color: var(--muted-ink);
+  font-size: 13rpx;
+  letter-spacing: 3rpx;
+  line-height: 1;
 }
 
 .album-page-kicker {
@@ -242,6 +280,41 @@ page {
   font-size: 18rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.collection-pagination {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 34rpx;
+  padding: 16rpx 0;
+  border-top: 2rpx dashed var(--line);
+  border-bottom: 2rpx dashed var(--line);
+}
+
+.pagination-action {
+  min-width: 108rpx;
+  padding: 12rpx 14rpx;
+  color: var(--stamp);
+  font-size: 20rpx;
+  text-align: center;
+}
+
+.pagination-action:active {
+  opacity: 0.62;
+}
+
+.pagination-action-disabled {
+  color: var(--line);
+}
+
+.pagination-status {
+  min-width: 84rpx;
+  color: var(--muted-ink);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 18rpx;
+  text-align: center;
 }
 
 .empty-album {

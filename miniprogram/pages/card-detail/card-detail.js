@@ -6,11 +6,11 @@ const { getCatById } = require('../../utils/catData');
 const cloudFiles = require('../../utils/cloudFiles');
 const catScoring = require('../../utils/catScoring');
 const deviceLayout = require('../../utils/deviceLayout');
+const archiveIds = require('../../utils/archiveCode');
 
 Page({
   data: {
     catData: null,
-    records: [],
     featuredPhoto: '',
     featuredRecordId: '',
     shareId: '',
@@ -26,15 +26,15 @@ Page({
     currentPawReward: null,
     currentPointReward: null,
     currentScorePending: true,
-    encounterCount: 0,
-    encounterCountText: '00',
-    encounterCountLabel: '尚未相遇',
-    archiveCode: '0000',
+    posterEligible: false,
+    posterUnavailableReason: '评分尚未完成，完成评分后才能生成海报',
+    archiveCode: '',
     fieldNoteText: '',
     fieldNoteDate: '--',
-    fieldNoteEncounterTitle: '相遇手记',
     firstSeenText: '--',
     lastSeenText: '--',
+    locationText: '',
+    hasLocation: false,
     showDeleteConfirm: false,
     deleteBusy: false,
     deleteError: '',
@@ -52,6 +52,7 @@ Page({
       this.shareId = '';
     }
     this.isSharedArchive = Boolean(this.shareId);
+    this._skipInitialShowRefresh = false;
     if (this.shareId) {
       this.setData({
         shareId: this.shareId,
@@ -60,13 +61,20 @@ Page({
       });
       this._loadSharedArchive(this.shareId);
     } else if (this.catId) {
+      // onLoad 后紧接着会触发第一次 onShow，首次展示不再重复读取和组装档案。
+      this._skipInitialShowRefresh = true;
       this._loadCatData(this.catId);
     }
   },
 
   onShow() {
     this._syncDeviceLayout();
-    if (!this.isSharedArchive && this.catId) this._loadCatData(this.catId);
+    if (this.isSharedArchive || !this.catId) return;
+    if (this._skipInitialShowRefresh) {
+      this._skipInitialShowRefresh = false;
+      return;
+    }
+    this._loadCatData(this.catId);
   },
 
   onResize() {
@@ -81,10 +89,49 @@ Page({
     });
   },
 
+  _formatLocation(location, locationStatus) {
+    const source = location && typeof location === 'object' ? location : null;
+    const status = String(locationStatus || (source ? 'captured' : 'unavailable'));
+    if (!source || status !== 'captured') return '';
+
+    const locationText = String(source.locationText || source.label || source.name || '').trim();
+    if (locationText) return locationText.slice(0, 20);
+
+    const latitude = Number(source.latitude);
+    const longitude = Number(source.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return '';
+    return `${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°`;
+  },
+
   goBack() {
     wx.navigateBack({
       delta: 1,
       fail: () => wx.switchTab({ url: '/pages/collection/collection' }),
+    });
+  },
+
+  openPoster() {
+    if (!this.catId && !this.shareId) return;
+    if (!this.data.posterEligible) {
+      wx.showToast({
+        title: this.data.posterUnavailableReason || '海报暂不可用',
+        icon: 'none',
+        duration: 1800,
+      });
+      return;
+    }
+
+    const query = [];
+    if (this.isSharedArchive && this.shareId) {
+      query.push(`shareId=${encodeURIComponent(this.shareId)}`);
+    } else if (this.catId) {
+      query.push(`catId=${encodeURIComponent(this.catId)}`);
+    }
+    if (this.data.featuredRecordId) {
+      query.push(`recordId=${encodeURIComponent(this.data.featuredRecordId)}`);
+    }
+    wx.navigateTo({
+      url: `/pages/poster-loading/poster-loading?${query.join('&')}`,
     });
   },
 
@@ -102,11 +149,11 @@ Page({
       profile: {
         name: entry.displayName,
         description: entry.displayDescription,
+        posterCopy: entry.posterCopy,
       },
       isShared: false,
       shareId: storage.getShareId(catId),
     });
-    this._prepareShare(catId, storedRecords, entry.featuredRecordId || '');
   },
 
   async _loadSharedArchive(shareId) {
@@ -123,6 +170,7 @@ Page({
         rawRecords: records,
         featuredRecordId: archive.featuredRecordId || '',
         profile: archive.profile || {},
+        displayArchiveCode: archive.archiveCode || '',
         isShared: true,
         shareId,
       });
@@ -175,8 +223,10 @@ Page({
       recordId,
       clientRecordId: item.localRecordId || item.clientRecordId || recordId,
       catId: item.catalogCatId || fallbackCatId,
+      archiveCode: archiveIds.normalizeArchiveCode(item.archiveCode),
       catName: display.name || item.catName || '',
       catDescription: display.description || item.catDescription || '',
+      posterCopy: display.posterCopy || item.posterCopy || '',
       copyVersion: display.copyVersion || item.copyVersion || '',
       photoPath: cutoutTempURL || originalTempURL,
       photo: originalTempURL,
@@ -222,33 +272,48 @@ Page({
     rawRecords = [],
     featuredRecordId = '',
     profile = {},
+    displayArchiveCode = '',
     isShared = false,
     shareId = '',
   }) {
     const catData = getCatById(catId);
     if (!catData) throw new Error('无效的猫咪档案');
 
-    const totalRecords = rawRecords.length;
-    const records = rawRecords.map((record, index) => {
-      const encounter = catScoring.getStoredEncounter(record);
-      const encounterNumber = totalRecords - index;
-      return {
-        ...record,
-        ...encounter,
-        photoPath: storage.getRecordDisplayPath(record) || record.photoPath || '',
-        originalPhotoPath: record.originalPhotoPath || record.photoPath || record.photo || '',
-        timeText: this._formatDate(record.createdAt),
-        timeShort: this._formatShortDate(record.createdAt),
-        encounterNumber,
-        encounterIndex: String(encounterNumber).padStart(2, '0'),
-        encounterTitle: encounterNumber === 1 ? '第一次遇见' : `第 ${encounterNumber} 次相遇`,
-      };
-    });
-    const featuredRecord = featuredRecordId
-      ? records.find(record => record.recordId === featuredRecordId)
-      : records[0];
-    const firstRecord = records[records.length - 1];
-    const lastRecord = records[0];
+    const sourceRecords = Array.isArray(rawRecords) ? rawRecords : [];
+    const requestedFeaturedIndex = featuredRecordId
+      ? sourceRecords.findIndex(record => (
+        (record.recordId || record.clientRecordId) === featuredRecordId
+      ))
+      : 0;
+    const featuredIndex = requestedFeaturedIndex >= 0 ? requestedFeaturedIndex : 0;
+    const featuredRecord = sourceRecords[featuredIndex] || null;
+    const featuredRecordCode = archiveIds.normalizeArchiveCode(
+      featuredRecord && featuredRecord.archiveCode,
+    );
+    const featuredRecordKey = featuredRecord
+      ? (featuredRecord.recordId || featuredRecord.clientRecordId || '')
+      : '';
+    const archiveCode = featuredRecordCode
+      || archiveIds.normalizeArchiveCode(displayArchiveCode)
+      || (sourceRecords.length
+        ? archiveIds.getOrCreateArchiveCode(
+          `record:${catId}:${featuredRecordKey || 'latest'}`,
+          featuredRecord && (featuredRecord.createdAt || featuredRecord.capturedAt)
+            ? new Date(featuredRecord.createdAt || featuredRecord.capturedAt)
+            : new Date(),
+        )
+        : '');
+    const firstRecord = sourceRecords[sourceRecords.length - 1];
+    const lastRecord = sourceRecords[0];
+    const latestLocatedRecord = sourceRecords.find(record => (
+      record
+      && record.location
+      && (!record.locationStatus || record.locationStatus === 'captured')
+    ));
+    const locationText = this._formatLocation(
+      latestLocatedRecord && latestLocatedRecord.location,
+      latestLocatedRecord && latestLocatedRecord.locationStatus,
+    );
     const profileTraits = Array.isArray(profile.traits) && profile.traits.length
       ? profile.traits
       : null;
@@ -263,11 +328,29 @@ Page({
       story: profile.description
         || (lastRecord && lastRecord.catDescription)
         || catData.story,
+      posterCopy: profile.posterCopy
+        || (lastRecord && lastRecord.posterCopy)
+        || catData.posterCopy
+        || '',
     };
-    const encounterCount = records.length;
     // 详情页展示当前猫咪最近一次相遇的评分，不把历史最高分误标为历史最佳。
     const currentEncounter = lastRecord ? catScoring.getStoredEncounter(lastRecord) : null;
     const currentLevel = catScoring.getLevelMeta(currentEncounter ? currentEncounter.levelCode : 'C');
+    const hasAnyImage = sourceRecords.some(record => Boolean(
+      record
+      && (storage.getRecordDisplayPath(record)
+        || record.photoPath
+        || record.photo
+        || record.originalPhotoPath
+        || record.originalFileID
+        || record.cutoutFileID)
+    ));
+    const posterEligible = Boolean(sourceRecords.length && hasAnyImage);
+    const posterUnavailableReason = !sourceRecords.length
+      ? '还没有可生成的相遇记录'
+      : !hasAnyImage
+        ? '还没有可用的猫咪照片'
+        : '';
 
     this.catId = catId;
     this.isSharedArchive = isShared === true;
@@ -276,8 +359,9 @@ Page({
       : storage.getShareId(catId);
     this.setData({
       catData: displayCatData,
-      records,
-      featuredRecordId: featuredRecord ? featuredRecord.recordId : '',
+      featuredRecordId: featuredRecord
+        ? (featuredRecord.recordId || featuredRecord.clientRecordId || '')
+        : '',
       featuredPhoto: featuredRecord
         ? storage.getRecordDisplayPath(featuredRecord)
         : '',
@@ -296,23 +380,34 @@ Page({
       currentPawReward: currentEncounter ? currentEncounter.pawReward : null,
       currentPointReward: currentEncounter ? currentEncounter.pointReward : null,
       currentScorePending: currentEncounter ? currentEncounter.scorePending : true,
-      encounterCount,
-      encounterCountText: String(encounterCount).padStart(2, '0'),
-      encounterCountLabel: encounterCount > 0 ? `第 ${encounterCount} 次遇见` : '尚未相遇',
-      archiveCode: this._formatArchiveCode(catId),
+      posterEligible,
+      posterUnavailableReason,
+      archiveCode,
       fieldNoteText: displayCatData.story || '这次相遇，已经被轻轻收进档案里。',
       fieldNoteDate: lastRecord ? this._formatDate(lastRecord.createdAt) : '--',
-      fieldNoteEncounterTitle: lastRecord ? lastRecord.encounterTitle : '相遇手记',
       firstSeenText: firstRecord ? this._formatDate(firstRecord.createdAt) : '--',
       lastSeenText: lastRecord ? this._formatDate(lastRecord.createdAt) : '--',
+      locationText,
+      hasLocation: Boolean(locationText),
     });
-    this._refreshPhotoURLs(records, featuredRecord ? featuredRecord.recordId : '');
+    this._refreshPhotoURL(featuredRecord);
   },
 
   _buildShareArchive(catId, rawRecords, featuredRecordId) {
     const catData = getCatById(catId) || {};
     const currentCatData = this.data.catData || {};
     const latest = rawRecords[0] || {};
+    const featuredRecord = rawRecords.find(record => (
+      (record.recordId || record.clientRecordId) === featuredRecordId
+    )) || latest;
+    const featuredRecordKey = featuredRecord.recordId || featuredRecord.clientRecordId || 'latest';
+    const featuredArchiveCode = archiveIds.normalizeArchiveCode(featuredRecord.archiveCode)
+      || archiveIds.getOrCreateArchiveCode(
+        `record:${catId}:${featuredRecordKey}`,
+        featuredRecord.createdAt || featuredRecord.capturedAt
+          ? new Date(featuredRecord.createdAt || featuredRecord.capturedAt)
+          : new Date(),
+      );
     const traits = Array.isArray(latest.detectedTraits) && latest.detectedTraits.length
       ? latest.detectedTraits
       : (Array.isArray(catData.trait) ? catData.trait : []);
@@ -320,9 +415,11 @@ Page({
     return {
       catalogCatId: catId,
       featuredRecordId: featuredRecordId || (latest.recordId || latest.clientRecordId || ''),
+      archiveCode: featuredArchiveCode,
       profile: {
         name: currentCatData.name || latest.catName || catData.name || '',
         description: currentCatData.story || latest.catDescription || catData.story || '',
+        posterCopy: currentCatData.posterCopy || latest.posterCopy || '',
         breed: currentCatData.breed || latest.detectedBreed || catData.breed || '',
         traits: Array.isArray(currentCatData.trait) && currentCatData.trait.length
           ? currentCatData.trait
@@ -331,9 +428,17 @@ Page({
       records: rawRecords.slice(0, 50).map(record => ({
         clientRecordId: record.clientRecordId || record.recordId,
         catalogCatId: catId,
+        archiveCode: archiveIds.normalizeArchiveCode(record.archiveCode)
+          || archiveIds.getOrCreateArchiveCode(
+            `record:${catId}:${record.recordId || record.clientRecordId || 'latest'}`,
+            record.createdAt || record.capturedAt
+              ? new Date(record.createdAt || record.capturedAt)
+              : new Date(),
+          ),
         display: {
           name: record.catName || '',
           description: record.catDescription || '',
+          posterCopy: record.posterCopy || '',
           copyVersion: record.copyVersion || '',
         },
         media: {
@@ -405,39 +510,163 @@ Page({
       });
   },
 
-  async _refreshPhotoURLs(records, featuredRecordId) {
-    await Promise.all(records.map(async (record, index) => {
-      const directURLs = [record.cutoutTempURL, record.originalTempURL].filter(Boolean);
-      if (!directURLs.length && !record.cutoutFileID && !record.originalFileID) return;
+  async _refreshPhotoURL(record) {
+    if (!record) return;
 
-      try {
-        let photoPath = directURLs[0] || '';
-        if (!photoPath) {
-          const fileIDs = [record.cutoutFileID, record.originalFileID].filter(Boolean);
-          for (const fileID of fileIDs) {
-            try {
-              photoPath = await cloudFiles.getTempFileURL(fileID);
-              if (photoPath) break;
-            } catch (error) {
-              // 主体图失效时继续尝试安全校验后的原图 fileID。
-            }
-          }
+    // 本地拍摄记录通常已经有临时地址，不必再次请求云存储；共享记录也优先使用已有地址。
+    const existingPath = storage.getRecordDisplayPath(record)
+      || record.photoPath
+      || record.photo
+      || record.cutoutTempURL
+      || record.originalTempURL
+      || '';
+    if (existingPath) {
+      if (this.data.featuredPhoto !== existingPath) this.setData({ featuredPhoto: existingPath });
+      this._queueShareThumbnail(existingPath);
+      return;
+    }
+
+    const fileIDs = [record.cutoutFileID, record.originalFileID].filter(Boolean);
+    if (!fileIDs.length) return;
+
+    try {
+      let photoPath = '';
+      for (const fileID of fileIDs) {
+        try {
+          photoPath = await cloudFiles.getTempFileURL(fileID);
+          if (photoPath) break;
+        } catch (error) {
+          // 主体图失效时继续尝试安全校验后的原图 fileID。
         }
-        if (!photoPath) throw new Error('云存储文件地址不可用');
-        const patch = {};
-        patch[`records[${index}].photoPath`] = photoPath;
-        if (record.recordId === featuredRecordId) patch.featuredPhoto = photoPath;
-        this.setData(patch);
-      } catch (error) {
-        const patch = {};
-        patch[`records[${index}].photoPath`] = record.originalPhotoPath || '';
-        if (record.recordId === featuredRecordId) {
-          patch.featuredPhoto = record.originalPhotoPath || '';
-        }
-        this.setData(patch);
-        console.warn('[CardDetail] 获取图像地址失败:', error);
       }
-    }));
+      if (!photoPath) throw new Error('云存储文件地址不可用');
+      this.setData({ featuredPhoto: photoPath });
+      this._queueShareThumbnail(photoPath);
+    } catch (error) {
+      const fallback = record.originalPhotoPath || record.photoPath || record.photo || '';
+      if (fallback) {
+        this.setData({ featuredPhoto: fallback });
+        this._queueShareThumbnail(fallback);
+      }
+      console.warn('[CardDetail] 获取主图地址失败:', error);
+    }
+  },
+
+  _queueShareThumbnail(sourcePath) {
+    if (!sourcePath || this._shareThumbnailSource === sourcePath) return;
+    if (this._shareThumbnailTimer) clearTimeout(this._shareThumbnailTimer);
+    this._shareThumbnailPath = '';
+    this._shareThumbnailSource = '';
+    this._shareThumbnailTimer = setTimeout(() => {
+      this._shareThumbnailTimer = null;
+      this._createShareThumbnail(sourcePath);
+    }, 800);
+  },
+
+  _resolveShareImage(sourcePath) {
+    if (!wx.getImageInfo) return Promise.resolve({ path: sourcePath, width: 1, height: 1 });
+    return new Promise((resolve, reject) => {
+      wx.getImageInfo({
+        src: sourcePath,
+        success: result => resolve({
+          path: result.path || sourcePath,
+          width: Number(result.width) || 1,
+          height: Number(result.height) || 1,
+        }),
+        fail: reject,
+      });
+    });
+  },
+
+  _createShareThumbnail(sourcePath) {
+    if (!sourcePath || typeof wx.createOffscreenCanvas !== 'function'
+      || typeof wx.canvasToTempFilePath !== 'function') return;
+    if (this._shareThumbnailPreparing === sourcePath) return;
+
+    this._shareThumbnailPreparing = sourcePath;
+    this._resolveShareImage(sourcePath)
+      .then(imageInfo => new Promise((resolve, reject) => {
+        let canvas;
+        try {
+          canvas = wx.createOffscreenCanvas({ type: '2d', width: 600, height: 480 });
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        const image = canvas.createImage();
+        image.onload = () => {
+          try {
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#f8f1e7';
+            context.fillRect(0, 0, 600, 480);
+            context.fillStyle = '#fffdf8';
+            context.fillRect(20, 58, 560, 332);
+            context.strokeStyle = '#d7c5b3';
+            context.lineWidth = 2;
+            context.strokeRect(20, 58, 560, 332);
+
+            context.fillStyle = '#9b442a';
+            context.font = '700 18px sans-serif';
+            context.fillText('猫咪咔咔', 32, 34);
+            context.fillStyle = '#8c7569';
+            context.font = '12px monospace';
+            context.fillText('CITY CAT ARCHIVE', 32, 49);
+
+            const sourceWidth = imageInfo.width || image.width || 1;
+            const sourceHeight = imageInfo.height || image.height || 1;
+            const scale = Math.min(360 / sourceWidth, 292 / sourceHeight);
+            const drawWidth = Math.max(1, Math.round(sourceWidth * scale));
+            const drawHeight = Math.max(1, Math.round(sourceHeight * scale));
+            const drawX = Math.round((600 - drawWidth) / 2);
+            const drawY = 76 + Math.round((292 - drawHeight) / 2);
+            context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+
+            context.fillStyle = '#332824';
+            context.font = '700 24px serif';
+            context.fillText(
+              String((this.data.catData && this.data.catData.name) || '一只猫').slice(0, 12),
+              32,
+              430,
+            );
+            context.fillStyle = '#9b442a';
+            context.font = '12px monospace';
+            context.fillText('CAT ARCHIVE · SHARE', 32, 456);
+          } catch (error) {
+            reject(error);
+            return;
+          }
+
+          setTimeout(() => {
+            wx.canvasToTempFilePath({
+              canvas,
+              x: 0,
+              y: 0,
+              width: 600,
+              height: 480,
+              destWidth: 600,
+              destHeight: 480,
+              fileType: 'jpg',
+              quality: 0.86,
+              success: result => resolve(result.tempFilePath),
+              fail: reject,
+            });
+          }, 0);
+        };
+        image.onerror = reject;
+        image.src = imageInfo.path;
+      }))
+      .then(thumbnailPath => {
+        if (!thumbnailPath) return;
+        this._shareThumbnailPath = thumbnailPath;
+        this._shareThumbnailSource = sourcePath;
+      })
+      .catch(error => {
+        console.warn('[CardDetail] 分享缩略图生成失败，使用主图兜底:', error);
+      })
+      .finally(() => {
+        if (this._shareThumbnailPreparing === sourcePath) this._shareThumbnailPreparing = null;
+      });
   },
 
   _formatDate(timestamp) {
@@ -450,11 +679,6 @@ Page({
     if (!timestamp) return '--';
     const date = new Date(timestamp);
     return `${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-  },
-
-  _formatArchiveCode(catId) {
-    const matched = String(catId || '').match(/\d+/);
-    return matched ? String(Number(matched[0])).padStart(4, '0') : '0000';
   },
 
   goCollection() {
@@ -489,7 +713,7 @@ Page({
       console.error('[CardDetail] 删除档案失败:', error);
       this.setData({
         deleteBusy: false,
-        deleteError: '档案暂时没有删掉，请稍后再试。',
+        deleteError: '放归失败，请稍后再试。',
       });
     }
   },
@@ -502,6 +726,22 @@ Page({
     wx.showToast({ title: '主图已更新', icon: 'success', duration: 1200 });
   },
 
+  _getShareImageUrl() {
+    if (this._shareThumbnailPath) return this._shareThumbnailPath;
+    if (this.data.featuredPhoto) return this.data.featuredPhoto;
+    if (!this.catId) return '';
+
+    const records = storage.getRecordsForCat(this.catId);
+    const collection = storage.getCollection();
+    const entry = collection[this.catId] || {};
+    const featuredRecord = entry.featuredRecordId
+      ? storage.getRecordById(entry.featuredRecordId)
+      : records[0];
+    return storage.getRecordDisplayPath(featuredRecord)
+      || (featuredRecord && (featuredRecord.photoPath || featuredRecord.photo))
+      || '';
+  },
+
   onShareAppMessage() {
     const name = this.data.catData && this.data.catData.name
       ? this.data.catData.name
@@ -512,12 +752,15 @@ Page({
     if (!this.isSharedArchive && this.catId && !this._shareReady) {
       this._prepareShare(this.catId, storage.getRecordsForCat(this.catId), this.data.featuredRecordId);
     }
-    return {
+    const share = {
       title: `我在街角遇见了「${name}」｜猫咪咔咔`,
       path: shareId
         ? `/pages/card-detail/card-detail?shareId=${encodeURIComponent(shareId)}`
         : `/pages/card-detail/card-detail?catId=${encodeURIComponent(this.catId || '')}&from=share`,
     };
+    const imageUrl = this._getShareImageUrl();
+    if (imageUrl) share.imageUrl = imageUrl;
+    return share;
   },
 
   onShareTimeline() {
@@ -530,11 +773,14 @@ Page({
     if (!this.isSharedArchive && this.catId && !this._shareReady) {
       this._prepareShare(this.catId, storage.getRecordsForCat(this.catId), this.data.featuredRecordId);
     }
-    return {
+    const share = {
       title: `街角遇见「${name}」｜猫咪咔咔`,
       query: shareId
         ? `shareId=${encodeURIComponent(shareId)}`
         : `catId=${encodeURIComponent(this.catId || '')}&from=timeline`,
     };
+    const imageUrl = this._getShareImageUrl();
+    if (imageUrl) share.imageUrl = imageUrl;
+    return share;
   },
 });

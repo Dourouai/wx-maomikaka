@@ -15,6 +15,13 @@
     <view class="loading-dots">
       <view></view><view></view><view></view>
     </view>
+    <view class="loading-knowledge-card" aria-label="猫咪小知识">
+      <view class="loading-knowledge-head">
+        <text class="loading-knowledge-title">猫咪小知识</text>
+        <text class="loading-knowledge-source">{{loadingKnowledgeSource}}</text>
+      </view>
+      <text class="loading-knowledge-text">{{loadingKnowledge}}</text>
+    </view>
     <text class="loading-footer">识别特征 · 整理档案 · 准备揭晓</text>
   </view>
 
@@ -77,12 +84,14 @@
       <text wx:if="{{scoreNote}}" class="result-score-note">{{scoreNote}}</text>
 
       <view class="result-actions">
-        <view class="result-action-primary" bindtap="goCollection" aria-role="button" aria-label="加入图鉴">
+        <view class="result-action result-action-primary" bindtap="goCollection" aria-role="button" aria-label="加入猫卡">
           <image src="/assets/icon-album-white.svg" mode="aspectFit" />
-          <text>加入图鉴</text>
+          <text>加入猫卡</text>
+        </view>
+        <view class="result-action result-action-secondary" bindtap="goCamera" aria-role="button" aria-label="放回街角，等待下一次相遇">
+          <text>放回街角 · 等待下一次相遇</text>
         </view>
       </view>
-      <text class="result-release">放回街角 · 等待下一次相遇</text>
       <view class="reveal-bottom-safe"></view>
     </view>
   </scroll-view>

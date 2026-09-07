@@ -1,0 +1,132 @@
+{
+  "version": "card-poster-v0.1",
+  "canvas": {
+    "width": 1060,
+    "height": 1484,
+    "ratio": "5:7"
+  },
+  "photoFrameBounds": {
+    "x": 82,
+    "y": 78,
+    "width": 897,
+    "height": 941,
+    "radius": 56
+  },
+  "photoContentClip": {
+    "x": 90,
+    "y": 86,
+    "width": 882,
+    "height": 926,
+    "radius": 51
+  },
+  "layers": [
+    {
+      "id": "shell",
+      "order": 1,
+      "dynamic": false,
+      "file": "card-shells-v3/card-shell-{level}.png"
+    },
+    {
+      "id": "background",
+      "order": 2,
+      "dynamic": true,
+      "clip": "photoContentClip",
+      "fit": "cover"
+    },
+    {
+      "id": "cat",
+      "order": 3,
+      "dynamic": true,
+      "clip": "photoContentClip",
+      "fit": "contain",
+      "anchor": "catPlacement"
+    },
+    {
+      "id": "fixedElements",
+      "order": 4,
+      "dynamic": false,
+      "file": "fixed-elements-v2/fixed-elements-{level}.png"
+    },
+    {
+      "id": "dynamicText",
+      "order": 5,
+      "dynamic": true,
+      "renderer": "canvas-2d"
+    }
+  ],
+  "levels": {
+    "C": {
+      "shell": "card-shells-v3/card-shell-c.png",
+      "fixedElements": "fixed-elements-v2/fixed-elements-c.png"
+    },
+    "U": {
+      "shell": "card-shells-v3/card-shell-u.png",
+      "fixedElements": "fixed-elements-v2/fixed-elements-u.png"
+    },
+    "R": {
+      "shell": "card-shells-v3/card-shell-r.png",
+      "fixedElements": "fixed-elements-v2/fixed-elements-r.png"
+    },
+    "SR": {
+      "shell": "card-shells-v3/card-shell-sr.png",
+      "fixedElements": "fixed-elements-v2/fixed-elements-sr.png"
+    },
+    "UR": {
+      "shell": "card-shells-v3/card-shell-ur.png",
+      "fixedElements": "fixed-elements-v2/fixed-elements-ur.png"
+    }
+  },
+  "textSlots": {
+    "cardNo": {
+      "x": 630,
+      "y": 147,
+      "width": 315,
+      "height": 30,
+      "align": "right"
+    },
+    "name": {
+      "x": 165,
+      "y": 1028,
+      "width": 583,
+      "height": 102,
+      "align": "center",
+      "maxChars": 5
+    },
+    "copy": {
+      "x": 165,
+      "y": 1152,
+      "width": 583,
+      "height": 116,
+      "align": "center",
+      "maxChars": 50
+    },
+    "mika": {
+      "x": 798,
+      "y": 1100,
+      "width": 104,
+      "height": 72,
+      "align": "center",
+      "min": 0,
+      "max": 100
+    },
+    "metrics": {
+      "x": 94,
+      "y": 1285,
+      "width": 878,
+      "height": 149,
+      "columns": 3,
+      "labels": ["charm", "cleverness", "aura"],
+      "placeholder": 100,
+      "min": 0,
+      "max": 100
+    }
+  },
+  "rules": {
+    "topBadge": "letter-only",
+    "rarityIconsOnCard": false,
+    "scoreFormat": "integer",
+    "nameMaxChars": 5,
+    "copyMaxChars": 50,
+    "deprecatedFixedElements": "fixed-elements-v1"
+  }
+}

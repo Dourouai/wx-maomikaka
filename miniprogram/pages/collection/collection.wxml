@@ -1,14 +1,22 @@
-<!-- 图鉴：街角猫档案索引 -->
+<!-- 猫卡：街角猫档案索引 -->
 <view class="collection-page">
   <scroll-view class="collection-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="collection-content" style="padding-top: {{pageHeaderTop}}px;">
       <view class="album-page-header" style="padding-right: {{headerRightInset}}px;">
-        <image class="album-full-logo" src="/assets/maomi-kaka-logo.svg" mode="aspectFit" />
+        <view class="album-brand-mark">
+          <view class="album-brand-symbol">
+            <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+          </view>
+          <view class="album-brand-copy">
+            <text class="album-brand-name">猫咪咔咔</text>
+            <text class="album-brand-sub">CITY CAT ARCHIVE</text>
+          </view>
+        </view>
       </view>
 
       <text class="album-page-kicker">ARCHIVE INDEX · LIVING INDEX</text>
       <view class="album-title">
-        <text>我的</text><text class="album-title-em">图鉴</text>
+        <text>我的</text><text class="album-title-em">猫卡</text>
       </view>
 
       <view class="album-count-row">
@@ -36,7 +44,7 @@
 
       <view wx:if="{{filteredList.length > 0}}" class="album-grid">
         <view
-          wx:for="{{filteredList}}"
+          wx:for="{{pagedList}}"
           wx:for-item="cat"
           wx:key="id"
           class="album-entry"
@@ -61,8 +69,30 @@
 
           <view class="cat-label">
             <text class="cat-label-name">{{cat.displayName}}</text>
-            <text class="cat-label-meta">{{cat.levelCode}} · {{cat.levelLabel}} · {{cat.metaText}}</text>
+            <text class="cat-label-meta">{{cat.levelCode}} · {{cat.levelLabel}}</text>
           </view>
+        </view>
+      </view>
+
+      <view wx:if="{{totalPages > 1}}" class="collection-pagination">
+        <view
+          class="pagination-action {{currentPage <= 1 ? 'pagination-action-disabled' : ''}}"
+          bindtap="changePage"
+          data-page="{{currentPage - 1}}"
+          aria-role="button"
+          aria-label="上一页"
+        >
+          <text>上一页</text>
+        </view>
+        <text class="pagination-status">{{currentPage}} / {{totalPages}}</text>
+        <view
+          class="pagination-action {{currentPage >= totalPages ? 'pagination-action-disabled' : ''}}"
+          bindtap="changePage"
+          data-page="{{currentPage + 1}}"
+          aria-role="button"
+          aria-label="下一页"
+        >
+          <text>下一页</text>
         </view>
       </view>
 

@@ -1,4 +1,4 @@
-<!-- 文字生图测试页：仅用于测试文生图模型，不写入猫咪图鉴。 -->
+<!-- 文字生图测试页：仅用于测试文生图模型，不写入猫卡。 -->
 <navigation-bar title="文字生图实验室" back="{{true}}" color="#332824" background="#FFFDF8" />
 
 <view class="text-image-page">
@@ -10,7 +10,7 @@
         <text class="text-image-title">让一句话长出画面</text>
         <text class="text-image-subtitle">输入描述，试试看它会画出什么</text>
         <view class="text-image-note">
-          <text>仅供开发测试，不会写入猫咪图鉴。</text>
+          <text>仅供开发测试，不会写入猫卡。</text>
         </view>
       </view>
 
@@ -87,7 +87,7 @@
 
         <view wx:if="{{imagePath}}" class="result-meta">
           <text>模型：{{modelLabel}}</text>
-          <text>仅供测试 · 不保存到图鉴</text>
+          <text>仅供测试 · 不保存到猫卡</text>
         </view>
       </view>
 

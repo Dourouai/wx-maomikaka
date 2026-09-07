@@ -6,7 +6,7 @@ const TAB_LIST = [
     selectedIconPath: '/assets/tab-encounter-active.png',
   },
   {
-    text: '图鉴',
+    text: '猫卡',
     pagePath: '/pages/collection/collection',
     iconPath: '/assets/tab-album.png',
     selectedIconPath: '/assets/tab-album-active.png',

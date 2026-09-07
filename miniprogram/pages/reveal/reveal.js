@@ -7,6 +7,10 @@ const catTransform = require('../../utils/catTransform');
 const catScoring = require('../../utils/catScoring');
 const userData = require('../../utils/userData');
 const deviceLayout = require('../../utils/deviceLayout');
+const catKnowledge = require('../../utils/catKnowledge');
+const archiveIds = require('../../utils/archiveCode');
+
+const KNOWLEDGE_ROTATION_MS = 3000;
 
 Page({
   data: {
@@ -49,7 +53,7 @@ Page({
     pointReward: 0,
     scorePending: true,
     scoreNote: '',
-    archiveCode: '0000',
+    archiveCode: '',
     resultQuote: '',
     isNew: false,
     recordId: null,
@@ -58,10 +62,13 @@ Page({
     cutoutPhoto: '',
     breedLabel: '',
     detectedTraits: [],
+    posterCopy: '',
     imageChecked: false,
     capturedAtText: '',
     loadingTitle: '正在收录这次相遇',
     loadingSubtitle: '先把这次相遇收好',
+    loadingKnowledge: catKnowledge.getFallbackKnowledge(),
+    loadingKnowledgeSource: 'FIELD NOTE',
     fallbackIcon: '/assets/cat-placeholder.svg',
   },
 
@@ -77,9 +84,79 @@ Page({
       });
       return;
     }
-    const photo = options.photo ? decodeURIComponent(options.photo) : '';
+    const captureId = options && options.captureId ? decodeURIComponent(options.captureId) : '';
+    this._captureId = captureId;
+    this._captureContext = captureId ? storage.getPendingCapture(captureId) : null;
+    const photo = options && options.photo
+      ? decodeURIComponent(options.photo)
+      : (this._captureContext && this._captureContext.photoPath) || '';
     this.setData({ photo, originalPhoto: photo });
+    // 两条线在进入处理页时立即并行启动：科普短句不读取 photo，也不等待 GLM 识别或主体图处理。
+    // 先显示本地内容，Hy3 返回后再无感替换；知识线失败不会影响图片线。
+    this._startKnowledgeRotation();
+    this._loadCatKnowledge();
     this._processPhoto(photo);
+  },
+
+  onUnload() {
+    this._stopKnowledgeRotation();
+  },
+
+  async _loadCatKnowledge() {
+    try {
+      const result = await catKnowledge.getCatKnowledge();
+      if (!result || !result.text || !this.data.showLoading) return;
+      const knowledgeItem = {
+        text: String(result.text).trim(),
+        source: result.source === 'hy3' ? 'HY3' : 'FIELD NOTE',
+      };
+      const items = this._knowledgeItems || [];
+      const existingIndex = items.findIndex(item => item.text === knowledgeItem.text);
+      if (existingIndex >= 0) {
+        items[existingIndex] = knowledgeItem;
+        this._knowledgeIndex = existingIndex;
+      } else {
+        items.push(knowledgeItem);
+        this._knowledgeIndex = items.length - 1;
+      }
+      this.setData({
+        loadingKnowledge: knowledgeItem.text,
+        loadingKnowledgeSource: knowledgeItem.source,
+      });
+    } catch (error) {
+      console.warn('[Reveal] 猫咪科普短句加载失败:', error);
+    }
+  },
+
+  _startKnowledgeRotation() {
+    this._stopKnowledgeRotation();
+    this._knowledgeItems = catKnowledge.getFallbackKnowledgeList().map(text => ({
+      text,
+      source: 'FIELD NOTE',
+    }));
+    const currentIndex = this._knowledgeItems.findIndex(item => item.text === this.data.loadingKnowledge);
+    this._knowledgeIndex = currentIndex >= 0 ? currentIndex : 0;
+    this._knowledgeTimer = setInterval(() => this._showNextKnowledge(), KNOWLEDGE_ROTATION_MS);
+  },
+
+  _stopKnowledgeRotation() {
+    if (this._knowledgeTimer) clearInterval(this._knowledgeTimer);
+    this._knowledgeTimer = null;
+  },
+
+  _showNextKnowledge() {
+    if (!this.data.showLoading) {
+      this._stopKnowledgeRotation();
+      return;
+    }
+    const items = this._knowledgeItems || [];
+    if (items.length < 2) return;
+    this._knowledgeIndex = (this._knowledgeIndex + 1) % items.length;
+    const item = items[this._knowledgeIndex];
+    this.setData({
+      loadingKnowledge: item.text,
+      loadingKnowledgeSource: item.source,
+    });
   },
 
   onResize() {
@@ -199,11 +276,14 @@ Page({
     let saved;
     try {
       // 两条链路都完成后再入档，保证用户看到的卡片就是最终主体图。
+      const capturedAt = this._captureContext && this._captureContext.capturedAt;
       saved = storage.saveRecord({
         ...result,
+        captureId: this._captureId || null,
         catId: result.catId || catData.id,
         photoPath: safePhoto,
         originalFileID: sourceFileID || cutout.originalFileID || '',
+        originalContentType: sourceContentType,
         cutoutFileID: cutout.cutoutFileID,
         cutoutPhotoPath: cutoutPhoto,
         cutoutContentType: cutout.cutoutContentType || 'image/png',
@@ -211,9 +291,14 @@ Page({
         cutoutOperation: cutout.cutoutOperation || 'image-to-image-subject-only',
         cutoutRequestId: cutout.cutoutRequestId || '',
         cutoutCheckerboardRemoved: cutout.checkerboardRemoved === true,
+        location: this._captureContext && this._captureContext.location,
+        locationStatus: this._captureContext && this._captureContext.locationStatus,
+        createdAt: capturedAt || undefined,
         ...encounterScore,
       });
+      if (this._captureId) storage.clearPendingCapture(this._captureId);
 
+      this._stopKnowledgeRotation();
       this.setData({
         showLoading: false,
         showCard: true,
@@ -221,6 +306,7 @@ Page({
         catData,
         breedLabel,
         detectedTraits: result.detectedTraits || [],
+        posterCopy: result.posterCopy || '',
         photo: cutoutPhoto,
         originalPhoto: safePhoto,
         cutoutPhoto,
@@ -236,12 +322,15 @@ Page({
         pointReward: encounterScore.pointReward,
         scorePending: encounterScore.scorePending,
         scoreNote: encounterScore.scorePending ? '当前按基础相遇记录暂存' : '',
-        archiveCode: this._formatArchiveCode(result.catId || catData.id),
+        archiveCode: saved.record.archiveCode || archiveIds.getOrCreateArchiveCode(
+          `record:${result.catId || catData.id}:${saved.recordId}`,
+          capturedAt || Date.now(),
+        ),
         // 结果页只使用产品固定短句，不把视觉模型返回的描述渲染成页面文案。
         resultQuote: '在街角，它刚好回头看了你一眼。',
         isNew: saved.isNew,
         recordId: saved.recordId,
-        capturedAtText: this._formatDate(Date.now()),
+        capturedAtText: this._formatDate(capturedAt || Date.now()),
       });
 
       // 已绑定用户的拍摄记录后台同步；未绑定时只保存在本机，等待用户在“我的”里确认导入。
@@ -337,6 +426,7 @@ Page({
     messageDetail = '',
     note = '本次不扣罐罐 · 可以重新拍照',
   }) {
+    this._stopKnowledgeRotation();
     this.setData({
       showLoading: false,
       showCard: false,
@@ -359,6 +449,7 @@ Page({
     secondaryText = '回到相遇',
     showSecondary = true,
   }) {
+    this._stopKnowledgeRotation();
     this.setData({
       showLoading: false,
       showCard: false,
@@ -459,11 +550,6 @@ Page({
   _formatDate(timestamp) {
     const date = new Date(timestamp);
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-  },
-
-  _formatArchiveCode(catId) {
-    const matched = String(catId || '').match(/\d+/);
-    return matched ? String(Number(matched[0])).padStart(4, '0') : '0000';
   },
 
   goCamera() {

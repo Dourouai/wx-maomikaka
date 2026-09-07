@@ -1,0 +1,102 @@
+{
+  "version": "card-poster-v0.2",
+  "canvas": {
+    "width": 720,
+    "height": 1420,
+    "ratio": "0.507"
+  },
+  "photoContentClip": {
+    "x": 56,
+    "y": 81,
+    "width": 607,
+    "height": 833,
+    "radius": 43
+  },
+  "layers": [
+    {
+      "id": "shell",
+      "order": 1,
+      "dynamic": false,
+      "file": "shells/card-shell-{level}.png"
+    },
+    {
+      "id": "background",
+      "order": 2,
+      "dynamic": true,
+      "clip": "photoContentClip",
+      "fit": "cover"
+    },
+    {
+      "id": "cat",
+      "order": 3,
+      "dynamic": true,
+      "clip": "photoContentClip",
+      "fit": "contain",
+      "anchor": "catPlacement"
+    },
+    {
+      "id": "fixedElements",
+      "order": 4,
+      "dynamic": false,
+      "file": "fixed-elements/fixed-elements-{level}.png"
+    },
+    {
+      "id": "dynamicText",
+      "order": 5,
+      "dynamic": true,
+      "renderer": "canvas-2d"
+    }
+  ],
+  "levels": {
+    "C": {
+      "shell": "shells/card-shell-c.png",
+      "fixedElements": "fixed-elements/fixed-elements-c.png"
+    },
+    "U": {
+      "shell": "shells/card-shell-u.png",
+      "fixedElements": "fixed-elements/fixed-elements-u.png"
+    },
+    "R": {
+      "shell": "shells/card-shell-r.png",
+      "fixedElements": "fixed-elements/fixed-elements-r.png"
+    },
+    "SR": {
+      "shell": "shells/card-shell-sr.png",
+      "fixedElements": "fixed-elements/fixed-elements-sr.png"
+    },
+    "UR": {
+      "shell": "shells/card-shell-ur.png",
+      "fixedElements": "fixed-elements/fixed-elements-ur.png"
+    }
+  },
+  "textSlots": {
+    "cardNo": { "x": 390, "y": 105, "width": 270, "height": 40, "align": "right" },
+    "name": { "x": 155, "y": 945, "width": 390, "height": 104, "align": "center", "maxChars": 5 },
+    "copy": { "x": 155, "y": 1092, "width": 390, "height": 110, "align": "center", "maxChars": 50 },
+    "mika": { "x": 553, "y": 975, "width": 100, "height": 66, "align": "center", "min": 0, "max": 100 },
+    "metrics": {
+      "columns": [
+        { "id": "charm", "x": 108, "y": 1308, "width": 84, "height": 52 },
+        { "id": "cleverness", "x": 318, "y": 1308, "width": 84, "height": 52 },
+        { "id": "aura", "x": 528, "y": 1308, "width": 84, "height": 52 }
+      ],
+      "min": 0,
+      "max": 100,
+      "placeholder": 100
+    }
+  },
+  "rules": {
+    "topBadge": "letter-only",
+    "rarityIconsOnCard": false,
+    "nameMaxChars": 5,
+    "copyMaxChars": 50,
+    "scoreFormat": "integer",
+    "deprecated": [
+      "card-frames-v1/card-frame-{level}.png",
+      "card-frames-v1/card-shells-v2/card-shell-{level}.png",
+      "card-frames-v1/card-shells-v3/card-shell-{level}.png",
+      "card-frames-v1/fixed-elements-v1",
+      "card-frames-v1/fixed-elements-v2"
+    ]
+  }
+}

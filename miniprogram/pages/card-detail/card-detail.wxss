@@ -139,6 +139,42 @@ page {
   white-space: nowrap;
 }
 
+.file-photo-poster-action {
+  position: absolute;
+  right: 18rpx;
+  bottom: 18rpx;
+  z-index: 4;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 76rpx;
+  height: 76rpx;
+  border: 2rpx solid rgba(155, 68, 42, 0.34);
+  border-radius: 22rpx;
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: 0 6rpx 12rpx rgba(51, 40, 36, 0.1);
+  box-sizing: border-box;
+}
+
+.file-photo-poster-action-icon {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+.file-photo-poster-action-ready {
+  border-color: rgba(155, 68, 42, 0.56);
+  background: rgba(255, 253, 248, 0.98);
+}
+
+.file-photo-poster-action-disabled {
+  opacity: 0.48;
+}
+
+.file-photo-poster-action:active {
+  transform: translateY(2rpx);
+}
+
 .file-hero {
   padding: 16rpx;
   border: 2rpx solid var(--line);
@@ -350,7 +386,7 @@ page {
 }
 
 .field-note-card {
-  padding: 20rpx 22rpx 18rpx;
+  padding: 26rpx 24rpx 24rpx;
   border: 2rpx solid var(--line);
   border-radius: 24rpx;
   background: rgba(239, 210, 209, 0.24);
@@ -374,10 +410,10 @@ page {
 
 .field-note-copy {
   display: block;
-  margin: 16rpx 0;
+  margin: 20rpx 0 24rpx;
   font-family: var(--font-display);
-  font-size: 24rpx;
-  line-height: 1.55;
+  font-size: 27rpx;
+  line-height: 1.7;
 }
 
 .field-note-meta {
@@ -418,12 +454,6 @@ page {
   line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.score-context-level {
-  margin-top: 8rpx;
-  color: var(--muted);
-  font-size: 16rpx;
 }
 
 .score-total {
@@ -645,38 +675,33 @@ page {
   align-items: center;
   justify-content: center;
   gap: 10rpx;
-  min-height: 58rpx;
-  margin-top: 4rpx;
-  padding: 4rpx 10rpx;
+  width: 100%;
+  min-height: 82rpx;
+  margin-top: 18rpx;
+  padding: 0 20rpx;
+  border: 2rpx solid var(--line);
+  border-radius: 18rpx;
+  color: var(--stamp);
+  background: transparent;
   box-sizing: border-box;
 }
 
 .file-release-icon {
-  width: 28rpx;
-  height: 28rpx;
+  width: 32rpx;
+  height: 32rpx;
   opacity: 0.9;
 }
 
 .file-release-copy {
   display: flex;
   align-items: baseline;
-  gap: 10rpx;
   min-width: 0;
 }
 
 .file-release-title {
   color: var(--stamp);
-  font-size: 19rpx;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.file-release-subtitle {
-  flex: none;
-  color: var(--muted);
-  font-size: 13rpx;
-  letter-spacing: 1rpx;
+  font-size: 28rpx;
+  font-weight: 750;
   line-height: 1;
   white-space: nowrap;
 }
@@ -709,10 +734,10 @@ page {
   top: 50%;
   right: 36rpx;
   left: 36rpx;
-  padding: 38rpx 28rpx 30rpx;
+  padding: 38rpx 28rpx 32rpx;
   border: 2rpx solid var(--line);
   background: var(--surface);
-  box-shadow: 0 24rpx 56rpx rgba(51, 40, 36, 0.26);
+  box-shadow: 0 26rpx 56rpx rgba(51, 40, 36, 0.26);
   text-align: center;
   transform: translateY(-50%);
   box-sizing: border-box;
@@ -731,40 +756,42 @@ page {
 }
 
 .delete-symbol image {
-  width: 42rpx;
-  height: 42rpx;
+  width: 38rpx;
+  height: 38rpx;
 }
 
 .delete-eyebrow {
   display: block;
   color: var(--stamp);
-  font-size: 17rpx;
-  letter-spacing: 3rpx;
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 16rpx;
+  line-height: 1;
+  letter-spacing: 2.56rpx;
 }
 
 .delete-title {
   display: block;
-  margin-top: 18rpx;
+  margin: 18rpx 0 0;
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: 38rpx;
+  font-size: 40rpx;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .delete-message {
   display: block;
-  margin-top: 12rpx;
+  margin: 14rpx 0 0;
   color: var(--muted);
   font-family: var(--font-display);
-  font-size: 21rpx;
-  line-height: 1.55;
+  font-size: 20rpx;
+  line-height: 1.5;
 }
 
 .delete-detail {
   display: block;
   padding-top: 16rpx;
-  margin-top: 16rpx;
+  margin-top: 18rpx;
   border-top: 2rpx dashed var(--line);
   color: var(--muted);
   font-size: 18rpx;
@@ -781,7 +808,7 @@ page {
   display: flex;
   flex-direction: row;
   gap: 14rpx;
-  margin-top: 24rpx;
+  margin-top: 28rpx;
 }
 
 .delete-button {
@@ -790,9 +817,10 @@ page {
   align-items: center;
   justify-content: center;
   min-height: 84rpx;
-  padding: 0 8rpx;
+  padding: 0 10rpx;
   border: 2rpx solid var(--line);
-  font-size: 21rpx;
+  color: var(--ink);
+  font-size: 20rpx;
   font-weight: 700;
   box-sizing: border-box;
 }
@@ -806,6 +834,10 @@ page {
   border-color: var(--stamp);
   color: var(--surface);
   background: var(--stamp);
+}
+
+.delete-button:active {
+  opacity: 0.82;
 }
 
 .detail-bottom-safe {

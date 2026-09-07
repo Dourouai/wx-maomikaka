@@ -123,7 +123,7 @@ async function cutoutCat(filePath, options = {}) {
     try {
       cutoutPhotoPath = await getTempFileURL(result.cutoutFileID);
     } catch (error) {
-      // 抠图文件已经落盘，临时地址失败时仍保留 fileID，图鉴页面可稍后重新换取地址。
+      // 抠图文件已经落盘，临时地址失败时仍保留 fileID，猫卡页面可稍后重新换取地址。
       console.warn('[CatMatting] 抠图地址获取失败:', error);
     }
 
@@ -137,7 +137,7 @@ async function cutoutCat(filePath, options = {}) {
       cutoutRequestId: result.requestId || '',
     };
   } catch (error) {
-    // 抠图失败时不回退到原图，避免图鉴把带背景的照片误当成主体图。
+    // 抠图失败时不回退到原图，避免猫卡把带背景的照片误当成主体图。
     if (ownsSourceFile) await deleteSourceFile(sourceFileID);
     if (error && !error.sourceFileID) error.sourceFileID = sourceFileID;
     if (error && error.code) throw error;

@@ -1,0 +1,138 @@
+<!-- 个人主页：自己的主页与他人公开主页 -->
+<view class="profile-page">
+  <scroll-view class="profile-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="profile-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="profile-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="profile-back" bindtap="goBack" aria-role="button" aria-label="返回">
+          <image src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="profile-heading">
+          <text class="profile-kicker">{{isSelf ? 'MY PROFILE · CAT ARCHIVE' : 'PUBLIC PROFILE · CAT ARCHIVE'}}</text>
+          <text class="profile-title">{{isSelf ? '个人主页' : 'TA 的主页'}}</text>
+        </view>
+        <view wx:if="{{!isSelf}}" class="profile-follow-header {{isFollowing ? 'is-following' : ''}}" bindtap="toggleFollow" aria-role="button" aria-label="{{isFollowing ? '取消关注' : '关注'}}">
+          <text>{{isFollowing ? '已关注' : '关注'}}</text>
+        </view>
+      </view>
+
+      <view class="profile-hero">
+        <view class="profile-hero-top">
+          <view class="profile-avatar-wrap">
+            <image wx:if="{{profileAvatar}}" class="profile-avatar" src="{{profileAvatar}}" mode="aspectFill" />
+            <image wx:else class="profile-avatar profile-avatar-fallback" src="/assets/cat-illustration.svg" mode="aspectFit" />
+          </view>
+          <view class="profile-hero-copy">
+            <text class="profile-hero-name">{{profileName}}</text>
+            <text class="profile-hero-role">{{profileRole}}</text>
+            <text class="profile-hero-bio">{{profileBio}}</text>
+          </view>
+          <text wx:if="{{isSelf}}" class="profile-self-mark">SELF</text>
+          <text wx:else class="profile-public-mark">PUBLIC</text>
+        </view>
+
+        <view class="profile-stat-row">
+          <view class="profile-stat">
+            <text class="profile-stat-value">{{catCount}}</text>
+            <text class="profile-stat-label">猫卡</text>
+          </view>
+          <view class="profile-stat">
+            <text class="profile-stat-value">{{recordCount}}</text>
+            <text class="profile-stat-label">相遇</text>
+          </view>
+          <view class="profile-stat">
+            <text class="profile-stat-value">{{isSelf ? followingCount : followerCount}}</text>
+            <text class="profile-stat-label">{{isSelf ? '关注' : '粉丝'}}</text>
+          </view>
+        </view>
+
+        <view class="profile-hero-footer">
+          <text class="profile-hero-note">{{isSelf ? '只展示你主动收录的猫卡' : '只展示对方主动公开的猫卡'}}</text>
+          <block wx:if="{{isSelf && isLoggedIn}}">
+            <button
+              class="profile-share-button"
+              open-type="share"
+              hover-class="profile-action-hover"
+              aria-label="分享我的个人主页"
+            >分享主页</button>
+          </block>
+          <text wx:elif="{{isSelf}}" class="profile-share-login-note">绑定微信后可分享主页</text>
+          <block wx:else>
+            <view class="profile-public-note">公开索引</view>
+          </block>
+        </view>
+      </view>
+
+      <view wx:if="{{isSelf && !isLoggedIn}}" class="profile-login-note">
+        <view class="profile-login-copy">
+          <text class="profile-login-title">绑定账号，开启主页</text>
+          <text class="profile-login-subtitle">本机记录不会自动公开，绑定后才可以分享给朋友。</text>
+        </view>
+        <view class="profile-login-action" bindtap="goMy" aria-role="button" aria-label="去我的页面绑定账号">去绑定 →</view>
+      </view>
+
+      <view class="profile-section-head">
+        <view class="profile-section-copy">
+          <text class="profile-section-kicker">CAT ARCHIVE · {{isSelf ? 'MINE' : 'PUBLIC'}}</text>
+          <text class="profile-section-title">{{isSelf ? '我的猫卡' : 'TA 的猫卡'}}</text>
+        </view>
+        <text class="profile-section-count">{{catCount}} 张</text>
+      </view>
+
+      <view wx:if="{{loading}}" class="profile-state profile-state-loading">
+        <view class="profile-state-dot"></view>
+        <text>正在整理这份猫档案</text>
+      </view>
+
+      <view wx:elif="{{loadError}}" class="profile-state profile-state-error">
+        <text class="profile-state-title">{{loadError}}</text>
+        <text class="profile-state-subtitle">分享码只用于打开公开主页，不会暴露账号身份。</text>
+        <view class="profile-state-action" bindtap="retryLoad" aria-role="button" aria-label="重试加载">再试一次</view>
+      </view>
+
+      <view wx:elif="{{catList.length > 0}}" class="profile-cat-list">
+        <view
+          wx:for="{{catList}}"
+          wx:for-item="cat"
+          wx:key="id"
+          class="profile-cat-card profile-cat-card-{{cat.levelCode}}"
+          bindtap="openCat"
+          data-cat-id="{{cat.id}}"
+          aria-role="button"
+          aria-label="{{isSelf ? '打开' : '查看'}} {{cat.displayName}}"
+        >
+          <view class="profile-cat-photo-wrap">
+            <image wx:if="{{cat.photoPath}}" class="profile-cat-photo" src="{{cat.photoPath}}" mode="aspectFit" />
+            <image wx:else class="profile-cat-photo-fallback" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+            <view class="profile-cat-level profile-cat-level-{{cat.levelCode}}">
+              <text class="profile-cat-level-code">{{cat.levelCode}}</text>
+              <text>{{cat.levelLabel}}</text>
+            </view>
+            <text wx:if="{{cat.archiveCode}}" class="profile-cat-code">No. {{cat.archiveCode}}</text>
+          </view>
+          <view class="profile-cat-copy">
+            <view class="profile-cat-name-row">
+              <text class="profile-cat-name">{{cat.displayName}}</text>
+              <text class="profile-cat-score">{{cat.overallScore}}</text>
+            </view>
+            <view class="profile-cat-story">
+              <text class="profile-cat-note">“{{cat.posterCopy}}”</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:elif="{{!loading && !loadError}}" class="profile-empty">
+        <image class="profile-empty-mark" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+        <text class="profile-empty-title">{{emptyTitle}}</text>
+        <text class="profile-empty-subtitle">{{emptySubtitle}}</text>
+        <view wx:if="{{isSelf && isLoggedIn}}" class="profile-empty-action" bindtap="goCollection" aria-role="button" aria-label="打开猫卡">去看看猫卡 →</view>
+      </view>
+
+      <view class="profile-footnote">
+        <text>{{isSelf ? '一张猫卡，一次被记住的相遇' : '公开猫卡只保留故事，不展示隐私位置'}}</text>
+        <text class="profile-footnote-code">PROFILE / 0.1</text>
+      </view>
+      <view class="profile-bottom-safe"></view>
+    </view>
+  </scroll-view>
+</view>

@@ -50,7 +50,14 @@ function get(shareId) {
   });
 }
 
+function clearPosterArtifacts() {
+  return callFunction({
+    action: 'clear-poster-artifacts',
+  });
+}
+
 module.exports = {
   create,
   get,
+  clearPosterArtifacts,
 };

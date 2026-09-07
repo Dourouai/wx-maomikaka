@@ -1,0 +1,185 @@
+[
+  {
+    "name": "U-L4-label-plate",
+    "points": [
+      [
+        44,
+        42
+      ],
+      [
+        160,
+        42
+      ],
+      [
+        186,
+        68
+      ],
+      [
+        186,
+        174
+      ],
+      [
+        160,
+        202
+      ],
+      [
+        70,
+        202
+      ],
+      [
+        44,
+        174
+      ],
+      [
+        44,
+        68
+      ]
+    ],
+    "closed": true,
+    "stroke": "#8075af",
+    "fill": "#f1eefb",
+    "width": 1.4
+  },
+  {
+    "name": "U-L4-label-plate-inner",
+    "points": [
+      [
+        52,
+        51
+      ],
+      [
+        153,
+        51
+      ],
+      [
+        176,
+        75
+      ],
+      [
+        176,
+        168
+      ],
+      [
+        153,
+        193
+      ],
+      [
+        76,
+        193
+      ],
+      [
+        52,
+        168
+      ],
+      [
+        52,
+        75
+      ]
+    ],
+    "closed": true,
+    "stroke": "#f9f7ff",
+    "fill": "none",
+    "width": 3.0
+  },
+  {
+    "name": "U-L4-label-highlight-top",
+    "points": [
+      [
+        65,
+        59
+      ],
+      [
+        148,
+        59
+      ]
+    ],
+    "closed": false,
+    "stroke": "#f9f7ff",
+    "fill": "none",
+    "width": 2.0
+  },
+  {
+    "name": "U-L4-label-highlight-left",
+    "points": [
+      [
+        58,
+        76
+      ],
+      [
+        58,
+        157
+      ]
+    ],
+    "closed": false,
+    "stroke": "#f9f7ff",
+    "fill": "none",
+    "width": 1.5
+  },
+  {
+    "name": "U-L4-label-accent-bottom",
+    "points": [
+      [
+        76,
+        193
+      ],
+      [
+        153,
+        193
+      ]
+    ],
+    "closed": false,
+    "stroke": "#b9afd4",
+    "fill": "none",
+    "width": 1.0
+  },
+  {
+    "name": "U-L4-label-rivet-top",
+    "points": [
+      [
+        153,
+        61
+      ],
+      [
+        157,
+        57
+      ],
+      [
+        161,
+        61
+      ],
+      [
+        157,
+        65
+      ]
+    ],
+    "closed": true,
+    "stroke": "#f9f7ff",
+    "fill": "#f9f7ff",
+    "width": 0.9
+  },
+  {
+    "name": "U-L4-label-rivet-bottom",
+    "points": [
+      [
+        70,
+        184
+      ],
+      [
+        72.5,
+        181.5
+      ],
+      [
+        75,
+        184
+      ],
+      [
+        72.5,
+        186.5
+      ]
+    ],
+    "closed": true,
+    "stroke": "#b9afd4",
+    "fill": "#b9afd4",
+    "width": 0.7
+  }
+]

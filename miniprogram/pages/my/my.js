@@ -2,7 +2,7 @@
 const storage = require('../../utils/storage');
 const userData = require('../../utils/userData');
 const cloudFiles = require('../../utils/cloudFiles');
-const { ALL_CATS, getCatById } = require('../../utils/catData');
+const { ALL_CATS } = require('../../utils/catData');
 const memberLevel = require('../../utils/memberLevel');
 const deviceLayout = require('../../utils/deviceLayout');
 
@@ -11,7 +11,6 @@ Page({
     isLoggedIn: false,
     unlockedCount: 0,
     totalCount: ALL_CATS.length,
-    totalPhotos: 0,
     todayCount: 0,
     streakDays: 0,
     journeyPercent: 0,
@@ -25,7 +24,8 @@ Page({
     nextGrowth: 300,
     growthToNext: 300,
     memberIsMax: false,
-    recentRecords: [],
+    profileAvatar: '',
+    profileName: '猫咪观察员',
     syncBusy: false,
     syncKicker: 'ACCOUNT / ARCHIVE',
     syncTitle: '绑定当前微信账号',
@@ -38,6 +38,8 @@ Page({
     exceptionTitle: '',
     exceptionMessage: '',
     exceptionPrimaryText: '再试一次',
+    showFeedbackContact: false,
+    feedbackWechatId: 'CloudCollect',
     pageHeaderTop: 48,
     headerRightInset: 0,
   },
@@ -50,6 +52,7 @@ Page({
 
   onShow() {
     this._syncDeviceLayout();
+    this._refreshProfile();
     this._refreshData();
     this._refreshSyncState();
   },
@@ -71,9 +74,54 @@ Page({
     if (tabBar) {
       tabBar.setData({
         selected: 2,
-        hidden: !this.data.isLoggedIn,
+        hidden: false,
       });
     }
+  },
+
+  _refreshProfile() {
+    const profile = storage.getUserProfile();
+    this.setData({
+      profileAvatar: profile.avatarUrl || '',
+      profileName: profile.nickName || '猫咪观察员',
+    });
+
+    if (!profile.avatarFileID) return;
+    cloudFiles.getTempFileURL(profile.avatarFileID).then(avatarUrl => {
+      if (!avatarUrl) return;
+      storage.setUserProfile({ avatarUrl });
+      this.setData({ profileAvatar: avatarUrl });
+    }).catch(() => {
+      // 头像临时地址失效时保留本地头像或默认头像，不影响账号登录和记录同步。
+    });
+  },
+
+  _uploadAvatar(filePath) {
+    if (!filePath || !wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
+      return Promise.resolve('');
+    }
+
+    const cloudPath = `user-profile/avatar/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.jpg`;
+    return new Promise((resolve, reject) => {
+      wx.cloud.uploadFile({
+        cloudPath,
+        filePath,
+        success: response => resolve(response && response.fileID ? response.fileID : ''),
+        fail: reject,
+      });
+    });
+  },
+
+  onChooseAvatar(event) {
+    const avatarUrl = String(event && event.detail && event.detail.avatarUrl || '').trim();
+    if (!avatarUrl) {
+      this.onBindAccount();
+      return;
+    }
+
+    const profile = storage.setUserProfile({ avatarUrl }, { replaceAvatar: true });
+    this.setData({ profileAvatar: avatarUrl });
+    this.onBindAccount(profile);
   },
 
   _refreshData() {
@@ -82,16 +130,6 @@ Page({
     const stats = storage.getUserStats();
     const membership = memberLevel.getMemberLevel(stats.pawGrowth);
     const today = this._dateKey(Date.now());
-    const recentRecords = records.slice(0, 5).map((record, index) => {
-      const cat = getCatById(record.catId);
-      return {
-        ...record,
-        photoPath: storage.getRecordDisplayPath(record),
-        catName: record.catName || (cat ? cat.name : '神秘猫'),
-        fallbackIcon: '/assets/cat-placeholder.svg',
-        timeText: this._formatDate(record.createdAt),
-      };
-    });
 
     const unlockedCount = Object.keys(collection).filter(catId =>
         collection[catId] && collection[catId].unlocked
@@ -100,7 +138,6 @@ Page({
 
     this.setData({
       unlockedCount,
-      totalPhotos: records.length,
       todayCount: records.filter(record => this._dateKey(record.createdAt) === today).length,
       streakDays: this._getStreakDays(records),
       journeyPercent: totalCount ? Math.min((unlockedCount / totalCount) * 100, 100) : 0,
@@ -114,29 +151,7 @@ Page({
       nextGrowth: membership.nextGrowth || 0,
       growthToNext: membership.growthToNext,
       memberIsMax: membership.isMax,
-      recentRecords,
     });
-    this._refreshRecordPhotoURLs(recentRecords);
-  },
-
-  async _refreshRecordPhotoURLs(records) {
-    await Promise.all((records || []).map(async record => {
-      if (!record || record.photoPath || (!record.cutoutFileID && !record.originalFileID)) return;
-
-      let photoPath = '';
-      for (const fileID of [record.cutoutFileID, record.originalFileID].filter(Boolean)) {
-        try {
-          photoPath = await cloudFiles.getTempFileURL(fileID);
-          if (photoPath) break;
-        } catch (error) {
-          // 主体图地址失效时继续尝试安全校验后的原图。
-        }
-      }
-      if (!photoPath) return;
-
-      const index = this.data.recentRecords.findIndex(item => item.recordId === record.recordId);
-      if (index >= 0) this.setData({ [`recentRecords[${index}].photoPath`]: photoPath });
-    }));
   },
 
   _refreshSyncState() {
@@ -190,7 +205,7 @@ Page({
     });
   },
 
-  async onBindAccount() {
+  async onBindAccount(profileOverride) {
     if (this.data.syncBusy) return;
 
     this.setData({ syncBusy: true });
@@ -200,6 +215,20 @@ Page({
       const accountCheck = await userData.checkAccount();
       const state = storage.getSyncState();
       const accountChanged = accountCheck.accountChanged === true || state.accountChanged === true;
+      let profile = profileOverride || storage.getUserProfile();
+      if (profileOverride && profileOverride.avatarUrl) {
+        try {
+          const avatarFileID = await this._uploadAvatar(profileOverride.avatarUrl);
+          if (avatarFileID) {
+            profile = storage.setUserProfile({
+              avatarUrl: profileOverride.avatarUrl,
+              avatarFileID,
+            }, { replaceAvatar: true });
+          }
+        } catch (error) {
+          // 云头像上传失败时仍允许账号登录，当前设备继续使用临时头像。
+        }
+      }
       let markConsent = false;
       const needsConsent = summary.totalRecords > 0
         && (!state.userBound || accountChanged || !state.importConsentAt);
@@ -215,6 +244,7 @@ Page({
         force: true,
         source: state.userBound && !accountChanged ? 'capture' : 'guest-import',
         markConsent,
+        profile,
       });
       this._refreshData();
       this._refreshSyncState();
@@ -285,11 +315,6 @@ Page({
     return streak;
   },
 
-  _formatDate(timestamp) {
-    const date = new Date(timestamp || Date.now());
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-  },
-
   goCamera() {
     if (this.data.isOpeningCamera) return;
     this.setData({ isOpeningCamera: true });
@@ -314,12 +339,15 @@ Page({
     this.goCamera();
   },
 
-  goCollection() {
-    wx.switchTab({ url: '/pages/collection/collection' });
-  },
-
   goHome() {
     wx.switchTab({ url: '/pages/index/index' });
+  },
+
+  goProfile() {
+    wx.navigateTo({
+      url: '/pages/profile/profile',
+      fail: () => wx.showToast({ title: '个人主页暂时打不开', icon: 'none' }),
+    });
   },
 
   goPrivacy() {
@@ -344,6 +372,33 @@ Page({
           exceptionTitle: '关于页面没打开',
           exceptionMessage: '页面暂时没有准备好，请稍后再试',
         });
+      },
+    });
+  },
+
+  showFeedbackContact() {
+    this.setData({
+      showFeedbackContact: true,
+      feedbackWechatId: 'CloudCollect',
+    });
+  },
+
+  stopFeedbackPropagation() {},
+
+  closeFeedbackContact() {
+    this.setData({ showFeedbackContact: false });
+  },
+
+  copyFeedbackContact() {
+    const wechatId = this.data.feedbackWechatId || 'CloudCollect';
+    this.setData({ showFeedbackContact: false });
+    wx.setClipboardData({
+      data: wechatId,
+      success: () => {
+        wx.showToast({ title: '微信号已复制', icon: 'success', duration: 1400 });
+      },
+      fail: () => {
+        wx.showToast({ title: '复制失败，请手动添加', icon: 'none', duration: 1800 });
       },
     });
   },

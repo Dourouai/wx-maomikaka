@@ -3,7 +3,7 @@ const crypto = require('crypto');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
-  timeout: 30000,
+  timeout: 60000,
 });
 
 const db = cloud.database();
@@ -12,8 +12,26 @@ const PROFILES_COLLECTION = 'cat_profiles';
 const ENCOUNTERS_COLLECTION = 'encounters';
 const DATA_SCHEMA_VERSION = 1;
 const MAX_RECORDS = 50;
+const MAX_CLEANUP_PAGE_SIZE = 1000;
 const MAX_SHARE_ID_LENGTH = 96;
 const VALID_EVIDENCE_GROUPS = ['charm', 'cleverness', 'aura'];
+const ARCHIVE_CODE_PATTERN = /^\d{8}[0-9A-Z]{6}$/;
+const POSTER_MEDIA_FIELDS = [
+  'coverFileID',
+  'coverPhotoPath',
+  'coverTempURL',
+  'coverContentType',
+  'coverProvider',
+  'coverModel',
+  'coverOperation',
+  'coverPromptVersion',
+  'coverTargetRatio',
+  'coverStatus',
+  'coverRequestId',
+  'coverCreatedAt',
+  'coverRejectReason',
+  'posterResult',
+];
 
 function createError(code, message) {
   const error = new Error(message || code);
@@ -49,6 +67,29 @@ async function safeGet(query) {
   }
 }
 
+async function getAllOwnedDocuments(collectionName, ownerOpenId) {
+  const documents = [];
+  let offset = 0;
+
+  while (true) {
+    let query = db.collection(collectionName)
+      .where({ ownerOpenId })
+      .limit(MAX_CLEANUP_PAGE_SIZE);
+    if (offset > 0) {
+      if (typeof query.skip !== 'function') {
+        throw createError('POSTER_CLEANUP_QUERY_UNSUPPORTED', '海报清理查询暂不支持分页');
+      }
+      query = query.skip(offset);
+    }
+
+    const response = await safeGet(query);
+    const page = response && Array.isArray(response.data) ? response.data : [];
+    documents.push(...page);
+    if (page.length < MAX_CLEANUP_PAGE_SIZE) return documents;
+    offset += page.length;
+  }
+}
+
 async function getShare(shareId) {
   try {
     const response = await db.collection(SHARES_COLLECTION).doc(shareId).get();
@@ -61,6 +102,11 @@ async function getShare(shareId) {
 
 function trimString(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
+}
+
+function normalizeArchiveCode(value) {
+  const code = trimString(value, 32).toUpperCase();
+  return ARCHIVE_CODE_PATTERN.test(code) ? code : '';
 }
 
 function clampNumber(value, min, max) {
@@ -128,13 +174,91 @@ function normalizeMedia(value) {
   const source = value && typeof value === 'object' ? value : {};
   return {
     originalFileID: trimString(source.originalFileID, 512),
+    originalContentType: trimString(source.originalContentType, 64),
     cutoutFileID: trimString(source.cutoutFileID, 512),
     cutoutContentType: trimString(source.cutoutContentType, 64),
     cutoutProvider: trimString(source.cutoutProvider, 80),
     cutoutOperation: trimString(source.cutoutOperation, 120),
     cutoutRequestId: trimString(source.cutoutRequestId, 160),
     cutoutCheckerboardRemoved: source.cutoutCheckerboardRemoved === true,
+    coverFileID: trimString(source.coverFileID, 512),
+    coverContentType: trimString(source.coverContentType, 64),
+    coverProvider: trimString(source.coverProvider, 80),
+    coverModel: trimString(source.coverModel, 160),
+    coverOperation: trimString(source.coverOperation, 120),
+    coverPromptVersion: trimString(source.coverPromptVersion, 120),
+    coverTargetRatio: trimString(source.coverTargetRatio, 20),
+    coverStatus: trimString(source.coverStatus, 20),
+    coverRequestId: trimString(source.coverRequestId, 160),
+    coverCreatedAt: trimString(source.coverCreatedAt, 80),
+    coverRejectReason: trimString(source.coverRejectReason, 240),
   };
+}
+
+function addPosterCoverFileID(fileIDs, value) {
+  const fileID = trimString(value, 512);
+  if (fileID) fileIDs.add(fileID);
+}
+
+function collectArchivePosterCoverFileIDs(archive, fileIDs) {
+  const records = archive && Array.isArray(archive.records) ? archive.records : [];
+  records.forEach(record => {
+    const media = record && record.media && typeof record.media === 'object'
+      ? record.media
+      : {};
+    addPosterCoverFileID(fileIDs, media.coverFileID);
+  });
+}
+
+function hasPosterMediaData(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return POSTER_MEDIA_FIELDS.some(field => (
+    source[field] !== undefined
+    && source[field] !== null
+    && String(source[field]).trim() !== ''
+  ));
+}
+
+function clearPosterMedia(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const next = { ...source };
+  POSTER_MEDIA_FIELDS.forEach(field => {
+    if (Object.prototype.hasOwnProperty.call(next, field)) next[field] = null;
+  });
+  return next;
+}
+
+function getPosterCleanupData(encounter) {
+  const source = encounter && typeof encounter === 'object' ? encounter : {};
+  const data = {};
+  const media = source.media && typeof source.media === 'object' ? source.media : {};
+
+  if (hasPosterMediaData(media)) data.media = clearPosterMedia(media);
+  // 兼容早期曾把封面字段写在 encounter 根节点的历史数据。
+  POSTER_MEDIA_FIELDS.forEach(field => {
+    if (Object.prototype.hasOwnProperty.call(source, field)
+      && source[field] !== undefined
+      && source[field] !== null
+      && String(source[field]).trim() !== '') {
+      data[field] = null;
+    }
+  });
+  return Object.keys(data).length ? data : null;
+}
+
+function collectEncounterPosterCoverFileIDs(encounter, fileIDs) {
+  const source = encounter && typeof encounter === 'object' ? encounter : {};
+  const media = source.media && typeof source.media === 'object' ? source.media : {};
+  addPosterCoverFileID(fileIDs, media.coverFileID);
+  const posterResult = media.posterResult && typeof media.posterResult === 'object'
+    ? media.posterResult
+    : {};
+  const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : {};
+  addPosterCoverFileID(fileIDs, coverImage.fileID);
+  addPosterCoverFileID(fileIDs, posterResult.posterImage && posterResult.posterImage.fileID);
+  addPosterCoverFileID(fileIDs, source.coverFileID);
 }
 
 function getArchiveFileIDs(archive) {
@@ -145,7 +269,7 @@ function getArchiveFileIDs(archive) {
     const media = record && record.media && typeof record.media === 'object'
       ? record.media
       : {};
-    [media.cutoutFileID, media.originalFileID].forEach(value => {
+    [media.coverFileID, media.cutoutFileID, media.originalFileID].forEach(value => {
       const fileID = trimString(value, 512);
       if (!fileID || seen.has(fileID)) return;
       seen.add(fileID);
@@ -193,6 +317,7 @@ async function hydrateArchiveMedia(archive) {
         ...record,
         media: {
           ...media,
+          coverTempURL: urlMap[media.coverFileID] || '',
           cutoutTempURL: urlMap[media.cutoutFileID] || '',
           originalTempURL: urlMap[media.originalFileID] || '',
         },
@@ -249,9 +374,11 @@ function normalizeRecord(input, fallbackCatId) {
   return {
     localRecordId,
     catalogCatId,
+    archiveCode: normalizeArchiveCode(source.archiveCode),
     display: {
       name: trimString(display.name || source.catName, 40),
       description: trimString(display.description || source.catDescription, 240),
+      posterCopy: trimString(display.posterCopy || source.posterCopy, 52),
       copyVersion: trimString(display.copyVersion || source.copyVersion, 80),
     },
     media: normalizeMedia(source.media || {
@@ -286,6 +413,10 @@ function normalizeProfile(value, records) {
       source.description || source.displayDescription || latestDisplay.description,
       240
     ),
+    posterCopy: trimString(
+      source.posterCopy || source.displayPosterCopy || latestDisplay.posterCopy,
+      52
+    ),
     breed: trimString(source.breed || latestObservation.breed, 80),
     traits: Array.isArray(traits)
       ? traits.slice(0, 6).map(trait => trimString(trait, 40)).filter(Boolean)
@@ -296,7 +427,7 @@ function normalizeProfile(value, records) {
 function normalizeArchive(input) {
   const source = input && typeof input === 'object' ? input : {};
   const catalogCatId = normalizeCatalogCatId(source.catalogCatId || source.catId);
-  if (!catalogCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少图鉴角色编号');
+  if (!catalogCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少猫卡角色编号');
 
   const rawRecords = Array.isArray(source.records) ? source.records.slice(0, MAX_RECORDS) : [];
   const records = rawRecords.map(record => normalizeRecord(record, catalogCatId)).filter(Boolean);
@@ -312,6 +443,9 @@ function normalizeArchive(input) {
   return {
     catalogCatId,
     featuredRecordId,
+    archiveCode: normalizeArchiveCode(source.archiveCode)
+      || (records.find(record => record.localRecordId === featuredRecordId) || records[0]).archiveCode
+      || '',
     profile: normalizeProfile(source.profile || source.display, records),
     records,
   };
@@ -321,6 +455,7 @@ function toArchiveRecord(encounter) {
   return {
     localRecordId: encounter.clientRecordId || encounter._id,
     catalogCatId: encounter.catalogCatId,
+    archiveCode: normalizeArchiveCode(encounter.archiveCode),
     display: encounter.display || {},
     media: encounter.media || {},
     observation: encounter.observation || {},
@@ -361,6 +496,7 @@ async function loadOwnerArchive(userId, catalogCatId) {
       ? {
         name: profile.displayName,
         description: profile.displayDescription,
+        posterCopy: profile.displayPosterCopy,
       }
       : null,
     records: encounters.map(toArchiveRecord),
@@ -374,7 +510,7 @@ async function createShare(event) {
       ? event.catalogCatId
       : event && event.archive && (event.archive.catalogCatId || event.archive.catId)
   );
-  if (!requestedCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少图鉴角色编号');
+  if (!requestedCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少猫卡角色编号');
 
   let archive = null;
   if (event && event.archive) {
@@ -418,7 +554,24 @@ async function readShare(event) {
     throw createError('SHARE_NOT_FOUND', '这份猫咪档案已失效');
   }
 
-  const archive = await hydrateArchiveMedia(share.archive);
+  // 分享只授权这份档案；每次读取从所属相遇查询最新海报，避免旧分享快照失效。
+  const owned = await safeGet(db.collection(ENCOUNTERS_COLLECTION).where({
+    ownerOpenId: share.ownerOpenId, catalogCatId: share.catalogCatId, status: 'active',
+  }).limit(MAX_CLEANUP_PAGE_SIZE));
+  const records = await Promise.all(share.archive.records.map(async record => {
+    const encounter = (owned.data || []).find(item => item.clientRecordId === record.clientRecordId);
+    const result = encounter && encounter.media && encounter.media.posterResult;
+    const fileID = result && result.posterImage && result.posterImage.fileID;
+    const urls = fileID ? await getTempURLMap([fileID]) : {};
+    const posterResult = fileID ? {
+      name: result.name, copy: result.copy, scores: result.scores,
+      levelCode: result.levelCode, sourceArchiveId: result.sourceArchiveId,
+      sourceRecordId: result.sourceRecordId, posterImage: { fileID },
+      posterTempURL: urls[fileID] || '',
+    } : null;
+    return { ...record, media: { ...record.media, posterResult } };
+  }));
+  const archive = await hydrateArchiveMedia({ ...share.archive, records });
 
   return {
     ok: true,
@@ -427,9 +580,54 @@ async function readShare(event) {
   };
 }
 
+async function clearPosterArtifacts() {
+  const ownerOpenId = getOpenId();
+  const [shares, encounters] = await Promise.all([
+    getAllOwnedDocuments(SHARES_COLLECTION, ownerOpenId),
+    getAllOwnedDocuments(ENCOUNTERS_COLLECTION, ownerOpenId),
+  ]);
+  const coverFileIDs = new Set();
+
+  shares.forEach(share => {
+    collectArchivePosterCoverFileIDs(share && share.archive, coverFileIDs);
+  });
+  encounters.forEach(encounter => {
+    collectEncounterPosterCoverFileIDs(encounter, coverFileIDs);
+  });
+
+  let clearedEncounterCount = 0;
+  for (const encounter of encounters) {
+    if (!encounter || !encounter._id) continue;
+    const cleanupData = getPosterCleanupData(encounter);
+    if (!cleanupData) continue;
+    await db.collection(ENCOUNTERS_COLLECTION).doc(encounter._id).update({
+      data: {
+        ...cleanupData,
+        updatedAt: db.serverDate(),
+      },
+    });
+    clearedEncounterCount += 1;
+  }
+
+  let clearedShareCount = 0;
+  for (const share of shares) {
+    if (!share || !share._id) continue;
+    await db.collection(SHARES_COLLECTION).doc(share._id).remove();
+    clearedShareCount += 1;
+  }
+
+  return {
+    ok: true,
+    clearedShareCount,
+    clearedEncounterCount,
+    coverFileIDs: Array.from(coverFileIDs),
+  };
+}
+
 exports.main = async (event = {}) => {
   const action = event.action || 'get';
   if (action === 'create') return createShare(event);
   if (action === 'get') return readShare(event);
+  if (action === 'clear-poster-artifacts') return clearPosterArtifacts();
   throw createError('INVALID_ACTION', '不支持的档案分享操作');
 };

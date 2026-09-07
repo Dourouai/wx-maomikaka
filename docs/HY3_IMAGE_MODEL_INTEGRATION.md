@@ -1,8 +1,8 @@
 # 猫咪咔咔 — HY3 文本与图像模型接入技术说明
 
-> 状态：当前版本接入 TokenHub GLM-5.3-Flash 图片理解 → CloudBase 混元图生图主体处理 → 入图鉴链路
+> 状态：当前版本接入 TokenHub GLM-5.3-Flash 图片理解 + TokenHub Hy3 处理中页科普短句 → CloudBase 混元图生图主体处理与海报封面生成 → 入猫卡链路
 >
-> 更新时间：2026-09-02
+> 更新时间：2026-09-06
 >
 > 业务侧简称：HY3
 
@@ -10,7 +10,9 @@
 
 记录 HY3 相关模型的服务端接入方案，作为服务端接口、微信小程序调用和猫咪主体卡片流程的实施依据。
 
-当前按 CloudBase 官方 `wx-server-sdk` 方案拆分为视觉理解和主体图处理两层；本版本不调用 Hy3 文本模型，先由 GLM 视觉模型在严格长度和事实边界内返回品种、猫咪昵称和简短描述。
+当前按 CloudBase 官方 `wx-server-sdk` 方案拆分为文本知识、视觉理解和主体图处理三层；Hy3 只在图片处理等待页生成一条猫咪科普短句，不接收用户照片或个人信息。品种、猫咪昵称、档案描述和约 20 字海报文案仍由 GLM 视觉模型在严格长度和事实边界内返回。
+
+当前 `cat-transform` 继续只承担“主体图 / matting”职责。需要给猫咪生成海报主图场景时，新增独立的 `poster-cover` 业务链路，复用本文件中的同一图像模型和服务配置，但使用独立提示词、操作名、版本和结果字段；具体边界见 [猫咪图生图封面规则 v0.1](./CAT_IMAGE_TO_IMAGE_COVER_RULES_V0_1.md)。
 
 ## 2. 当前模型清单
 
@@ -20,8 +22,8 @@
 
 | 业务名称 | 模型名称 / ID | 供应商 | 类别 | 当前状态 | 计划用途 |
 |---|---|---|---|---|---|
-| HY3 | `Hy3`（API 实际 ID 待确认） | 腾讯混元 | 文本生成 / 推理 / Agent | 待接入 | 生成卡片文案、猫咪故事、标签和图像提示词 |
-| GLM 视觉识别 | `glm-5.3-flash` | TokenHub | 多模态理解 | 云函数已接入，待配置 Key | 判断是否为猫、猫数量、品种、短昵称、短描述、相遇评分和结构化猫咪特征 |
+| HY3 | `hy3` | TokenHub · 腾讯混元 | 文本生成 / 推理 / Agent | 代码已接入，待配置并部署 | 图片处理页猫咪科普短句；后续可扩展卡片文案 |
+| GLM 视觉识别 | `glm-5.3-flash` | TokenHub | 多模态理解 | 云函数已接入，待配置 Key | 判断是否为猫、猫数量、品种、短昵称、档案描述、海报文案、相遇评分和结构化猫咪特征 |
 
 Hy3 的公开模型资料见 [Tencent-Hunyuan/Hy3](https://github.com/Tencent-Hunyuan/Hy3)。
 
@@ -30,12 +32,12 @@ Hy3 的公开模型资料见 [Tencent-Hunyuan/Hy3](https://github.com/Tencent-Hu
 | 模型 ID | 供应商 | 类别 | 当前状态 | 当前用量 | 计划用途 |
 |---|---|---|---|---:|---|
 | `HY-Image-3.0-Plus-4090-Tob-v1.0` | `hunyuan-image` | 文生图 | 已启用 | 0 次 | 生成卡片背景、主题插画、装饰元素 |
-| `HY-Image-v3.0-I2I-ToB-v1.0.1` | `hunyuan-image` | 图生图 | 已启用 | 0 次 | 从用户拍摄的猫咪照片中保留完整主体，不做卡片化重绘 |
+| `HY-Image-v3.0-I2I-ToB-v1.0.1` | `hunyuan-image` | 图生图 | 已启用 | 0 次 | `cat-transform` 保留完整主体；`poster-cover` 生成无文字海报封面场景 |
 
 说明：
 
 - `HY3` 在本文中指文本模型接入能力；两个 `HY-Image` 模型属于图像生成能力，不能混用。
-- Hy3 的服务端模型 ID、供应商名称、用量统计方式需要接入前确认。
+- 当前正式模型使用 `hy3`；`hy3-preview` 不作为默认配置。服务端 API Key、套餐和用量仍以 TokenHub 控制台为准。
 - 当前尚未确认模型服务的鉴权方式、接口地址、同步/异步模式、计费和限流规则。
 - “已启用”只表示模型管理侧状态，不代表小程序已经完成调用。
 
@@ -51,14 +53,25 @@ Hy3 的公开模型资料见 [Tencent-Hunyuan/Hy3](https://github.com/Tencent-Hu
 - `confidence` 和最多 3 个外观特征；
 - `name`：根据可见毛色、花纹、姿态或神态生成的有趣中文昵称，最多 5 个字符；
 - `description`：基于照片可见内容生成的轻松短描述，最多 50 个字符；
-- `glmCatFeatureProfile`：按 `glm-cat-feature.v0.1` 返回的固定特征槽位，用于后续同猫候选比较；客户端再编码为 83 维临时向量，不作为唯一生物特征；
+- `posterCopy`：基于照片可见内容生成的单行海报短句，限制 16–36 个中文字符，目标约 20 字，供后续海报排版使用；
+- `copyVersion`：展示文案契约版本，当前为 `cat-copy.v0.5`；
+- `glmCatFeatureProfile`：按 `glm-cat-feature.v0.2` 返回的固定特征槽位，用于后续同猫候选比较；客户端和 `sync-guest-data` 按同一契约编码为固定 128 维结构化向量，不作为唯一生物特征；
 - `scoreEvidence`：魅力、机灵、灵气各自的可观察子项，均为 0–100 分；服务端按 `cat-score.v0.2` 固定权重计算 `scores`，再用于计算咪咔并映射相遇等级。
 
 当前通过 TokenHub OpenAI 兼容的 `/v1/chat/completions` 调用 `glm-5.3-flash`。图片以 Chat Completions 的 `image_url` 内容块传入 Base64 Data URI；TokenHub API Key 只保存在 `cat-vision` 云函数环境变量中，不进入小程序或代码库。TokenHub 的 GLM-5.3-Flash 多模态示例也使用该接口。
 
-### 3.2 文本模型：Hy3（当前版本不调用）
+### 3.2 文本模型：Hy3 猫咪科普短句
 
-Hy3 后续可以负责更长的卡片文案，但当前版本不调用它。猫咪昵称和 50 字以内的描述直接由 GLM 在看图后生成，并由服务端做长度清理；生成失败时回退到本地图鉴固定名称和描述，不影响原始拍摄记录。
+图片处理页会独立调用 Hy3 生成一条等待期间展示的猫咪小知识。它不参与猫咪识别、评分、猫卡映射或档案写入，也不接收本次照片；服务端只提交固定的科普事实池和输出约束。Hy3 调用失败、未配置或返回内容不合规时，云函数返回本地事实池中的兜底短句，不阻塞识别和主体图处理。
+
+当前接入约定：
+
+- 云函数：`miniprogram/cloudfunctions/cat-knowledge/`；
+- 小程序调用封装：`miniprogram/utils/catKnowledge.js`；
+- 模型默认值：`HY3_MODEL=hy3`；
+- API Key 优先读取 `HY3_API_KEY`，兼容复用 `CAT_VISION_API_KEY` 或 `TOKENHUB_API_KEY`；
+- Base URL 优先读取 `HY3_BASE_URL`，兼容复用 `CAT_VISION_BASE_URL`，默认使用 `https://tokenhub.tencentmaas.com/v1`；
+- 请求显式关闭思考并限制输出长度，避免等待页因为文案调用延迟而阻塞主流程。
 
 建议用途：
 
@@ -171,7 +184,7 @@ Hy3 后续可以负责更长的卡片文案，但当前版本不调用它。猫�
 
 - `cat identification`：判断是否有猫、品种或分类；
 - `anti-spoofing`：照片/屏幕/视频重放检查；
-- `text generation`：当前由 GLM 生成受约束的短昵称和短描述，后续再使用 Hy3 扩展卡片文案、标签和图像提示词；
+- `text generation`：图片处理页由 Hy3 生成受约束的猫咪科普短句；猫咪昵称、短描述和海报短句仍由 GLM 视觉识别链路生成，后续再评估 Hy3 的卡片文案扩展；
 - `image generation`：使用两个 Hunyuan Image 模型进行文生图和图生图；
 - `card composition`：把原图、生成图、品种和故事合成为最终卡片。
 
@@ -179,10 +192,13 @@ Hy3 后续可以负责更长的卡片文案，但当前版本不调用它。猫�
 
 当前代码已新增以下链路：
 
-- `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`name`、`description`、`traits`、`glmCatFeatureProfile` 和 `scoreEvidence`，服务端规范化后返回 `scores`；
+- `miniprogram/cloudfunctions/cat-vision/`：通过 TokenHub `glm-5.3-flash` 的 `/chat/completions` 多模态接口返回 `isCat`、`catCount`、`breed`、`confidence`、`name`、`description`、`posterCopy`、`traits`、`glmCatFeatureProfile` 和 `scoreEvidence`，服务端规范化后返回 `scores`；`posterCopy` 按 `cat-copy.v0.5` 限制为 16–36 个中文字符；
+- `miniprogram/cloudfunctions/cat-knowledge/`：通过 TokenHub `hy3` 的 `/chat/completions` 文本接口，从固定事实池生成图片处理页猫咪科普短句；未配置、超时或响应不合规时返回本地兜底，不影响主流程；
 - `miniprogram/cloudfunctions/cat-transform/`：使用 `wx-server-sdk@4.0.2` 保存图片，通过 `cloud.ai().createImageModel('hunyuan-image')` 调用 `HY-Image-v3.0-I2I-ToB-v1.0.1`，以 `images: [base64]` 传入一张原图并固定使用 `images/ar/generations`；
+- `miniprogram/cloudfunctions/poster-cover/`：独立的海报封面云函数，复用上述供应商、模型和 `images/ar/generations`，固定请求 `718x1074`，只返回无文字的猫咪与手绘背景合成图；
+- `miniprogram/utils/posterCover.js` 与 `pages/poster-loading/`：海报生成时优先使用已验收封面，首次本地生成调用 `poster-cover`，失败回退原图/主体图；封面元数据写入本地记录并带入公开分享快照；
 - 小程序拍照后先调用现有 `content-security` 校验压缩图片，并保留通过检测的同一个 `fileID`；随后并行调用 `cat-vision` 判断是否为猫、映射品种并计算相遇评分，以及 `cat-transform` 的 `matting` 动作。两条链路都完成后才一次性展示和写入记录；任务提交后先扣除 1 个罐罐，非猫、多猫无法确认目标或图片不合格时会清理并不写入拍摄记录；识别服务不可用等产品侧异常时返还罐罐；
-- 云函数使用上一版 CloudBase 链路的三句主体处理提示并关闭提示词改写，CloudBase 图生图请求只传入 `footnote: '·'`，不传 `LogoAdd`；模型结果不做二次 `security.imgSecCheck`，直接保存到 `cat-album/cutout/`；
+- 云函数使用 `cat-subject-only-cloudbase-i2i-v11-strict-alpha-matting` 完整主体抠图提示并关闭提示词改写，CloudBase 图生图请求只传入 `footnote: '·'`，不传 `LogoAdd`；模型结果不做二次 `security.imgSecCheck`，直接保存到 `cat-album/cutout/`；
 - 本地记录同时保存安全校验后的原图 `fileID`、主体图 `fileID` 和主体处理元数据；图鉴与详情页优先展示主体图，主体处理失败时不把原图伪装成主体图；
 - 主体图临时访问地址过期后，图鉴和详情页会根据持久化 `fileID` 重新换取地址；页面不展示模型提示词、生成标签或模型说明。
 
@@ -190,8 +206,10 @@ Hy3 后续可以负责更长的卡片文案，但当前版本不调用它。猫�
 
 1. 已在 CloudBase 环境 `yangxi-studio` 中部署 `cat-transform` 普通云函数；
 2. `cat-vision` 使用 TokenHub GLM 5.3 的 `/chat/completions` 多模态调用并接入拍照主流程，配置环境变量后部署即可生效；
-3. 运行环境建议 Node.js 20.19，依赖自动安装已开启，视觉函数超时建议设置为 120 秒；
-4. 当前先用正常图片验证生图与入图鉴，再补充“非猫图片、单猫图片、多猫图片”的拦截测试。
+3. `cat-knowledge` 代码已接入图片处理页，需在 CloudBase 新建/上传云函数，并配置 `HY3_API_KEY`（可复用现有 TokenHub Key）；
+4. `poster-cover` 已在 CloudBase 环境 `yangxi-studio` 完成上传部署，云端依赖为 `wx-server-sdk@4.0.2`，函数执行超时已在控制台设置为 900 秒；2026-09-06 已用真实猫档案样本生成成功，未触发原图/主体图回退；
+5. 运行环境建议 Node.js 20.19，依赖自动安装已开启；`cat-knowledge` 超时至少 30 秒，视觉函数超时建议设置为 120 秒；
+6. 当前先用正常图片验证生图与入图鉴，再补充“非猫图片、单猫图片、多猫图片”的拦截测试。
 
 视觉模型配置步骤：
 
@@ -207,7 +225,8 @@ CloudBase 图生图配置：
 1. 在 CloudBase AI 中确认 `HY-Image-v3.0-I2I-ToB-v1.0.1` 已开通；
 2. 确认 `cat-transform` 云函数使用 `wx-server-sdk@4.0.2` 并完成云端依赖安装；
 3. `cat-transform` 已于 2026-09-03 16:26:11 通过 CloudBase 控制台重新上传部署到 `$LATEST`；16:28:17 同步测试成功，返回 PNG 主体图并完成棋盘格清理；
-4. 若返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，先检查 CloudBase AI 模型和图生图参数，不重复尝试空 `footnote` 去除平台标识。
+4. `poster-cover` 使用同一模型与服务路线，但作为独立云函数部署；请求尺寸固定为 `718x1074`，结果写入 `cat-album/poster-cover/`。2026-09-06 17:23:58 已在 CloudBase 控制台将执行超时从默认 3 秒改为 900 秒，17:26 左右用 `小黑炭` C 档案真实生成成功，海报预览出现新的手绘场景且猫咪主体仍保留实拍质感；
+5. 若返回 `CLOUDBASE_IMAGE_NOT_CONFIGURED` 或 `CLOUDBASE_IMAGE_API_ERROR`，先检查 CloudBase AI 模型和图生图参数，不重复尝试空 `footnote` 去除平台标识。
 
 ## 5. 推荐业务流程
 
@@ -482,7 +501,7 @@ queued → running → succeeded
 
 ### 阶段 2：文本模型
 
-- 接入 `Hy3`；
+- 图片处理页已接入 `Hy3` 科普短句；
 - 固化猫咪卡片文案的 JSON Schema 和提示词模板；
 - 建立标题、故事、标签和图像提示词的验收样本；
 - 增加敏感内容过滤、事实边界校验和固定模板降级。

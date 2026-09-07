@@ -1,4 +1,4 @@
-<!-- 猫咪图生图测试页：只验证主体 PNG 处理，不写入猫咪图鉴。 -->
+<!-- 猫咪图生图测试页：只验证主体 PNG 处理，不写入猫卡。 -->
 <navigation-bar title="猫咪图生图" back="{{true}}" color="#332824" background="#FFFDF8" />
 
 <view class="image-image-page">
@@ -10,7 +10,7 @@
         <text class="image-image-title">只留下猫咪主体</text>
         <text class="image-image-subtitle">测试照片到透明 PNG 的主体处理效果</text>
         <view class="image-image-note">
-          <text>只测试抠图链路，不识别、不评分、不写入图鉴。</text>
+          <text>只测试抠图链路，不识别、不评分、不写入猫卡。</text>
         </view>
       </view>
 

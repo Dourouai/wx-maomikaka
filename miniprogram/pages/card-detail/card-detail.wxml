@@ -4,7 +4,7 @@
   <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="detail-content" style="padding-top: {{pageHeaderTop}}px;">
       <view class="file-header" style="padding-right: {{headerRightInset}}px;">
-        <view class="file-back" bindtap="goBack" aria-role="button" aria-label="返回图鉴">
+        <view class="file-back" bindtap="goBack" aria-role="button" aria-label="返回猫卡">
           <image class="file-back-icon" src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
         </view>
         <view class="file-heading">
@@ -23,8 +23,8 @@
         <text class="shared-state-kicker">CAT ARCHIVE · UNAVAILABLE</text>
         <text class="shared-state-title">{{shareError}}</text>
         <text class="shared-state-copy">这份分享链接可能已经失效，或云端暂时没有响应。</text>
-        <view class="shared-state-action" bindtap="goCollection" aria-role="button" aria-label="返回图鉴">
-          <text>返回图鉴</text>
+        <view class="shared-state-action" bindtap="goCollection" aria-role="button" aria-label="返回猫卡">
+          <text>返回猫卡</text>
         </view>
       </view>
 
@@ -35,6 +35,15 @@
             <text class="file-photo-stamp">CAT ARCHIVE</text>
             <image wx:if="{{featuredPhoto}}" class="file-photo-image" src="{{featuredPhoto}}" mode="aspectFit" />
             <image wx:else class="file-photo-placeholder" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+            <view
+              wx:if="{{catData && !shareLoading}}"
+              class="file-photo-poster-action file-photo-poster-action-{{posterEligible ? 'ready' : 'disabled'}}"
+              bindtap="openPoster"
+              aria-role="button"
+              aria-label="生成海报"
+            >
+              <image class="file-photo-poster-action-icon" src="/assets/icon-poster-share-coral.svg" mode="aspectFit" />
+            </view>
           </view>
 
           <view class="file-photo-label">
@@ -49,7 +58,6 @@
           <view class="file-tags" aria-label="相遇标签">
             <text class="file-tag">{{catData.breed}}</text>
             <text wx:for="{{catData.trait}}" wx:for-item="trait" wx:key="index" class="file-tag">{{trait}}</text>
-            <text class="file-tag">相遇 {{encounterCount}} 次</text>
           </view>
 
           <view class="file-data">
@@ -57,27 +65,22 @@
               <text>首次遇见</text>
               <text class="file-data-value">{{firstSeenText}}</text>
             </view>
-            <view class="file-data-item">
-              <text>档案状态</text>
-              <text class="file-data-value">已建立</text>
-            </view>
-            <view class="file-data-item">
-              <text>相遇次数</text>
-              <text class="file-data-value">{{encounterCountText}} 次</text>
+            <view wx:if="{{hasLocation}}" class="file-data-item">
+              <text>出没位置：</text>
+              <text class="file-data-value">{{locationText}}</text>
             </view>
           </view>
         </view>
 
         <view class="file-section score-section">
           <view class="section-heading">
-            <text class="section-title">猫咪评分</text>
+            <text class="section-title">猫卡</text>
             <text class="section-code">CAT SCORE</text>
           </view>
           <view class="score-card">
             <view class="score-head">
               <view class="score-context">
-                <text class="score-context-title">当前小猫评分</text>
-                <text class="score-context-level">{{currentLevelCode}} · {{currentLevelLabel}}</text>
+                <text class="score-context-title">{{currentLevelCode}} · {{currentLevelLabel}}</text>
               </view>
               <view class="score-total">
                 <text class="score-total-label">咪咔</text>
@@ -98,7 +101,7 @@
 
             <view class="score-footer">
               <text>当前猫咪 · 满分 100</text>
-              <text wx:if="{{currentPawReward !== null}}">猫爪 +{{currentPawReward}} · 积分 +{{currentPointReward}}</text>
+              <text wx:if="{{currentPawReward !== null}}">猫爪 +{{currentPawReward}} · 咔咔分 +{{currentPointReward}}</text>
               <text wx:else>每次相遇单独计算</text>
             </view>
           </view>
@@ -106,12 +109,11 @@
 
         <view class="file-section field-notes">
           <view class="section-heading">
-            <text class="section-title">相遇手记</text>
-            <text class="section-code">FIELD NOTES · {{encounterCountText}}</text>
+            <text class="section-title">手记</text>
+            <text class="section-code">FIELD NOTES</text>
           </view>
           <view class="field-note-card">
             <view class="field-note-head">
-              <text>{{fieldNoteEncounterTitle}}</text>
               <text>{{fieldNoteDate}}</text>
             </view>
             <text class="field-note-copy">“{{fieldNoteText}}”</text>
@@ -123,45 +125,15 @@
           </view>
         </view>
 
-        <view wx:if="{{records.length > 0}}" class="file-section records-section">
-          <view class="section-heading">
-            <text class="section-title">相遇记录</text>
-            <text class="section-code">{{encounterCountText}} ENCOUNTERS</text>
-          </view>
-          <view class="file-timeline">
-            <view
-              wx:for="{{records}}"
-              wx:for-item="record"
-              wx:key="recordId"
-              class="file-encounter {{record.recordId === featuredRecordId ? 'file-encounter-featured' : ''}}"
-              bindtap="setFeatured"
-              data-record-id="{{record.recordId}}"
-              aria-role="button"
-              aria-label="{{isSharedArchive ? '查看相遇记录' : '设为档案主图'}}"
-            >
-              <text class="file-encounter-index">{{record.encounterIndex}}</text>
-              <view class="file-encounter-copy">
-                <text class="file-encounter-title">{{record.encounterTitle}}</text>
-                <text class="file-encounter-meta">{{record.levelCode}} · {{record.levelLabel}} · {{record.recordId === featuredRecordId ? '档案主图' : '轻轻记录'}}</text>
-              </view>
-              <view class="file-encounter-side">
-                <text>{{record.timeShort}}</text>
-                <text wx:if="{{record.recordId === featuredRecordId}}" class="file-featured-mark">主图</text>
-              </view>
-            </view>
-          </view>
-        </view>
-
         <view class="file-actions">
-          <view class="file-primary" bindtap="goCollection" aria-role="button" aria-label="返回图鉴">
+          <view class="file-primary" bindtap="goCollection" aria-role="button" aria-label="返回猫卡">
             <text class="file-primary-icon">▣</text>
-            <text>返回图鉴</text>
+            <text>返回猫卡</text>
           </view>
-          <view wx:if="{{!isSharedArchive}}" class="file-release" bindtap="openDeleteConfirm" aria-role="button" aria-label="放归这只猫的档案">
+          <view wx:if="{{!isSharedArchive}}" class="file-release" bindtap="openDeleteConfirm" aria-role="button" aria-label="放归这只猫">
             <image class="file-release-icon" src="/assets/icon-trash-coral.svg" mode="aspectFit" />
             <view class="file-release-copy">
-              <text class="file-release-title">放归自由漫游</text>
-              <text class="file-release-subtitle">RELEASE TO WILD · 删除档案</text>
+              <text class="file-release-title">放归自由</text>
             </view>
           </view>
           <text class="file-action-note">CITY CAT ARCHIVE · NO.{{archiveCode}}</text>
@@ -188,7 +160,7 @@
           <text>保留档案</text>
         </view>
         <view class="delete-button delete-button-confirm" bindtap="confirmDelete">
-          <text>{{deleteBusy ? '正在放归…' : '放归'}}</text>
+          <text>{{deleteBusy ? '正在放归…' : '放归并删除'}}</text>
         </view>
       </view>
     </view>

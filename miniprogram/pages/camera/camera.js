@@ -1,11 +1,17 @@
 // 拍照页 camera.js
 const deviceLayout = require('../../utils/deviceLayout');
+const storage = require('../../utils/storage');
+const location = require('../../utils/location');
 
 Page({
   data: {
+    todayCount: 0,
+    remainingCans: 3,
+    dailyCanLimit: 3,
     isTakingPhoto: false,
+    showLocationPrompt: false,
+    locationConsentBusy: false,
     cameraError: false,
-    showExitPrompt: false,
     cameraIssueKind: 'permission',
     cameraIssueEyebrow: '相机权限',
     cameraIssueTitle: '需要使用相机',
@@ -20,15 +26,34 @@ Page({
     safeBottom: 34,
   },
 
-  onLoad(options) {
+  onLoad() {
     this._syncDeviceLayout();
+    this._refreshDailyQuota();
+  },
 
-    // 仅用于设计验收：直接打开 camera?preview=exit 可查看退出状态提示，
-    // 不触发拍照、消耗罐罐或写入任何记录。
-    const previewState = String((options && (options.preview || options.state)) || '').toLowerCase();
-    if (previewState === 'exit') {
-      this.setData({ showExitPrompt: true });
+  _refreshDailyQuota() {
+    const today = this._getDateKey(Date.now());
+    const todayCount = storage.getAllRecords().filter(record => (
+      this._getDateKey(record.createdAt) === today
+    )).length;
+    const remainingCans = Math.max(0, 3 - todayCount);
+    this.setData({ todayCount, remainingCans });
+    if (remainingCans <= 0) {
+      this.setData({
+        cameraError: true,
+        cameraIssueKind: 'quota',
+        cameraIssueEyebrow: '今日相遇已满',
+        cameraIssueTitle: '罐罐用完啦',
+        cameraIssueSubtitle: '今天已经遇见 3 只猫，明天再来继续收集吧。',
+        cameraIssueAction: '返回首页',
+      });
     }
+    return remainingCans;
+  },
+
+  _getDateKey(timestamp) {
+    const date = new Date(timestamp || Date.now());
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   },
 
   onResize() {
@@ -67,7 +92,10 @@ Page({
 
   // 拍摄页面内的当前画面，不再跳转到微信原生相机页。
   takePhoto() {
-    if (this.data.isTakingPhoto) return;
+    if (this.data.isTakingPhoto || this._captureFlowBusy || this.data.showLocationPrompt) return;
+
+    const remainingCans = this._refreshDailyQuota();
+    if (remainingCans <= 0) return;
 
     if (this.data.cameraError) {
       this.handleCameraIssue();
@@ -78,23 +106,28 @@ Page({
       this.cameraContext = wx.createCameraContext();
     }
 
+    this._captureFlowBusy = true;
     this.setData({ isTakingPhoto: true });
     this.cameraContext.takePhoto({
       quality: 'high',
       success: (res) => {
         const tempImagePath = res && res.tempImagePath;
         if (!tempImagePath) {
+          this._captureFlowBusy = false;
           this._showPhotoError();
           return;
         }
 
-        wx.navigateTo({
-          url: `/pages/reveal/reveal?photo=${encodeURIComponent(tempImagePath)}`,
-          fail: () => this._showPhotoError(),
+        this._prepareCapturedPhoto(tempImagePath).catch(error => {
+          console.error('[Camera] 拍摄上下文准备失败:', error);
+          this._captureFlowBusy = false;
+          this._pendingCapture = null;
+          this._showPhotoError();
         });
       },
       fail: (err) => {
         console.error('[Camera] 拍照失败:', err);
+        this._captureFlowBusy = false;
         this._showPhotoError();
       },
       complete: () => {
@@ -103,11 +136,101 @@ Page({
     });
   },
 
+  async _prepareCapturedPhoto(tempImagePath) {
+    const pending = {
+      captureId: storage.createPendingCaptureId(),
+      photoPath: tempImagePath,
+      capturedAt: Date.now(),
+    };
+    this._pendingCapture = pending;
+
+    let authorizationStatus = 'unavailable';
+    try {
+      authorizationStatus = await location.getAuthorizationStatus();
+    } catch (error) {
+      console.warn('[Camera] 位置授权状态不可用，跳过位置记录:', error);
+    }
+
+    if (authorizationStatus === 'undetermined') {
+      // 自定义说明先于微信系统授权弹窗出现，用户拒绝位置不会影响本次识别。
+      this.setData({
+        showLocationPrompt: true,
+        locationConsentBusy: false,
+      });
+      return;
+    }
+
+    if (authorizationStatus === 'authorized') {
+      try {
+        const capturedLocation = await location.getFuzzyLocation();
+        this._finishCapturedPhoto(pending, capturedLocation, 'captured');
+      } catch (error) {
+        console.warn('[Camera] 已授权但位置读取失败，继续处理照片:', error);
+        this._finishCapturedPhoto(pending, null, 'unavailable');
+      }
+      return;
+    }
+
+    this._finishCapturedPhoto(
+      pending,
+      null,
+      authorizationStatus === 'denied' ? 'denied' : 'unavailable'
+    );
+  },
+
+  chooseLocationConsent() {
+    if (this.data.locationConsentBusy || !this._pendingCapture) return;
+    this.setData({ locationConsentBusy: true });
+    location.getFuzzyLocation()
+      .then(capturedLocation => {
+        this._finishCapturedPhoto(this._pendingCapture, capturedLocation, 'captured');
+      })
+      .catch(error => {
+        console.warn('[Camera] 用户同意后位置读取失败，继续处理照片:', error);
+        const message = String(error && (error.errMsg || error.message) || '').toLowerCase();
+        const status = /deny|denied|auth|authorize|拒绝/.test(message) ? 'denied' : 'unavailable';
+        this._finishCapturedPhoto(this._pendingCapture, null, status);
+      });
+  },
+
+  skipLocationConsent() {
+    if (this.data.locationConsentBusy || !this._pendingCapture) return;
+    this._finishCapturedPhoto(this._pendingCapture, null, 'skipped');
+  },
+
+  _finishCapturedPhoto(pending, capturedLocation, locationStatus) {
+    if (!pending || this._pendingCapture !== pending) return;
+
+    try {
+      const savedPending = storage.savePendingCapture({
+        ...pending,
+        location: capturedLocation,
+        locationStatus,
+      });
+      this._pendingCapture = null;
+      this._captureFlowBusy = false;
+      this.setData({
+        showLocationPrompt: false,
+        locationConsentBusy: false,
+      });
+      wx.navigateTo({
+        url: `/pages/reveal/reveal?captureId=${encodeURIComponent(savedPending.captureId)}&photo=${encodeURIComponent(savedPending.photoPath)}`,
+        fail: () => {
+          storage.clearPendingCapture(savedPending.captureId);
+          this._showPhotoError();
+        },
+      });
+    } catch (error) {
+      console.error('[Camera] 拍摄上下文保存失败:', error);
+      this._pendingCapture = null;
+      this._captureFlowBusy = false;
+      this.setData({ showLocationPrompt: false, locationConsentBusy: false });
+      this._showPhotoError();
+    }
+  },
+
   onCameraError(event) {
     console.error('[Camera] 相机不可用:', event && event.detail);
-
-    // 设计预览或用户已经结束拍摄时，不要再被 camera 的异步错误覆盖退出状态提示。
-    if (this.data.showExitPrompt) return;
 
     const detail = event && event.detail;
     const detailText = typeof detail === 'string' ? detail : JSON.stringify(detail || '');
@@ -146,6 +269,10 @@ Page({
   },
 
   handleCameraIssue() {
+    if (this.data.cameraIssueKind === 'quota') {
+      wx.switchTab({ url: '/pages/index/index' });
+      return;
+    }
     if (this.data.cameraIssueKind === 'privacy') {
       this.setData({ cameraError: false }, () => {
         this.cameraContext = wx.createCameraContext();
@@ -160,16 +287,8 @@ Page({
     this.openCameraSettings();
   },
 
-  // 返回上一页
+  // 退出拍摄，直接回到相遇首页。
   goBack() {
-    if (this.data.showExitPrompt) return;
-    this.setData({ showExitPrompt: true });
-  },
-
-  stopExitPromptPropagation() {},
-
-  returnHome() {
-    this.setData({ showExitPrompt: false });
     wx.switchTab({ url: '/pages/index/index' });
   },
 

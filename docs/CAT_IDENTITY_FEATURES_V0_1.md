@@ -1,8 +1,10 @@
-# 猫咪咔咔｜猫咪身份特征与视觉向量方案 v0.1
+# 猫咪咔咔｜猫咪身份特征与视觉向量方案 v0.2
 
-> 状态：方案草案
+> 状态：GLM 结构化特征方案已记录但暂缓运行；真正视觉 embedding 仍待接入
 >
 > 目标：在现有“GLM 视觉识别”之后，建立一条可迭代的猫咪个体识别链路，用于判断“这次拍到的猫，是否可能是之前遇见的同一只猫”。
+
+当前运行约定（2026-09-04）：暂不要求 GLM 返回 `glmCatFeatureProfile`，也不在客户端或同步云函数生成、传递、写入 128 维向量；历史字段保留，待后续重新评估后再启用。
 
 ## 0. 先定一个重要结论
 
@@ -24,7 +26,7 @@
 
 ## 1. 和现有项目的关系
 
-当前项目已经有：
+当前项目曾经接入过、目前暂缓运行：
 
 ```text
 拍照
@@ -162,11 +164,11 @@ GLM 不负责：
 - 每个观察都要带模型版本，便于以后重跑和比较；
 - `usableForIdentity=false` 时可以生成相遇失败或普通记录，但不应写入身份图库。
 
-### 3.2 前期 MVP：GLM 结构化特征指纹
+### 3.2 预留方案：GLM 结构化特征指纹
 
 前期先不接入专用视觉 embedding，使用 GLM 5.3 输出一份受白名单约束的 `glmCatFeatureProfile`。它是“可解释观察 + 确定性编码”的临时方案，不能称为真正的猫咪生物识别向量，也不能单独生成现实猫咪的唯一 `catId`。
 
-当前契约固定为 `glm-cat-feature.v0.1`，包含 12 个特征槽位：
+当前契约固定为 `glm-cat-feature.v0.2`，包含 19 个特征槽位：
 
 | 槽位 | 含义 |
 | --- | --- |
@@ -176,19 +178,24 @@ GLM 不负责：
 | `earFeature` / `tailFeature` | 耳部、尾部特征 |
 | `bodyBuild` / `noseColor` | 体型、鼻头颜色 |
 | `distinctiveMark` | 可见的明显记号 |
+| `faceProportion` / `muzzleShape` | 脸部比例、口鼻形状 |
+| `foreheadMark` / `cheekMark` | 额头、左右脸颊的局部记号 |
+| `chestMark` / `pawPattern` | 胸口、脚掌的可见颜色或花纹 |
+| `tailCurl` | 尾巴弯曲、卷曲或炸毛形态 |
 
-每个槽位只能返回固定枚举；看不清统一返回 `unknown`，并为每个槽位返回 `confidence`。同时返回 `quality.visibility`、`quality.occlusion` 和 `quality.usableForMatch`，只有质量合格时才编码向量。
+每个槽位只能返回固定枚举；看不清统一返回 `unknown`，并为每个槽位返回 `confidence`。同时返回 `quality.visibility`、`quality.occlusion`、`quality.confidence` 和 `quality.usableForMatch`，只有质量合格时才编码向量。
 
 代码链路为：
 
 ```text
 cat-vision → glmCatFeatureProfile
            → identify.js 白名单归一化
-           → glmFeatureVector（glm-cat-vector.v0.1，当前 83 维）
+           → glmFeatureVector（glm-cat-vector.v0.2，固定 128 维）
            → 本地相遇记录
+           → sync-guest-data 服务端重算并写入 encounters / cat_profiles
 ```
 
-83 维向量由分类特征 one-hot、字段置信度和图片质量元数据组成；`unknown` 不产生匹配信号。它只用于同一用户范围内的候选排序和实验，当前不自动合并猫咪档案，也不通过分享链路下发。同步到云端时只保留白名单后的结构化特征，后续可以在服务端按版本重算。
+128 维向量由 `101` 个分类特征 one-hot、`19` 个字段置信度和 `8` 个图片质量元数据组成：`101 + 19 + 8 = 128`。`unknown` 不产生 one-hot 匹配信号。它是 GLM 结构化观察的确定性编码，不是图像 embedding，也不是唯一生物识别指纹；当前写入用户私有的 `encounters.observation`，并在 `cat_profiles` 保存最新一次特征摘要。云函数会根据白名单结构化字段重算，不信任客户端传入的向量数组。
 
 同一特征档案的比较结果必须同时看 `score`、`coverage` 和 `usableForMatch`；低质量、覆盖不足或第一候选不明显时，统一进入待确认流程。
 
@@ -319,11 +326,11 @@ confirmed ──人工纠错/后台任务──→ merged 或 rejected
 
 ## 7. 对现有代码的改造边界
 
-### 第一阶段：现在可以做
+### 第一阶段：重新启用后再做
 
-1. `cat-vision` 返回 `glmCatFeatureProfile`，并由客户端按固定版本生成 83 维临时向量；
+1. `cat-vision` 返回 `glmCatFeatureProfile`，客户端按固定版本生成 128 维本地镜像；
 2. 在 `storage.saveRecord` 中保存白名单特征档案和向量版本，不保存自由文本特征；
-3. 同步到云端时只传结构化特征，不把本机向量数组放进分享数据；
+3. `sync-guest-data` 按相同契约在服务端重算 128 维，并写入 `encounters.observation` 与 `cat_profiles` 最新摘要；
 4. 继续预留 `catProfileId`、`observationId`、`identityFeatureId`、`identityStatus`，为真实身份层留接口；
 5. 将 `catData.id` 改名为概念上的 `catalogCatId`，避免继续把固定角色 ID 当现实猫 ID。
 
@@ -354,7 +361,7 @@ confirmed ──人工纠错/后台任务──→ merged 或 rejected
 ## 8. 隐私与安全底线
 
 - API Key、原始向量和候选搜索都只在云端进行；
-- 正式身份向量只在云端保存和检索；当前 83 维临时向量仅作为本地实验数据，不进入卡面、分享或日志；
+- 当前 128 维是 GLM 结构化观察向量，不等同于正式身份向量；它只保存在用户私有数据库和本地镜像，不进入卡面、公开分享或日志；
 - 不把精确 GPS、人物、建筑背景带入身份向量；
 - 地点只用于可选的弱候选排序，不作为“就是同一只”的证明；
 - 用户删除照片或档案时，应定义原图、裁剪图、观察结果、向量和索引的级联删除策略；
@@ -370,5 +377,6 @@ catId = 服务端生成的猫咪档案 ID
 catData.id = 固定图鉴角色 ID，不再承担现实个体身份
 相似度 = 概率判断，不承诺绝对唯一
 默认范围 = 用户自己的图鉴
-不具备真实 embedding 服务 = 不生成伪向量
+当前 128D = GLM 结构化特征的确定性向量，不冒充真实 embedding
+不具备真实 embedding 服务 = 不生成伪造的图像身份向量
 ```

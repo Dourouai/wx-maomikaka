@@ -1,0 +1,583 @@
+{
+  "version": "0.6",
+  "rarity": "C",
+  "canvas": {
+    "width": 720,
+    "height": 1420,
+    "color": "RGBA"
+  },
+  "layer_order": "bottom_to_top",
+  "groups": [
+    "MASTER-L1",
+    "CONTENT-L2",
+    "CONTENT-L3",
+    "MASTER-L4",
+    "MASTER-L4A",
+    "DEMO-L5"
+  ],
+  "group_contract": {
+    "MASTER-L1": "固定相框底纸，堆栈最底部；主图孔透明",
+    "CONTENT-L2": "无猫背景图，可替换并按主图窗口裁切",
+    "CONTENT-L3": "透明猫主体，可替换并按主图窗口裁切",
+    "MASTER-L4": "固定前景组件；编号牌、咪咔圆章、指标模块均为独立组件组，颜色、描边、高光、阴影和图标分开",
+    "MASTER-L4A": "独立 C 等级标签；位置和尺寸固定",
+    "DEMO-L5": "一个可见动态文字与数据层；Canvas 整层重绘"
+  },
+  "fixed_geometry": {
+    "card": [
+      10,
+      6,
+      710,
+      1414
+    ],
+    "photo": [
+      54,
+      80,
+      666,
+      974
+    ],
+    "photo_frame": [
+      47,
+      70,
+      673,
+      990
+    ],
+    "number_plaque": [
+      385,
+      80,
+      663,
+      159
+    ],
+    "number_plaque_inner": [
+      394,
+      89,
+      654,
+      150
+    ],
+    "information_panel": [
+      55,
+      974,
+      665,
+      1365
+    ],
+    "score_seal_center": [
+      604,
+      1048.0
+    ],
+    "score_seal_bounds": [
+      546.4,
+      990.4,
+      661.6,
+      1105.6
+    ],
+    "metrics": [
+      55,
+      1178,
+      665,
+      1348
+    ]
+  },
+  "components": [
+    {
+      "group": "MASTER-L1",
+      "slug": "L1-01-outer-gradient-C",
+      "file": "L1-01-outer-gradient-C.png",
+      "name": "MASTER-L1-01｜外框渐变底色｜最底层",
+      "role": "outer gradient color",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L1",
+      "slug": "L1-02-shell-inner-C",
+      "file": "L1-02-shell-inner-C.png",
+      "name": "MASTER-L1-02｜内壳底色｜最底层",
+      "role": "shell color",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L1",
+      "slug": "L1-03-surface-C",
+      "file": "L1-03-surface-C.png",
+      "name": "MASTER-L1-03｜内侧纸面底色｜最底层",
+      "role": "surface color",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L1",
+      "slug": "L1-04-panel-C",
+      "file": "L1-04-panel-C.png",
+      "name": "MASTER-L1-04｜信息区底色｜最底层",
+      "role": "panel color",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L1",
+      "slug": "L1-05-panel-inner-C",
+      "file": "L1-05-panel-inner-C.png",
+      "name": "MASTER-L1-05｜信息区内底色｜最底层",
+      "role": "panel inner color",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L1",
+      "slug": "L1-06-photo-shadow-C",
+      "file": "L1-06-photo-shadow-C.png",
+      "name": "MASTER-L1-06｜主图槽位阴影｜最底层",
+      "role": "photo recess shadow",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L1",
+      "slug": "L1-07-paper-highlight-C",
+      "file": "L1-07-paper-highlight-C.png",
+      "name": "MASTER-L1-07｜纸张高光与纹理｜最底层",
+      "role": "paper highlight",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "CONTENT-L2",
+      "slug": "L2-background-replaceable-C",
+      "file": "L2-background-replaceable-C.png",
+      "name": "CONTENT-L2｜示例背景图｜可替换",
+      "role": "replaceable background",
+      "kind": "photo",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": null
+    },
+    {
+      "group": "CONTENT-L3",
+      "slug": "L3-cat-slot-placeholder-C",
+      "file": "L3-cat-slot-placeholder-C.png",
+      "name": "CONTENT-L3｜猫主体占位｜可替换透明 PNG",
+      "role": "replaceable cat subject",
+      "kind": "photo",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": null
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-01-frame-primary-line-C",
+      "file": "L4-01-frame-primary-line-C.png",
+      "name": "MASTER-L4-01｜外框主边线｜线稿",
+      "role": "frame primary line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-04-frame-highlight-line-C",
+      "file": "L4-04-frame-highlight-line-C.png",
+      "name": "MASTER-L4-04｜外框高光线｜线稿",
+      "role": "frame highlight line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-07-photo-recess-deep-C",
+      "file": "L4-07-photo-recess-deep-C.png",
+      "name": "MASTER-L4-07｜照片槽外凹深线｜线稿",
+      "role": "photo recess line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-10-photo-aperture-primary-C",
+      "file": "L4-10-photo-aperture-primary-C.png",
+      "name": "MASTER-L4-10｜照片窗口主边线｜线稿",
+      "role": "photo aperture line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-20-number-fill-C",
+      "file": "L4-20-number-fill-C.png",
+      "name": "MASTER-L4-20｜编号牌底色｜颜色",
+      "role": "number plaque fill",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-21-number-primary-line-C",
+      "file": "L4-21-number-primary-line-C.png",
+      "name": "MASTER-L4-21｜编号牌主边线｜线稿",
+      "role": "number plaque line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-26-score-fill-C",
+      "file": "L4-26-score-fill-C.png",
+      "name": "MASTER-L4-26｜咪咔徽章底色｜颜色",
+      "role": "score seal fill",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-27-score-primary-line-C",
+      "file": "L4-27-score-primary-line-C.png",
+      "name": "MASTER-L4-27｜咪咔徽章主边线｜线稿",
+      "role": "score seal line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-32-name-divider-C",
+      "file": "L4-32-name-divider-C.png",
+      "name": "MASTER-L4-32｜名称分隔线｜线稿",
+      "role": "name divider",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-41-metric-module-fill-C",
+      "file": "L4-41-metric-module-fill-C.png",
+      "name": "MASTER-L4-41｜指标模块底色｜颜色",
+      "role": "metric module fill",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-42-metric-cell-1-fill-C",
+      "file": "L4-42-metric-cell-1-fill-C.png",
+      "name": "MASTER-L4-42｜指标格一底色｜颜色",
+      "role": "metric cell 1 fill",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-43-metric-cell-2-fill-C",
+      "file": "L4-43-metric-cell-2-fill-C.png",
+      "name": "MASTER-L4-43｜指标格二底色｜颜色",
+      "role": "metric cell 2 fill",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-44-metric-cell-3-fill-C",
+      "file": "L4-44-metric-cell-3-fill-C.png",
+      "name": "MASTER-L4-44｜指标格三底色｜颜色",
+      "role": "metric cell 3 fill",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-45-metric-module-primary-line-C",
+      "file": "L4-45-metric-module-primary-line-C.png",
+      "name": "MASTER-L4-45｜指标模块主边线｜线稿",
+      "role": "metric module line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-57-metric-divider-1-deep-C",
+      "file": "L4-57-metric-divider-1-deep-C.png",
+      "name": "MASTER-L4-57｜指标分隔线一｜深线",
+      "role": "metric divider 1",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-60-metric-divider-2-deep-C",
+      "file": "L4-60-metric-divider-2-deep-C.png",
+      "name": "MASTER-L4-60｜指标分隔线二｜深线",
+      "role": "metric divider 2",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-64-icon-charm-C",
+      "file": "L4-64-icon-charm-C.png",
+      "name": "MASTER-L4-64｜魅力图标线｜独立图标",
+      "role": "charm icon",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-65-icon-clever-C",
+      "file": "L4-65-icon-clever-C.png",
+      "name": "MASTER-L4-65｜机灵图标线｜独立图标",
+      "role": "clever icon",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-66-icon-aura-C",
+      "file": "L4-66-icon-aura-C.png",
+      "name": "MASTER-L4-66｜灵气图标线｜独立图标",
+      "role": "aura icon",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4A",
+      "slug": "L4A-02-label-fill-C",
+      "file": "L4A-small-02-label-fill-C.png",
+      "name": "MASTER-L4A-02｜等级标签渐变底色｜颜色｜v0.6 缩小版",
+      "role": "label fill",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4A",
+      "slug": "L4A-03-label-primary-line-C",
+      "file": "L4A-small-03-label-primary-line-C.png",
+      "name": "MASTER-L4A-03｜等级标签主边线｜线稿｜v0.6 缩小版",
+      "role": "label primary line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4A",
+      "slug": "L4A-04-label-inner-highlight-C",
+      "file": "L4A-small-04-label-inner-highlight-C.png",
+      "name": "MASTER-L4A-04｜等级标签内框高光｜线稿｜v0.6 缩小版",
+      "role": "label inner line",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-24-number-prefix-C",
+      "file": "L4-24-number-prefix-C.png",
+      "name": "MASTER-L4-24｜固定文字 No.｜示例母版",
+      "role": "number prefix",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4",
+      "slug": "L4-31-score-title-C",
+      "file": "L4-31-score-title-C.png",
+      "name": "MASTER-L4-31｜固定文字 MIKA｜示例母版",
+      "role": "score title",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "MASTER-L4A",
+      "slug": "L4A-08-label-letter-C",
+      "file": "L4A-small-08-label-letter-C.png",
+      "name": "MASTER-L4A-08｜等级字母 C｜独立颜色层｜v0.6 缩小版",
+      "role": "label letter",
+      "kind": "card",
+      "visible_by_default": true,
+      "layer_contract": "single-editable-raster-component",
+      "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+    },
+    {
+      "group": "DEMO-L5",
+      "slug": "L5-demo-fields-100-placeholder-C-single-layer-v0-6",
+      "file": "L5-demo-fields-100-placeholder-C-single-layer-v0-6.png",
+      "name": "DEMO-L5｜示例文字与数据｜单一智能对象内容预览",
+      "role": "dynamic fields preview",
+      "kind": "text",
+      "visible_by_default": true,
+      "layer_contract": "single-full-canvas-transparent-layer",
+      "path_source": null
+    }
+  ],
+  "notes": [
+    "L5 的编号值、猫名、文案、咪咔和三个指标统一为一张顶部透明层。",
+    "固定的 C、No.、MIKA 与三个指标图标属于 L4/L4A；C 标签已缩小为 72% 独立组件。",
+    "编号牌、咪咔圆章、指标模块可单独开关/导出；指标模块内部再拆为容器、魅力图标、机灵图标、灵气图标四组。",
+    "PSD 只导入实际使用的核心组件；未使用的高光、角点和细线不再生成隐藏图层。",
+    "L1、L4、L4A 的有效组件仍然保留独立素材与路径源。",
+    "本版主图窗口下沿下移 60 px；名称区下移 31 px，评分章缩小至 90% 并下移 39 px，指标模块上移 17 px。",
+    "右上编号牌沿用 385–663 的固定牌体，No. 与编号值共用一条基线；文字整体右移 4 px 后左右内边距约 14 px。",
+    "照片窗口内和卡片外部保持透明；底部多余内侧横线不导出。"
+  ],
+  "dynamic_layer": {
+    "file": "L5-demo-fields-100-placeholder-C-single-layer-v0-6.png",
+    "fields": [
+      "编号值",
+      "猫名",
+      "文案",
+      "咪咔",
+      "魅力",
+      "机灵",
+      "灵气"
+    ],
+    "visible_layer_count": 1,
+    "placeholder": "100",
+    "psd_contract": "L5_SOURCE 转为一个智能对象；双击后仍可编辑全部文字与数据"
+  },
+  "photo_window_revision": {
+    "previous": [
+      54,
+      80,
+      666,
+      914
+    ],
+    "current": [
+      54,
+      80,
+      666,
+      974
+    ],
+    "delta_y": 60,
+    "lower_anchors_unchanged": false,
+    "path_source": "editable-vector-paths/vector-path-specs.jsxinc"
+  },
+  "active_psd_layers": {
+    "unused_layers_removed": true,
+    "imported_component_count": 35,
+    "groups_removed": [
+      "00｜参考与辅助线｜隐藏不导出",
+      "99｜可选高光细节｜默认隐藏"
+    ],
+    "source_library_retained": true
+  },
+  "removed_from_psd": {
+    "description": "源素材库保留，但未使用的细节不再导入 v0.6 PSD。",
+    "L4": [
+      "L4-02-frame-gold-line-C.png",
+      "L4-03-frame-inner-rail-C.png",
+      "L4-05-frame-top-left-catch-C.png",
+      "L4-06-frame-right-deep-line-C.png",
+      "L4-08-photo-bevel-highlight-C.png",
+      "L4-09-photo-mount-gold-C.png",
+      "L4-11-photo-inner-lip-C.png",
+      "L4-12-photo-top-catch-C.png",
+      "L4-13-photo-left-catch-C.png",
+      "L4-14-photo-bottom-seam-C.png",
+      "L4-15-photo-right-seam-C.png",
+      "L4-16-photo-corners-highlight-C.png",
+      "L4-17-photo-corners-deep-C.png",
+      "L4-18-photo-corners-gold-C.png",
+      "L4-19-number-shadow-C.png",
+      "L4-22-number-inner-gold-line-C.png",
+      "L4-23-number-highlight-C.png",
+      "L4-25-score-shadow-C.png",
+      "L4-28-score-gold-line-C.png",
+      "L4-29-score-highlight-line-C.png",
+      "L4-30-score-sparkle-C.png",
+      "L4-33-name-divider-stud-C.png",
+      "L4-34-flower-metrics-left-C.png",
+      "L4-34-flower-metrics-right-C.png",
+      "L4-34-flower-name-left-C.png",
+      "L4-34-flower-name-right-C.png",
+      "L4-34-flower-top-C.png",
+      "L4-39-foil-motif-C.png",
+      "L4-40-metric-shadow-C.png",
+      "L4-46-metric-module-gold-line-C.png",
+      "L4-47-metric-module-lip-C.png",
+      "L4-48-metric-cell-1-border-C.png",
+      "L4-49-metric-cell-2-border-C.png",
+      "L4-50-metric-cell-3-border-C.png",
+      "L4-51-metric-cell-1-top-C.png",
+      "L4-52-metric-cell-2-top-C.png",
+      "L4-53-metric-cell-3-top-C.png",
+      "L4-54-metric-cell-1-bottom-C.png",
+      "L4-55-metric-cell-2-bottom-C.png",
+      "L4-56-metric-cell-3-bottom-C.png",
+      "L4-58-metric-divider-1-highlight-C.png",
+      "L4-59-metric-divider-1-studs-C.png",
+      "L4-61-metric-divider-2-highlight-C.png",
+      "L4-62-metric-divider-2-studs-C.png",
+      "L4-63-metric-corner-points-C.png",
+      "L4-fixed-decor-C.png"
+    ],
+    "L4A": [
+      "L4A-05-label-top-left-highlight-C.png",
+      "L4A-06-label-gold-detail-C.png",
+      "L4A-07-label-top-sparkle-C.png",
+      "L4A-08-label-letter-C.png",
+      "L4A-small-01-label-shadow-C.png",
+      "L4A-small-02-label-fill-C.png",
+      "L4A-small-03-label-primary-line-C.png",
+      "L4A-small-04-label-inner-highlight-C.png",
+      "L4A-small-05-label-top-left-highlight-C.png",
+      "L4A-small-06-label-gold-detail-C.png",
+      "L4A-small-07-label-top-sparkle-C.png",
+      "L4A-small-08-label-letter-C.png"
+    ]
+  }
+}

@@ -5,8 +5,8 @@
 // 它把 GLM 观察到的、可解释的稳定特征压成固定槽位，供后续候选匹配使用。
 // ============================================================
 
-const GLM_FEATURE_PROFILE_VERSION = 'glm-cat-feature.v0.1';
-const GLM_FEATURE_VECTOR_VERSION = 'glm-cat-vector.v0.1';
+const GLM_FEATURE_PROFILE_VERSION = 'glm-cat-feature.v0.2';
+const GLM_FEATURE_VECTOR_VERSION = 'glm-cat-vector.v0.2';
 const UNKNOWN_VALUE = 'unknown';
 
 // 模型只能从这些枚举中选择一个值；无法看清时统一返回 unknown。
@@ -33,6 +33,14 @@ const FEATURE_SCHEMA = Object.freeze({
   distinctiveMark: Object.freeze([
     'none', 'white_chin', 'white_chest', 'white_paws', 'ear_notch', 'tail_tip', 'other', UNKNOWN_VALUE,
   ]),
+  // 追加面部比例、局部标记和尾部形态，让向量能保留更多可解释的个体差异。
+  faceProportion: Object.freeze(['narrow', 'balanced', 'broad', 'long', UNKNOWN_VALUE]),
+  muzzleShape: Object.freeze(['short', 'balanced', 'long', 'broad', UNKNOWN_VALUE]),
+  foreheadMark: Object.freeze(['none', 'm_mark', 'vertical', 'blaze', 'other', UNKNOWN_VALUE]),
+  cheekMark: Object.freeze(['none', 'left', 'right', 'bilateral', 'other', UNKNOWN_VALUE]),
+  chestMark: Object.freeze(['none', 'white', 'cream', 'dark', UNKNOWN_VALUE]),
+  pawPattern: Object.freeze(['none', 'front_white', 'hind_white', 'all_white', 'mixed', UNKNOWN_VALUE]),
+  tailCurl: Object.freeze(['straight', 'slight_curve', 'hooked', 'coiled', 'plume', 'kinked', UNKNOWN_VALUE]),
 });
 
 const FEATURE_KEYS = Object.freeze(Object.keys(FEATURE_SCHEMA));
@@ -51,6 +59,13 @@ const FEATURE_WEIGHTS = Object.freeze({
   bodyBuild: 0.03,
   noseColor: 0.01,
   distinctiveMark: 0.04,
+  faceProportion: 0.025,
+  muzzleShape: 0.025,
+  foreheadMark: 0.04,
+  cheekMark: 0.035,
+  chestMark: 0.03,
+  pawPattern: 0.04,
+  tailCurl: 0.055,
 });
 
 const ENCODED_FEATURE_VALUES = Object.freeze(FEATURE_KEYS.reduce((result, key) => {
@@ -58,9 +73,14 @@ const ENCODED_FEATURE_VALUES = Object.freeze(FEATURE_KEYS.reduce((result, key) =
   return result;
 }, {}));
 
-const FEATURE_VECTOR_DIMENSION = FEATURE_KEYS.reduce((dimension, key) => (
+const FEATURE_ONE_HOT_DIMENSION = FEATURE_KEYS.reduce((dimension, key) => (
   dimension + ENCODED_FEATURE_VALUES[key].length
-), 0) + FEATURE_KEYS.length + 3;
+), 0);
+const FEATURE_CONFIDENCE_DIMENSION = FEATURE_KEYS.length;
+const FEATURE_QUALITY_DIMENSION = 8;
+const FEATURE_VECTOR_DIMENSION = FEATURE_ONE_HOT_DIMENSION
+  + FEATURE_CONFIDENCE_DIMENSION
+  + FEATURE_QUALITY_DIMENSION;
 
 function clamp01(value, fallback = 0) {
   const parsed = Number(value);
@@ -95,6 +115,7 @@ function normalizeFeatureProfile(value) {
   const confidence = {};
   let hasRecognizedFeature = false;
   let hasConfidentFeature = false;
+  const knownConfidences = [];
 
   FEATURE_KEYS.forEach(key => {
     const normalized = normalizeFeatureValue(source[key], key);
@@ -105,6 +126,7 @@ function normalizeFeatureProfile(value) {
     confidence[key] = confidenceValue;
     if (normalized !== UNKNOWN_VALUE) hasRecognizedFeature = true;
     if (normalized !== UNKNOWN_VALUE && confidenceValue > 0) hasConfidentFeature = true;
+    if (normalized !== UNKNOWN_VALUE) knownConfidences.push(confidenceValue);
   });
 
   // 没有任何有效槽位时不保存一个看似完整、实际为空的特征档案。
@@ -112,6 +134,13 @@ function normalizeFeatureProfile(value) {
 
   const visibility = clamp01(qualitySource.visibility, 0);
   const occlusion = clamp01(qualitySource.occlusion, 1);
+  const meanKnownConfidence = knownConfidences.length
+    ? knownConfidences.reduce((total, item) => total + item, 0) / knownConfidences.length
+    : 0;
+  const profileConfidence = clamp01(qualitySource.confidence, meanKnownConfidence);
+  const knownFeatureRatio = knownConfidences.length / FEATURE_KEYS.length;
+  const maxKnownConfidence = knownConfidences.length ? Math.max(...knownConfidences) : 0;
+  const minKnownConfidence = knownConfidences.length ? Math.min(...knownConfidences) : 0;
   const requestedUsable = qualitySource.usableForMatch === true;
   const usableForMatch = Boolean(
     requestedUsable
@@ -127,14 +156,21 @@ function normalizeFeatureProfile(value) {
     quality: {
       visibility,
       occlusion,
+      confidence: profileConfidence,
       usableForMatch,
+      knownFeatureRatio,
+      meanKnownConfidence,
+      maxKnownConfidence,
+      minKnownConfidence,
     },
   };
 }
 
 /**
  * 将结构化特征编码为固定维度的数值数组。
- * unknown 不占用匹配信号；每个槽位后附一个字段置信度，末尾附质量元信息。
+ * unknown 不占用匹配信号；每个槽位后附一个字段置信度，末尾附 8 个质量元信息。
+ * 当前顺序固定为：可见度、无遮挡度、可匹配标记、整体置信度、已知特征占比、
+ * 已知字段平均置信度、最高字段置信度、最低字段置信度。
  */
 function encodeFeatureProfile(value) {
   const profile = normalizeFeatureProfile(value);
@@ -151,8 +187,13 @@ function encodeFeatureProfile(value) {
   vector.push(profile.quality.visibility);
   vector.push(1 - profile.quality.occlusion);
   vector.push(profile.quality.usableForMatch ? 1 : 0);
+  vector.push(profile.quality.confidence);
+  vector.push(profile.quality.knownFeatureRatio);
+  vector.push(profile.quality.meanKnownConfidence);
+  vector.push(profile.quality.maxKnownConfidence);
+  vector.push(profile.quality.minKnownConfidence);
 
-  return vector;
+  return vector.length === FEATURE_VECTOR_DIMENSION ? vector : null;
 }
 
 function roundScore(value) {

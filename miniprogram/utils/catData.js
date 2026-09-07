@@ -1,5 +1,5 @@
 /**
- * 猫咪咔咔 - 猫咪图鉴数据
+ * 猫咪咔咔 - 猫卡数据
  * 共60只猫，分6大类，每类10只
  * 稀有度分布：N(普通) / R(稀有) / SR(超稀有) / SSR(传说)
  */
@@ -401,7 +401,7 @@ const LEGEND_CATS = [
 ]
 
 // ─────────────────────────────────────────
-// 完整图鉴（60只猫）
+// 完整猫卡（60只猫）
 // ─────────────────────────────────────────
 const ALL_CATS = [
   ...ORANGE_CATS,
@@ -449,15 +449,15 @@ function getCatsByRarity(rarity) {
 }
 
 /**
- * 按视觉模型返回的品种标签筛选图鉴条目。
- * 品种标签是事实层，图鉴角色（name）是游戏层，两者不混用。
+ * 按视觉模型返回的品种标签筛选猫卡条目。
+ * 品种标签是事实层，猫卡角色（name）是游戏层，两者不混用。
  */
 function getCatsByBreed(breed) {
   return ALL_CATS.filter(c => c.breed === breed)
 }
 
 /**
- * 图鉴分类信息
+ * 猫卡分类信息
  */
 const CATEGORIES = [
   { key: 'orange', name: '橘猫系', ids: ORANGE_CATS.map(c => c.id) },

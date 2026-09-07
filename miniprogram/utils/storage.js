@@ -3,12 +3,8 @@
 // ============================================================
 const { ALL_CATS } = require('./catData');
 const { MEMBER_LEVEL_VERSION } = require('./memberLevel');
-const {
-  GLM_FEATURE_VECTOR_VERSION,
-  FEATURE_VECTOR_DIMENSION,
-  normalizeFeatureProfile,
-  encodeFeatureProfile,
-} = require('./catFeatureProfile');
+const archiveIds = require('./archiveCode');
+const posterResultSchema = require('./posterResult');
 
 const KEY_COLLECTION = 'maomikaka_collection';
 const KEY_RECORDS = 'maomikaka_records';
@@ -16,7 +12,12 @@ const KEY_STATS = 'maomikaka_stats';
 const KEY_SYNC_STATE = 'maomikaka_sync_state';
 const KEY_DEVICE_ID = 'maomikaka_device_id';
 const KEY_SHARE_IDS = 'maomikaka_share_ids';
+const KEY_USER_PROFILE = 'maomikaka_user_profile';
+const KEY_PENDING_CAPTURE = 'maomikaka_pending_capture';
 const SYNC_SCHEMA_VERSION = 1;
+const LOCATION_STATUSES = ['captured', 'skipped', 'denied', 'unavailable'];
+const COVER_STATUSES = ['ready', 'rejected', 'pending'];
+const COVER_TARGET_RATIO = '359:537';
 
 function _get(key) {
   try {
@@ -35,6 +36,44 @@ function _set(key, value) {
   }
 }
 
+function _normalizeUserProfile(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const avatarUrl = String(source.avatarUrl || '').trim().slice(0, 1024);
+  const avatarFileID = String(source.avatarFileID || '').trim().slice(0, 512);
+  const nickName = String(source.nickName || '').trim().slice(0, 40);
+  return { avatarUrl, avatarFileID, nickName };
+}
+
+function _normalizePosterCopy(value) {
+  return Array.from(String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim())
+    .slice(0, 52)
+    .join('');
+}
+
+function getUserProfile() {
+  return _normalizeUserProfile(_get(KEY_USER_PROFILE));
+}
+
+function setUserProfile(value, options = {}) {
+  const current = getUserProfile();
+  const next = _normalizeUserProfile(value);
+  const replaceAvatar = options && options.replaceAvatar === true;
+  const profile = {
+    avatarUrl: next.avatarUrl || current.avatarUrl,
+    avatarFileID: replaceAvatar ? next.avatarFileID : (next.avatarFileID || current.avatarFileID),
+    nickName: next.nickName || current.nickName,
+  };
+  _set(KEY_USER_PROFILE, profile);
+  return profile;
+}
+
+function clearUserProfile() {
+  _set(KEY_USER_PROFILE, _normalizeUserProfile(null));
+}
+
 function _createLocalId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -46,12 +85,46 @@ function _getTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function _getFeatureProfile(data) {
-  const source = data && typeof data === 'object' ? data : {};
-  return normalizeFeatureProfile(
-    source.glmCatFeatureProfile
-      || (source.observation && source.observation.glmCatFeatureProfile)
-  );
+function _normalizeLocation(value, fallbackCapturedAt) {
+  const source = value && typeof value === 'object' ? value : {};
+  const latitude = Number(source.latitude);
+  const longitude = Number(source.longitude);
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return null;
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
+
+  const capturedAtTimestamp = _getTimestamp(source.capturedAt || fallbackCapturedAt);
+  const locationText = String(source.locationText || source.label || source.name || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 40);
+  return {
+    source: String(source.source || 'wx.getFuzzyLocation').trim().slice(0, 80),
+    coordinateSystem: source.coordinateSystem === 'gcj02' ? 'gcj02' : 'wgs84',
+    latitude: Number(latitude.toFixed(3)),
+    longitude: Number(longitude.toFixed(3)),
+    locationText: locationText || null,
+    capturedAt: capturedAtTimestamp ? new Date(capturedAtTimestamp).toISOString() : null,
+  };
+}
+
+function _normalizeLocationStatus(value, location) {
+  const status = String(value || '').trim();
+  if (status === 'captured' && !location) return 'unavailable';
+  if (LOCATION_STATUSES.includes(status)) return status;
+  return location ? 'captured' : 'unavailable';
+}
+
+function _normalizeCoverStatus(value, fileID) {
+  const status = String(value || '').trim();
+  if (status === 'ready' && fileID) return 'ready';
+  if (COVER_STATUSES.includes(status)) return status;
+  return fileID ? 'ready' : null;
+}
+
+function _normalizeCoverTargetRatio(value) {
+  const targetRatio = String(value || '').trim();
+  return targetRatio === COVER_TARGET_RATIO ? targetRatio : COVER_TARGET_RATIO;
 }
 
 function getDeviceId() {
@@ -61,6 +134,40 @@ function getDeviceId() {
   const deviceId = _createLocalId('device');
   _set(KEY_DEVICE_ID, deviceId);
   return deviceId;
+}
+
+function createPendingCaptureId() {
+  return _createLocalId('capture');
+}
+
+function savePendingCapture(context = {}) {
+  const source = context && typeof context === 'object' ? context : {};
+  const captureId = String(source.captureId || createPendingCaptureId()).trim().slice(0, 128);
+  const capturedAt = _getTimestamp(source.capturedAt) || Date.now();
+  const location = _normalizeLocation(source.location, capturedAt);
+  const pending = {
+    captureId,
+    photoPath: String(source.photoPath || '').trim().slice(0, 2048),
+    capturedAt,
+    location,
+    locationStatus: _normalizeLocationStatus(source.locationStatus, location),
+  };
+  _set(KEY_PENDING_CAPTURE, pending);
+  return pending;
+}
+
+function getPendingCapture(captureId) {
+  const pending = _get(KEY_PENDING_CAPTURE);
+  if (!pending || typeof pending !== 'object') return null;
+  if (!captureId || String(pending.captureId) !== String(captureId)) return null;
+  return pending;
+}
+
+function clearPendingCapture(captureId) {
+  const pending = _get(KEY_PENDING_CAPTURE);
+  if (!pending || !captureId || String(pending.captureId) === String(captureId)) {
+    _set(KEY_PENDING_CAPTURE, null);
+  }
 }
 
 function _getShareScope() {
@@ -102,6 +209,21 @@ function getOrCreateShareId(catId) {
   return setShareId(catId, shareId);
 }
 
+function clearShareIds() {
+  const shareIds = _getShareIdMap();
+  const scopePrefix = `${_getShareScope()}:`;
+  let clearedCount = 0;
+
+  Object.keys(shareIds).forEach((key) => {
+    if (!key.startsWith(scopePrefix)) return;
+    delete shareIds[key];
+    clearedCount += 1;
+  });
+
+  if (clearedCount > 0) _set(KEY_SHARE_IDS, shareIds);
+  return clearedCount;
+}
+
 function _createSyncState() {
   return {
     schemaVersion: SYNC_SCHEMA_VERSION,
@@ -125,7 +247,7 @@ function _createStats() {
     lastPhotoTime: null,
     // 猫爪是用户成长值，会员等级由 memberLevel.js 根据它计算。
     pawGrowth: 0,
-    // 咔咔分是可独立核对的积分余额，变动明细由云端奖励流水保存。
+    // 咔咔分是可独立核对的余额，变动明细由云端奖励流水保存。
     pointBalance: 0,
     memberLevelVersion: MEMBER_LEVEL_VERSION,
   };
@@ -165,6 +287,7 @@ function _createCollection() {
       featuredRecordId: null,
       displayName: null,
       displayDescription: null,
+      posterCopy: null,
       copyVersion: null,
       records: [],
     };
@@ -186,6 +309,7 @@ function _ensureCollectionShape(collection) {
         featuredRecordId: null,
         displayName: null,
         displayDescription: null,
+        posterCopy: null,
         copyVersion: null,
         records: [],
       };
@@ -208,6 +332,10 @@ function _ensureCollectionShape(collection) {
     }
     if (entry.displayDescription === undefined) {
       entry.displayDescription = null;
+      changed = true;
+    }
+    if (entry.posterCopy === undefined) {
+      entry.posterCopy = null;
       changed = true;
     }
     if (entry.copyVersion === undefined) {
@@ -293,15 +421,15 @@ function saveRecord(recordData) {
     || data.generatedDescription
     || (data.catData && (data.catData.story || data.catData.description))
     || null;
-  const glmCatFeatureProfile = _getFeatureProfile(data);
-  // 向量始终由当前版本的固定契约重新编码，不直接信任外部传入的数组。
-  const glmFeatureVector = encodeFeatureProfile(glmCatFeatureProfile);
+  const posterCopy = _normalizePosterCopy(data.posterCopy);
+  const location = _normalizeLocation(data.location, data.capturedAt || data.createdAt || now);
   const pawReward = Number.isFinite(Number(data.pawReward))
     ? Math.max(0, Math.round(Number(data.pawReward)))
     : 0;
   const pointReward = Number.isFinite(Number(data.pointReward))
     ? Math.max(0, Math.round(Number(data.pointReward)))
     : 0;
+  const capturedAtTimestamp = _getTimestamp(data.capturedAt || data.createdAt || now) || now;
   const records = getAllRecords();
   const collection = getCollection();
   const stats = getUserStats();
@@ -310,6 +438,17 @@ function saveRecord(recordData) {
     throw new Error('[Storage] invalid catId');
   }
 
+  const existingRecord = records.find(record => (
+    record
+    && (record.recordId === localRecordId || record.clientRecordId === localRecordId)
+  ));
+  const archiveCode = archiveIds.normalizeArchiveCode(data.archiveCode)
+    || archiveIds.normalizeArchiveCode(existingRecord && existingRecord.archiveCode)
+    || archiveIds.getOrCreateArchiveCode(
+      `record:${catId}:${localRecordId}`,
+      new Date(capturedAtTimestamp),
+    );
+
   const record = {
     recordId: localRecordId,
     clientRecordId: localRecordId,
@@ -317,19 +456,19 @@ function saveRecord(recordData) {
     syncedAt: null,
     syncError: null,
     serverEncounterId: null,
+    captureId: data.captureId || null,
     catProfileId: data.catProfileId || null,
-    glmCatFeatureProfile,
-    glmFeatureVector,
-    glmFeatureVectorVersion: glmFeatureVector ? GLM_FEATURE_VECTOR_VERSION : null,
-    glmFeatureVectorDimension: glmFeatureVector ? FEATURE_VECTOR_DIMENSION : null,
     catId,
+    archiveCode,
     catName,
     catDescription,
+    posterCopy: posterCopy || null,
     copyVersion: data.copyVersion || null,
     photoPath,
     // 保留 photo 字段，方便旧页面或历史数据读取。
     photo: photoPath,
     originalFileID: data.originalFileID || null,
+    originalContentType: data.originalContentType || null,
     cutoutFileID: data.cutoutFileID || null,
     cutoutPhotoPath: data.cutoutPhotoPath || data.cutoutPhoto || '',
     cutoutContentType: data.cutoutContentType || null,
@@ -337,7 +476,21 @@ function saveRecord(recordData) {
     cutoutOperation: data.cutoutOperation || null,
     cutoutRequestId: data.cutoutRequestId || null,
     cutoutCheckerboardRemoved: data.cutoutCheckerboardRemoved === true,
-    // 相遇等级由三项相遇分计算，和图鉴条目的静态分类字段分开保存。
+    // 封面图是独立的 poster-cover 产物，不能覆盖原图或主体图字段。
+    coverFileID: data.coverFileID || null,
+    coverPhotoPath: data.coverPhotoPath || data.coverPhoto || '',
+    coverContentType: data.coverContentType || null,
+    coverProvider: data.coverProvider || null,
+    coverModel: data.coverModel || null,
+    coverOperation: data.coverOperation || null,
+    coverPromptVersion: data.coverPromptVersion || null,
+    coverTargetRatio: _normalizeCoverTargetRatio(data.coverTargetRatio),
+    coverStatus: _normalizeCoverStatus(data.coverStatus, data.coverFileID),
+    coverRequestId: data.coverRequestId || null,
+    coverCreatedAt: data.coverCreatedAt || null,
+    coverRejectReason: data.coverRejectReason || null,
+    posterResult: posterResultSchema.normalizePosterResult(data.posterResult),
+    // 相遇等级由三项相遇分计算，和猫卡条目的静态分类字段分开保存。
     levelCode: data.levelCode || data.encounterLevel || null,
     levelLabel: data.levelLabel || null,
     levelShortLabel: data.levelShortLabel || null,
@@ -365,8 +518,10 @@ function saveRecord(recordData) {
     catCount: typeof data.catCount === 'number' ? data.catCount : 1,
     detectionSource: data.detectionSource || null,
     savedPath: data.savedPath || null,
+    location,
+    locationStatus: _normalizeLocationStatus(data.locationStatus, location),
     createdAt: data.createdAt || now,
-    capturedAt: new Date(data.createdAt || now).toISOString(),
+    capturedAt: new Date(capturedAtTimestamp).toISOString(),
   };
 
   records.unshift(record);
@@ -382,6 +537,7 @@ function saveRecord(recordData) {
   entry.featuredRecordId = entry.featuredRecordId || record.recordId;
   entry.displayName = entry.displayName || catName;
   entry.displayDescription = entry.displayDescription || catDescription;
+  entry.posterCopy = entry.posterCopy || record.posterCopy;
   entry.copyVersion = entry.copyVersion || record.copyVersion;
   _set(KEY_COLLECTION, collection);
 
@@ -397,6 +553,165 @@ function saveRecord(recordData) {
     recordId: record.recordId,
     isNew,
   };
+}
+
+/**
+ * 写入一条记录已经通过验收的封面图元数据。
+ * 该更新只改变 poster-cover 字段，永远不覆盖原图和主体图。
+ */
+function updateRecordCover(recordId, cover = {}) {
+  const normalizedRecordId = String(recordId || '').trim();
+  if (!normalizedRecordId) return null;
+
+  const records = getAllRecords();
+  const index = records.findIndex(record => (
+    record
+    && (record.recordId === normalizedRecordId || record.clientRecordId === normalizedRecordId)
+  ));
+  if (index < 0) return null;
+
+  const existing = records[index];
+  const patch = cover && typeof cover === 'object' ? cover : {};
+  const fileID = String(patch.fileID || patch.coverFileID || '').trim();
+  const status = _normalizeCoverStatus(patch.status || patch.coverStatus, fileID);
+
+  // 旧封面已经可用时，新的失败结果不能把它降级成空图。
+  if (status === 'rejected' && existing.coverStatus === 'ready' && existing.coverFileID) {
+    return existing;
+  }
+  if (status === 'ready' && !fileID) return existing;
+
+  const next = {
+    ...existing,
+    coverFileID: status === 'ready' ? fileID : null,
+    coverPhotoPath: status === 'ready'
+      ? String(patch.path || patch.coverPhotoPath || '').trim().slice(0, 2048)
+      : '',
+    coverContentType: status === 'ready'
+      ? String(patch.contentType || patch.coverContentType || '').trim().slice(0, 64) || null
+      : null,
+    coverProvider: status === 'ready'
+      ? String(patch.provider || patch.coverProvider || '').trim().slice(0, 80) || null
+      : null,
+    coverModel: status === 'ready'
+      ? String(patch.model || patch.coverModel || '').trim().slice(0, 160) || null
+      : null,
+    coverOperation: status === 'ready'
+      ? String(patch.operation || patch.coverOperation || 'image-to-image-poster-cover')
+        .trim().slice(0, 120) || null
+      : null,
+    coverPromptVersion: status === 'ready'
+      ? String(patch.promptVersion || patch.coverPromptVersion || '').trim().slice(0, 120) || null
+      : null,
+    coverTargetRatio: _normalizeCoverTargetRatio(
+      patch.targetRatio || patch.coverTargetRatio || COVER_TARGET_RATIO,
+    ),
+    coverStatus: status,
+    coverRequestId: status === 'ready'
+      ? String(patch.requestId || patch.coverRequestId || '').trim().slice(0, 160) || null
+      : null,
+    coverCreatedAt: status === 'ready'
+      ? String(patch.createdAt || patch.coverCreatedAt || new Date().toISOString()).trim().slice(0, 80)
+      : null,
+    coverRejectReason: status === 'rejected'
+      ? String(patch.rejectReason || patch.coverRejectReason || 'COVER_GENERATION_FAILED')
+        .replace(/\s+/g, ' ').trim().slice(0, 240)
+      : null,
+  };
+  records[index] = next;
+  _set(KEY_RECORDS, records);
+  return next;
+}
+
+/**
+ * 保存一条记录对应的海报排版快照。
+ * 这是派生数据，不覆盖原图、主体图、评分或猫咪档案字段。
+ */
+function updateRecordPosterResult(recordId, result) {
+  const normalizedRecordId = String(recordId || '').trim();
+  const normalizedResult = posterResultSchema.normalizePosterResult(result);
+  if (!normalizedRecordId || !normalizedResult) return null;
+
+  const records = getAllRecords();
+  const index = records.findIndex(record => (
+    record
+    && (record.recordId === normalizedRecordId || record.clientRecordId === normalizedRecordId)
+  ));
+  if (index < 0) return null;
+
+  const next = {
+    ...records[index],
+    posterResult: normalizedResult,
+  };
+  records[index] = next;
+  _set(KEY_RECORDS, records);
+  return next;
+}
+
+/**
+ * 清理历史海报封面元数据，保留原图、主体图、档案、评分和奖励数据。
+ * 返回待从云存储删除的旧封面 fileID，由海报缓存模块负责执行删除。
+ */
+function clearAllRecordCovers() {
+  const records = getAllRecords();
+  const fileIDs = [];
+  const seen = new Set();
+  let clearedCount = 0;
+  const nextRecords = records.map(record => {
+    if (!record || (
+      !record.coverFileID
+      && !record.coverPhotoPath
+      && !record.coverStatus
+      && !record.posterResult
+    )) {
+      return record;
+    }
+
+    const fileID = String(record.coverFileID || '').trim();
+    if (fileID && !seen.has(fileID)) {
+      seen.add(fileID);
+      fileIDs.push(fileID);
+    }
+    const posterCoverFileID = record.posterResult
+      && record.posterResult.coverImage
+      && record.posterResult.coverImage.fileID
+      ? String(record.posterResult.coverImage.fileID).trim()
+      : '';
+    if (posterCoverFileID && !seen.has(posterCoverFileID)) {
+      seen.add(posterCoverFileID);
+      fileIDs.push(posterCoverFileID);
+    }
+    const posterFileID = record.posterResult && record.posterResult.posterImage
+      && record.posterResult.posterImage.fileID;
+    if (posterFileID && !seen.has(posterFileID)) {
+      seen.add(posterFileID);
+      fileIDs.push(posterFileID);
+    }
+    clearedCount += 1;
+    return {
+      ...record,
+      coverFileID: null,
+      coverPhotoPath: '',
+      coverContentType: null,
+      coverProvider: null,
+      coverModel: null,
+      coverOperation: null,
+      coverPromptVersion: null,
+      coverTargetRatio: COVER_TARGET_RATIO,
+      coverStatus: null,
+      coverRequestId: null,
+      coverCreatedAt: null,
+      coverRejectReason: null,
+      posterResult: null,
+      // 让已有账号记录有机会随下一次同步提交清理后的媒体字段。
+      syncState: record.syncState === 'synced' ? 'pending' : record.syncState,
+      syncedAt: record.syncState === 'synced' ? null : record.syncedAt,
+      syncError: null,
+    };
+  });
+
+  if (clearedCount) _set(KEY_RECORDS, nextRecords);
+  return { clearedCount, fileIDs };
 }
 
 function getAllRecords() {
@@ -563,8 +878,13 @@ function _normalizeRemoteRecord(remote) {
   const score = source.score && typeof source.score === 'object' ? source.score : {};
   const display = source.display && typeof source.display === 'object' ? source.display : {};
   const recordId = source.localRecordId || `remote_${source.encounterId || _createLocalId('record')}`;
-  const glmCatFeatureProfile = normalizeFeatureProfile(observation.glmCatFeatureProfile);
-  const glmFeatureVector = encodeFeatureProfile(glmCatFeatureProfile);
+  const catId = source.catalogCatId || 'cat_060';
+  const location = _normalizeLocation(source.location, source.capturedAt || source.createdAt);
+  const archiveCode = archiveIds.normalizeArchiveCode(source.archiveCode)
+    || archiveIds.getOrCreateArchiveCode(
+      `record:${catId}:${recordId}`,
+      new Date(source.createdAt || source.capturedAt || Date.now()),
+    );
 
   return {
     recordId,
@@ -573,18 +893,18 @@ function _normalizeRemoteRecord(remote) {
     syncedAt: Date.now(),
     syncError: null,
     serverEncounterId: source.encounterId || null,
+    captureId: source.captureId || null,
     catProfileId: source.catProfileId || null,
-    glmCatFeatureProfile,
-    glmFeatureVector,
-    glmFeatureVectorVersion: glmFeatureVector ? GLM_FEATURE_VECTOR_VERSION : null,
-    glmFeatureVectorDimension: glmFeatureVector ? FEATURE_VECTOR_DIMENSION : null,
-    catId: source.catalogCatId || 'cat_060',
+    catId,
+    archiveCode,
     catName: display.name || source.catName || null,
     catDescription: display.description || source.catDescription || null,
+    posterCopy: _normalizePosterCopy(display.posterCopy || source.posterCopy),
     copyVersion: display.copyVersion || source.copyVersion || null,
     photoPath: '',
     photo: '',
     originalFileID: media.originalFileID || source.originalFileID || null,
+    originalContentType: media.originalContentType || source.originalContentType || null,
     cutoutFileID: media.cutoutFileID || source.cutoutFileID || null,
     cutoutPhotoPath: '',
     cutoutContentType: media.cutoutContentType || source.cutoutContentType || null,
@@ -593,6 +913,26 @@ function _normalizeRemoteRecord(remote) {
     cutoutRequestId: media.cutoutRequestId || source.cutoutRequestId || null,
     cutoutCheckerboardRemoved: media.cutoutCheckerboardRemoved === true
       || source.cutoutCheckerboardRemoved === true,
+    coverFileID: media.coverFileID || source.coverFileID || null,
+    coverPhotoPath: '',
+    coverContentType: media.coverContentType || source.coverContentType || null,
+    coverProvider: media.coverProvider || source.coverProvider || null,
+    coverModel: media.coverModel || source.coverModel || null,
+    coverOperation: media.coverOperation || source.coverOperation || null,
+    coverPromptVersion: media.coverPromptVersion || source.coverPromptVersion || null,
+    coverTargetRatio: _normalizeCoverTargetRatio(
+      media.coverTargetRatio || source.coverTargetRatio,
+    ),
+    coverStatus: _normalizeCoverStatus(
+      media.coverStatus || source.coverStatus,
+      media.coverFileID || source.coverFileID,
+    ),
+    coverRequestId: media.coverRequestId || source.coverRequestId || null,
+    coverCreatedAt: media.coverCreatedAt || source.coverCreatedAt || null,
+    coverRejectReason: media.coverRejectReason || source.coverRejectReason || null,
+    posterResult: posterResultSchema.normalizePosterResult(
+      media.posterResult || source.posterResult,
+    ),
     levelCode: score.levelCode || source.levelCode || null,
     levelLabel: score.levelLabel || source.levelLabel || null,
     levelShortLabel: score.levelShortLabel || source.levelShortLabel || null,
@@ -619,6 +959,8 @@ function _normalizeRemoteRecord(remote) {
     catCount: typeof observation.catCount === 'number' ? observation.catCount : 1,
     detectionSource: observation.source || source.detectionSource || null,
     savedPath: null,
+    location,
+    locationStatus: _normalizeLocationStatus(source.locationStatus, location),
     createdAt: source.createdAt || source.capturedAt || Date.now(),
     capturedAt: source.capturedAt || source.createdAt || new Date().toISOString(),
   };
@@ -647,28 +989,31 @@ function mergeRemoteRecords(remoteRecords) {
     if (existing) {
       const index = nextRecords.findIndex(record => record === existing);
       if (index < 0) return;
-      // 云端旧记录暂时不一定带特征档案，不能用空值覆盖本机已经生成的特征。
-      const identityFields = normalized.glmCatFeatureProfile
-        ? {
-          glmCatFeatureProfile: normalized.glmCatFeatureProfile,
-          glmFeatureVector: normalized.glmFeatureVector,
-          glmFeatureVectorVersion: normalized.glmFeatureVectorVersion,
-          glmFeatureVectorDimension: normalized.glmFeatureVectorDimension,
-        }
-        : {
-          glmCatFeatureProfile: existing.glmCatFeatureProfile || null,
-          glmFeatureVector: existing.glmFeatureVector || null,
-          glmFeatureVectorVersion: existing.glmFeatureVectorVersion || null,
-          glmFeatureVectorDimension: existing.glmFeatureVectorDimension || null,
-        };
       nextRecords[index] = {
         ...existing,
         ...normalized,
-        ...identityFields,
         // 临时 URL 只服务于当前设备，不能被云端空值覆盖。
         photoPath: normalized.photoPath || existing.photoPath || '',
         photo: normalized.photo || existing.photo || '',
         cutoutPhotoPath: normalized.cutoutPhotoPath || existing.cutoutPhotoPath || '',
+        coverFileID: normalized.coverFileID || existing.coverFileID || null,
+        coverPhotoPath: normalized.coverPhotoPath || existing.coverPhotoPath || '',
+        coverContentType: normalized.coverContentType || existing.coverContentType || null,
+        coverProvider: normalized.coverProvider || existing.coverProvider || null,
+        coverModel: normalized.coverModel || existing.coverModel || null,
+        coverOperation: normalized.coverOperation || existing.coverOperation || null,
+        coverPromptVersion: normalized.coverPromptVersion || existing.coverPromptVersion || null,
+        coverTargetRatio: normalized.coverTargetRatio || existing.coverTargetRatio || COVER_TARGET_RATIO,
+        coverStatus: normalized.coverStatus || existing.coverStatus || null,
+        coverRequestId: normalized.coverRequestId || existing.coverRequestId || null,
+        coverCreatedAt: normalized.coverCreatedAt || existing.coverCreatedAt || null,
+        coverRejectReason: normalized.coverRejectReason || existing.coverRejectReason || null,
+        posterResult: normalized.posterResult || existing.posterResult || null,
+        originalContentType: normalized.originalContentType
+          || existing.originalContentType
+          || null,
+        posterCopy: normalized.posterCopy || existing.posterCopy || null,
+        archiveCode: existing.archiveCode || normalized.archiveCode,
       };
       changedCount += 1;
       return;
@@ -709,6 +1054,7 @@ function _rebuildDerivedState(records) {
       : (catRecords[0] ? catRecords[0].recordId : null);
     entry.displayName = entry.displayName || (latest && latest.catName) || null;
     entry.displayDescription = entry.displayDescription || (latest && latest.catDescription) || null;
+    entry.posterCopy = entry.posterCopy || (latest && latest.posterCopy) || null;
     entry.copyVersion = entry.copyVersion || (latest && latest.copyVersion) || null;
   });
   _set(KEY_COLLECTION, collection);
@@ -728,7 +1074,7 @@ function _rebuildDerivedState(records) {
   stats.totalPhotos = safeRecords.length;
   stats.unlockedCount = Object.keys(collection).filter(catId => collection[catId].unlocked).length;
   stats.lastPhotoTime = lastPhotoTime;
-  // 成长值和积分是累计值；放归猫咪或刷新远端快照时不能因展示记录减少而倒退。
+  // 猫爪成长值和咔咔分是累计值；放归猫咪或刷新远端快照时不能因展示记录减少而倒退。
   stats.pawGrowth = Math.max(Number(stats.pawGrowth) || 0, pawGrowth);
   stats.pointBalance = Math.max(Number(stats.pointBalance) || 0, pointBalance);
   _set(KEY_STATS, stats);
@@ -745,7 +1091,7 @@ function getRecordsForCat(catId) {
 }
 
 /**
- * 放归一只猫：从本地图鉴和相遇记录中移除它，但保留累计猫爪成长值。
+ * 放归一只猫：从本地猫卡和相遇记录中移除它，但保留累计猫爪成长值。
  * 云端图片文件不在这里删除，避免档案操作误删远端资源。
  */
 function removeCatArchive(catId) {
@@ -766,6 +1112,7 @@ function removeCatArchive(catId) {
   entry.featuredRecordId = null;
   entry.displayName = null;
   entry.displayDescription = null;
+  entry.posterCopy = null;
   entry.copyVersion = null;
   entry.records = [];
   _set(KEY_COLLECTION, collection);
@@ -871,6 +1218,7 @@ function getUnlockedMap() {
       count: entry.photoCount || records.length,
       displayName: entry.displayName || (latest && latest.catName) || null,
       displayDescription: entry.displayDescription || (latest && latest.catDescription) || null,
+      posterCopy: entry.posterCopy || (latest && latest.posterCopy) || null,
       lastPhotoPath: getRecordDisplayPath(latest),
       featuredPhotoPath: getRecordDisplayPath(featured),
       isNew: false,
@@ -883,11 +1231,22 @@ function getUnlockedMap() {
 module.exports = {
   initStorage,
   getDeviceId,
+  getUserProfile,
+  setUserProfile,
+  clearUserProfile,
+  createPendingCaptureId,
+  savePendingCapture,
+  getPendingCapture,
+  clearPendingCapture,
   getShareId,
   setShareId,
   getOrCreateShareId,
+  clearShareIds,
   getCollection,
   saveRecord,
+  updateRecordCover,
+  updateRecordPosterResult,
+  clearAllRecordCovers,
   getAllRecords,
   getRecordById,
   getRecordsForCat,

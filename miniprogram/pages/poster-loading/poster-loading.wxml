@@ -1,0 +1,34 @@
+<view class="poster-loading-page">
+  <view wx:if="{{state !== 'failed'}}" class="poster-loading-state">
+    <text class="poster-loading-kicker">CAT ARCHIVE · POSTER</text>
+    <view class="poster-loading-mark" aria-label="正在生成猫咪海报">
+      <view class="poster-loading-mark-inner">
+        <image src="/assets/cat-placeholder.svg" mode="aspectFit" />
+      </view>
+      <view class="poster-loading-ring poster-loading-ring-one"></view>
+      <view class="poster-loading-ring poster-loading-ring-two"></view>
+    </view>
+    <text class="poster-loading-title">{{stageTitle}}</text>
+    <text class="poster-loading-copy">{{stageCopy}}</text>
+    <view class="poster-loading-dots" aria-hidden="true">
+      <view></view><view></view><view></view>
+    </view>
+    <text class="poster-loading-foot">9:16 · CANVAS EDITION</text>
+  </view>
+
+  <view wx:if="{{state === 'failed'}}" class="poster-loading-error">
+    <text class="poster-loading-kicker">CAT ARCHIVE · RETRY</text>
+    <view class="poster-error-mark">!</view>
+    <text class="poster-error-title">{{errorTitle}}</text>
+    <text class="poster-error-copy">{{errorCopy}}</text>
+    <view class="poster-error-actions">
+      <view class="poster-error-button poster-error-button-primary" bindtap="retry" aria-role="button" aria-label="重新生成海报">
+        <text>重新生成</text>
+      </view>
+      <view class="poster-error-button poster-error-button-secondary" bindtap="goBack" aria-role="button" aria-label="返回猫档案">
+        <text>返回档案</text>
+      </view>
+    </view>
+    <text class="poster-error-code">{{errorCode}}</text>
+  </view>
+</view>

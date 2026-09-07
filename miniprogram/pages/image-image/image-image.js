@@ -1,4 +1,4 @@
-// 猫咪图生图测试页：只验证主体 PNG 处理，不识别、不评分、不写入图鉴。
+// 猫咪图生图测试页：只验证主体 PNG 处理，不识别、不评分、不写入猫卡。
 const storage = require('../../utils/storage');
 const catTransform = require('../../utils/catTransform');
 
@@ -100,7 +100,7 @@ Page({
         console.error('[ImageImage] 选择猫咪图片失败:', error);
         const privacyError = `${error && error.message ? error.message : ''} ${error && error.errMsg ? error.errMsg : ''}`;
         if (/api scope is not declared|privacy agreement|errno.?112/i.test(privacyError)) {
-          this._showException('相机还差一条说明', '请先在小程序后台声明“相机/摄像头”，再使用拍照选择');
+          this._showException('照片选择还差一条说明', '请先在小程序后台声明“选中的照片或视频”，再使用照片选择');
           return;
         }
         this._showException('图片没有选好', '请从相册或相机重新选择一张清楚的猫咪照片');
@@ -211,7 +211,7 @@ Page({
       return { title: '主体图没有回来', message: '这次没有拿到有效的猫咪主体，请换一张清楚的照片' };
     }
     if (code === 'CLOUDBASE_IMAGE_API_ERROR' || code === 'NATIVE_IMAGE_API_ERROR') {
-      return { title: '主体服务暂时不可用', message: '模型接口没有接通，请稍后再试', detail: '这只是开发模式测试，不会影响正式图鉴。' };
+      return { title: '主体服务暂时不可用', message: '模型接口没有接通，请稍后再试', detail: '这只是开发模式测试，不会影响正式猫卡。' };
     }
     return { title: '猫咪主体没抠好', message: '只保留猫咪的处理暂时没完成，请换一张照片再试' };
   },

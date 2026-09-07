@@ -1,0 +1,51 @@
+<view class="poster-preview-page">
+  <view wx:if="{{loaded && posterPath}}" class="poster-preview-content">
+    <view class="poster-preview-header">
+      <view class="poster-preview-back" bindtap="goBack" aria-role="button" aria-label="返回猫档案">
+        <image class="poster-preview-back-icon" src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
+      </view>
+      <view class="poster-preview-heading">
+        <text class="poster-preview-kicker">CAT ARCHIVE · POSTER</text>
+        <text class="poster-preview-title">海报预览</text>
+      </view>
+      <text class="poster-preview-ratio">{{ratio}}</text>
+    </view>
+
+    <view class="poster-frame poster-frame-{{levelCode}}">
+      <image class="poster-image" src="{{posterPath}}" mode="widthFix" />
+    </view>
+
+    <view class="poster-preview-meta">
+      <text class="poster-preview-name">{{name}}</text>
+      <text class="poster-preview-level">{{levelCode}} · 已从猫咪档案生成</text>
+    </view>
+
+    <view class="poster-preview-actions">
+      <view class="poster-action poster-action-primary" bindtap="savePoster" aria-role="button" aria-label="保存海报">
+        <text>{{saveBusy ? '正在保存…' : '保存海报'}}</text>
+      </view>
+      <button wx:if="{{shareReady}}" class="poster-action poster-action-secondary" open-type="share" aria-label="分享海报">
+        <text>分享海报</text>
+      </button>
+      <view wx:else class="poster-action poster-action-secondary" bindtap="prepareShare" aria-role="button" aria-label="准备分享海报">
+        <text>{{shareBusy ? '准备中…' : '准备分享'}}</text>
+      </view>
+    </view>
+    <view wx:if="{{!shareReady}}" class="poster-share-status" bindtap="prepareShare" aria-role="button" aria-label="准备公开分享">
+      <text>{{shareBusy ? '正在准备公开分享…' : '点击重试公开分享'}}</text>
+    </view>
+    <text wx:if="{{saveMessage}}" class="poster-save-message">{{saveMessage}}</text>
+    <text wx:if="{{shareError}}" class="poster-share-error">{{shareError}}</text>
+    <text class="poster-preview-note">预览、保存和分享使用同一张 9:16 PNG</text>
+    <view class="poster-preview-safe"></view>
+  </view>
+
+  <view wx:elif="{{loaded}}" class="poster-preview-empty">
+    <text class="poster-preview-kicker">CAT ARCHIVE · EXPIRED</text>
+    <text class="poster-empty-title">海报结果已过期</text>
+    <text class="poster-empty-copy">返回猫档案，再生成一张新的海报。</text>
+    <view class="poster-action poster-action-primary" bindtap="goBack" aria-role="button" aria-label="返回猫档案">
+      <text>返回档案</text>
+    </view>
+  </view>
+</view>

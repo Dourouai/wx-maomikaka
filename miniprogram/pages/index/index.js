@@ -109,6 +109,16 @@ Page({
 
   goCamera() {
     if (this.data.isOpeningCamera) return;
+    if (this.data.remainingCans <= 0) {
+      this.setData({
+        showException: true,
+        exceptionEyebrow: '今日相遇已满',
+        exceptionTitle: '罐罐用完啦',
+        exceptionMessage: '今天已经遇见 3 只猫，明天再来继续收集吧。',
+        exceptionPrimaryText: '知道了',
+      });
+      return;
+    }
     this.setData({ isOpeningCamera: true });
 
     wx.navigateTo({
@@ -128,7 +138,7 @@ Page({
 
   onExceptionPrimary() {
     this.setData({ showException: false });
-    this.goCamera();
+    if (this.data.remainingCans > 0) this.goCamera();
   },
 
   goCollection() {

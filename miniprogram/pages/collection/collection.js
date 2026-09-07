@@ -9,16 +9,21 @@ const FILTER_OPTIONS = [
   { value: 'all', label: '全部' },
   ...catScoring.LEVELS.map(level => ({ value: level.code, label: level.label })),
 ];
+const PAGE_SIZE = 12;
 
 Page({
   data: {
     catList: [],
     filteredList: [],
+    pagedList: [],
     unlockedCount: 0,
     activeFilter: 'all',
     filterOptions: [],
+    pageSize: PAGE_SIZE,
+    currentPage: 1,
+    totalPages: 1,
     showException: false,
-    exceptionEyebrow: '图鉴提醒',
+    exceptionEyebrow: '猫卡提醒',
     exceptionTitle: '',
     exceptionMessage: '',
     exceptionPrimaryText: '去遇见猫',
@@ -69,7 +74,7 @@ Page({
         ? catRecords.find(record => record.recordId === entry.featuredRecordId)
         : null;
       const latest = catRecords[0];
-      // 只有真正有相遇记录的猫才进入图鉴，避免空的解锁状态渲染成空卡片。
+      // 只有真正有相遇记录的猫才进入猫卡，避免空的解锁状态渲染成空卡片。
       const unlocked = catRecords.length > 0;
 
       const displayRecord = featured || latest;
@@ -80,7 +85,6 @@ Page({
       return {
         ...cat,
         unlocked,
-        count: entry.photoCount || catRecords.length,
         photoPath: storage.getRecordDisplayPath(displayRecord),
         originalPhotoPath: displayRecord
           ? (displayRecord.photoPath || displayRecord.photo || '')
@@ -99,7 +103,6 @@ Page({
         scorePending: bestEncounter ? bestEncounter.scorePending : true,
         // 名字以第一次成功识别生成的档案名为主，避免同一只猫每次相遇都被重新命名。
         displayName: entry.displayName || (latest && latest.catName) || cat.name,
-        metaText: `遇见 ${entry.photoCount || catRecords.length} 次`,
       };
     });
 
@@ -118,8 +121,8 @@ Page({
       unlockedCount,
       filterOptions,
     });
-    this._applyFilter(this.data.activeFilter, visibleCats);
-    this._refreshPhotoURLs(visibleCats);
+    const pagedList = this._applyFilter(this.data.activeFilter, visibleCats);
+    this._refreshPhotoURLs(pagedList);
   },
 
   async _refreshPhotoURLs(catList) {
@@ -145,6 +148,8 @@ Page({
         patch[`catList[${catIndex}].photoPath`] = photoPath;
         const filteredIndex = this.data.filteredList.findIndex(item => item.id === cat.id);
         if (filteredIndex >= 0) patch[`filteredList[${filteredIndex}].photoPath`] = photoPath;
+        const pagedIndex = this.data.pagedList.findIndex(item => item.id === cat.id);
+        if (pagedIndex >= 0) patch[`pagedList[${pagedIndex}].photoPath`] = photoPath;
         this.setData(patch);
       } catch (error) {
         const catIndex = this.data.catList.findIndex(item => item.id === cat.id);
@@ -155,6 +160,10 @@ Page({
           if (filteredIndex >= 0) {
             patch[`filteredList[${filteredIndex}].photoPath`] = cat.originalPhotoPath || '';
           }
+          const pagedIndex = this.data.pagedList.findIndex(item => item.id === cat.id);
+          if (pagedIndex >= 0) {
+            patch[`pagedList[${pagedIndex}].photoPath`] = cat.originalPhotoPath || '';
+          }
           this.setData(patch);
         }
         // 临时地址失效时回退到安全校验后的原图。
@@ -163,17 +172,44 @@ Page({
     }));
   },
 
-  _applyFilter(filter, list) {
+  _applyFilter(filter, list, page) {
     const source = list || this.data.catList;
     const filteredList = filter === 'all'
       ? source
       : source.filter(cat => cat.levelCode === filter);
-    this.setData({ filteredList, activeFilter: filter });
+    const totalPages = Math.max(Math.ceil(filteredList.length / PAGE_SIZE), 1);
+    const pageNumber = Number(page);
+    const requestedPage = Number.isFinite(pageNumber)
+      ? pageNumber
+      : this.data.currentPage;
+    const currentPage = Math.min(Math.max(Math.floor(requestedPage) || 1, 1), totalPages);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pagedList = filteredList.slice(start, start + PAGE_SIZE);
+    this.setData({
+      filteredList,
+      pagedList,
+      activeFilter: filter,
+      currentPage,
+      totalPages,
+    });
+    return pagedList;
   },
 
   switchFilter(event) {
     const filter = event.currentTarget.dataset.value;
-    if (filter !== this.data.activeFilter) this._applyFilter(filter);
+    if (filter !== this.data.activeFilter) {
+      const pagedList = this._applyFilter(filter, this.data.catList, 1);
+      this._refreshPhotoURLs(pagedList);
+    }
+  },
+
+  changePage(event) {
+    const targetPage = Number(event.currentTarget.dataset.page);
+    if (!Number.isFinite(targetPage) || targetPage < 1 || targetPage > this.data.totalPages) return;
+    if (targetPage === this.data.currentPage) return;
+
+    const pagedList = this._applyFilter(this.data.activeFilter, this.data.catList, targetPage);
+    this._refreshPhotoURLs(pagedList);
   },
 
   goDetail(event) {
@@ -182,7 +218,7 @@ Page({
       this.setData({
         showException: true,
         exceptionTitle: '这张卡还在等你',
-        exceptionMessage: '先去遇见它，再把它收进图鉴',
+        exceptionMessage: '先去遇见它，再把它收进猫卡',
       });
       return;
     }
@@ -196,14 +232,14 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: '我的猫咪图鉴｜猫咪咔咔',
+      title: '我的猫卡｜猫咪咔咔',
       path: '/pages/collection/collection?from=share',
     };
   },
 
   onShareTimeline() {
     return {
-      title: '我的猫咪图鉴｜收集城市里的每一只猫',
+      title: '我的猫卡｜收集城市里的每一只猫',
       query: 'from=timeline',
     };
   },

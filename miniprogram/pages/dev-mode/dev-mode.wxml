@@ -1,4 +1,4 @@
-<!-- 开发模式：模型测试入口，不写入猫咪图鉴。 -->
+<!-- 开发模式：模型测试入口，不写入猫卡。 -->
 <navigation-bar title="开发模式" back="{{true}}" color="#332824" background="#FFFDF8" />
 
 <view class="dev-mode-page">
@@ -8,9 +8,9 @@
         <view class="dev-mode-hero-tape"></view>
         <text class="dev-mode-kicker">DEVELOPER MODE</text>
         <text class="dev-mode-title">模型测试工具箱</text>
-        <text class="dev-mode-subtitle">把模型单独拎出来试一试，正式图鉴不受影响。</text>
+        <text class="dev-mode-subtitle">把模型单独拎出来试一试，正式猫卡不受影响。</text>
         <view class="dev-mode-note">
-          <text>测试结果不写入图鉴，也不会改变正式收录记录。</text>
+          <text>测试结果不写入猫卡，也不会改变正式收录记录。</text>
         </view>
       </view>
 

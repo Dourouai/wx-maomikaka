@@ -8,6 +8,8 @@ cloud.init({
 const db = cloud.database();
 const USERS_COLLECTION = 'users';
 const USER_SCHEMA_VERSION = 1;
+const MAX_AVATAR_FILE_ID_LENGTH = 512;
+const MAX_NICKNAME_LENGTH = 40;
 
 function createError(code, message) {
   const error = new Error(message || code);
@@ -17,6 +19,14 @@ function createError(code, message) {
 
 function createBindingKey() {
   return crypto.randomBytes(16).toString('hex');
+}
+
+function normalizeUserProfile(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const avatarFileID = String(source.avatarFileID || '').trim().slice(0, MAX_AVATAR_FILE_ID_LENGTH);
+  const nickName = String(source.nickName || '').trim().slice(0, MAX_NICKNAME_LENGTH);
+  if (!avatarFileID && !nickName) return null;
+  return { avatarFileID, nickName };
 }
 
 function getOpenId() {
@@ -47,8 +57,9 @@ async function getUser(userId) {
   }
 }
 
-async function ensureUser(userId) {
+async function ensureUser(userId, profileValue) {
   const userRef = db.collection(USERS_COLLECTION).doc(userId);
+  const profile = normalizeUserProfile(profileValue);
   let existing = await getUser(userId);
   if (!existing) {
     const bindingKey = createBindingKey();
@@ -64,12 +75,13 @@ async function ensureUser(userId) {
             pawGrowth: 0,
             pointBalance: 0,
           },
+          profile: profile || null,
           createdAt: db.serverDate(),
           updatedAt: db.serverDate(),
           lastSeenAt: db.serverDate(),
         },
       });
-      return { created: true, bindingKey };
+      return { created: true, bindingKey, profile };
     } catch (error) {
       // 并发首次打开时，另一请求可能已经创建了同一用户；继续走更新即可。
       if (!String(error && (error.errMsg || error.message) || '').toLowerCase().includes('exist')) {
@@ -82,6 +94,13 @@ async function ensureUser(userId) {
   const bindingKey = existing && existing.clientBindingKey
     ? existing.clientBindingKey
     : createBindingKey();
+  const existingProfile = normalizeUserProfile(existing && existing.profile);
+  const effectiveProfile = profile
+    ? {
+      avatarFileID: profile.avatarFileID || (existingProfile && existingProfile.avatarFileID) || '',
+      nickName: profile.nickName || (existingProfile && existingProfile.nickName) || '',
+    }
+    : existingProfile;
   const updateData = {
     schemaVersion: USER_SCHEMA_VERSION,
     clientBindingKey: bindingKey,
@@ -89,6 +108,7 @@ async function ensureUser(userId) {
     updatedAt: db.serverDate(),
     lastSeenAt: db.serverDate(),
   };
+  if (effectiveProfile) updateData.profile = effectiveProfile;
   const existingStats = existing && existing.stats && typeof existing.stats === 'object'
     ? { ...existing.stats }
     : {
@@ -101,7 +121,7 @@ async function ensureUser(userId) {
   await userRef.update({
     data: updateData,
   });
-  return { created: false, bindingKey };
+  return { created: false, bindingKey, profile: effectiveProfile };
 }
 
 exports.main = async (event = {}) => {
@@ -119,6 +139,7 @@ exports.main = async (event = {}) => {
       user: {
         schemaVersion: USER_SCHEMA_VERSION,
         bound: Boolean(existing),
+        profile: normalizeUserProfile(existing && existing.profile),
         accountBindingKey: existing && existing.clientBindingKey
           ? existing.clientBindingKey
           : null,
@@ -126,7 +147,7 @@ exports.main = async (event = {}) => {
     };
   }
 
-  const result = await ensureUser(userId);
+  const result = await ensureUser(userId, event.profile);
 
   // 不把 openid 返回给小程序，只返回业务上需要的绑定状态。
   return {
@@ -137,6 +158,7 @@ exports.main = async (event = {}) => {
       bound: true,
       // 仅用于客户端识别“当前微信账号是否发生变化”，不是身份凭证。
       accountBindingKey: result.bindingKey,
+      profile: result.profile,
     },
   };
 };

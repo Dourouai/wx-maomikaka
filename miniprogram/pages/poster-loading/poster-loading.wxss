@@ -1,0 +1,205 @@
+page {
+  --poster-paper: #f8f1e7;
+  --poster-surface: #fffdf8;
+  --poster-ink: #332824;
+  --poster-muted: #8c7569;
+  --poster-line: #d7c5b3;
+  --poster-stamp: #9b442a;
+  background: var(--poster-paper);
+}
+
+.poster-loading-page {
+  min-height: 100vh;
+  background-color: var(--poster-paper);
+  background-image: radial-gradient(rgba(155, 68, 42, 0.12) 1.4rpx, transparent 1.4rpx);
+  background-size: 32rpx 32rpx;
+  color: var(--poster-ink);
+}
+
+.poster-loading-state,
+.poster-loading-error {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 116rpx 42rpx calc(56rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.poster-loading-kicker {
+  color: var(--poster-stamp);
+  font-size: 17rpx;
+  font-weight: 800;
+  letter-spacing: 4rpx;
+}
+
+.poster-loading-mark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 360rpx;
+  height: 360rpx;
+  margin: 128rpx 0 52rpx;
+}
+
+.poster-loading-mark-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 190rpx;
+  height: 236rpx;
+  border: 2rpx solid var(--poster-line);
+  background: var(--poster-surface);
+  box-shadow: 0 14rpx 0 rgba(51, 40, 36, 0.07);
+  transform: rotate(-4deg);
+}
+
+.poster-loading-mark-inner image {
+  width: 150rpx;
+  height: 190rpx;
+  opacity: 0.78;
+}
+
+.poster-loading-ring {
+  position: absolute;
+  border: 2rpx solid rgba(215, 197, 179, 0.85);
+  border-radius: 50%;
+  animation: posterLoadingPulse 2.1s ease-in-out infinite;
+}
+
+.poster-loading-ring-one {
+  width: 320rpx;
+  height: 320rpx;
+}
+
+.poster-loading-ring-two {
+  width: 270rpx;
+  height: 270rpx;
+  border-style: dashed;
+  animation-delay: 0.24s;
+}
+
+.poster-loading-title {
+  font-family: var(--font-display);
+  font-size: 40rpx;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.poster-loading-copy {
+  margin-top: 16rpx;
+  color: var(--poster-muted);
+  font-size: 21rpx;
+}
+
+.poster-loading-dots {
+  display: flex;
+  flex-direction: row;
+  margin-top: 36rpx;
+}
+
+.poster-loading-dots view {
+  width: 12rpx;
+  height: 12rpx;
+  margin: 0 6rpx;
+  border-radius: 50%;
+  background: var(--poster-stamp);
+  opacity: 0.28;
+  animation: posterLoadingDot 1.25s ease-in-out infinite;
+}
+
+.poster-loading-dots view:nth-child(2) { animation-delay: 0.16s; }
+.poster-loading-dots view:nth-child(3) { animation-delay: 0.32s; }
+
+.poster-loading-foot {
+  margin-top: auto;
+  color: var(--poster-muted);
+  font-family: monospace;
+  font-size: 14rpx;
+  letter-spacing: 2rpx;
+}
+
+.poster-loading-error {
+  justify-content: center;
+  padding-top: 0;
+}
+
+.poster-error-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 108rpx;
+  height: 108rpx;
+  margin: 88rpx 0 32rpx;
+  border: 2rpx solid rgba(155, 68, 42, 0.38);
+  border-radius: 50%;
+  color: var(--poster-stamp);
+  font-family: var(--font-display);
+  font-size: 56rpx;
+}
+
+.poster-error-title {
+  font-family: var(--font-display);
+  font-size: 38rpx;
+  font-weight: 800;
+}
+
+.poster-error-copy {
+  max-width: 560rpx;
+  margin-top: 18rpx;
+  color: var(--poster-muted);
+  font-size: 21rpx;
+  line-height: 1.6;
+}
+
+.poster-error-actions {
+  display: flex;
+  width: 100%;
+  gap: 16rpx;
+  margin-top: 46rpx;
+}
+
+.poster-error-button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  border: 2rpx solid var(--poster-line);
+  font-size: 24rpx;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+.poster-error-button-primary {
+  border-color: var(--poster-stamp);
+  color: var(--poster-surface);
+  background: var(--poster-stamp);
+}
+
+.poster-error-button-secondary {
+  color: var(--poster-stamp);
+  background: var(--poster-surface);
+}
+
+.poster-error-code {
+  margin-top: 28rpx;
+  color: var(--poster-muted);
+  font-family: monospace;
+  font-size: 13rpx;
+  letter-spacing: 1rpx;
+}
+
+@keyframes posterLoadingPulse {
+  0%, 100% { opacity: 0.38; transform: scale(0.94); }
+  50% { opacity: 0.9; transform: scale(1); }
+}
+
+@keyframes posterLoadingDot {
+  0%, 100% { opacity: 0.22; transform: translateY(0); }
+  50% { opacity: 0.9; transform: translateY(-5rpx); }
+}

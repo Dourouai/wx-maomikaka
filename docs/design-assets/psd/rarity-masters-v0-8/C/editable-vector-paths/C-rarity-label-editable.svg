@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="165" height="183" viewBox="34 32 165 183">
+  <title>C fixed card vector paths</title>
+  <path id="C-L4-label-plate" d="M 44,42 160,42 186,68 186,174 160,202 70,202 44,174 44,68 Z" fill="#eff8e3" stroke="#6c8f68" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="C-L4-label-plate-inner" d="M 52,51 153,51 176,75 176,168 153,193 76,193 52,168 52,75 Z" fill="none" stroke="#f9fdef" stroke-width="3.0" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="C-L4-label-highlight-top" d="M 65,59 148,59" fill="none" stroke="#f9fdef" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="C-L4-label-highlight-left" d="M 58,76 58,157" fill="none" stroke="#f9fdef" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="C-L4-label-accent-bottom" d="M 76,193 153,193" fill="none" stroke="#bccd97" stroke-width="1.0" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="C-L4-label-rivet-top" d="M 153,61 157,57 161,61 157,65 Z" fill="#f9fdef" stroke="#f9fdef" stroke-width="0.9" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="C-L4-label-rivet-bottom" d="M 70,184 72.5,181.5 75,184 72.5,186.5 Z" fill="#bccd97" stroke="#bccd97" stroke-width="0.7" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -151,7 +151,7 @@ Page({
       console.warn('[Camera] 位置授权状态不可用，跳过位置记录:', error);
     }
 
-    if (authorizationStatus === 'undetermined') {
+    if (authorizationStatus === 'undetermined' && !storage.getLocationConsent()) {
       // 自定义说明先于微信系统授权弹窗出现，用户拒绝位置不会影响本次识别。
       this.setData({
         showLocationPrompt: true,
@@ -174,7 +174,9 @@ Page({
     this._finishCapturedPhoto(
       pending,
       null,
-      authorizationStatus === 'denied' ? 'denied' : 'unavailable'
+      authorizationStatus === 'denied'
+        ? 'denied'
+        : (storage.getLocationConsent() ? 'skipped' : 'unavailable')
     );
   },
 
@@ -195,6 +197,7 @@ Page({
 
   skipLocationConsent() {
     if (this.data.locationConsentBusy || !this._pendingCapture) return;
+    storage.setLocationConsent('skipped');
     this._finishCapturedPhoto(this._pendingCapture, null, 'skipped');
   },
 

@@ -48,7 +48,9 @@ page {
 .loading-illustration,
 .loading-title,
 .loading-copy,
+.loading-time-hint,
 .loading-dots,
+.loading-progress,
 .loading-knowledge-card,
 .loading-footer {
   position: relative;
@@ -101,6 +103,7 @@ page {
   border: 2rpx solid var(--line);
   background: var(--cream);
   box-shadow: 0 16rpx 0 rgba(51, 40, 36, 0.08);
+  overflow: hidden;
   transform: rotate(-5deg);
 }
 
@@ -112,6 +115,32 @@ page {
   height: 8rpx;
   background: var(--blush, #efd2d1);
   content: '';
+}
+
+.loading-photo::after {
+  position: absolute;
+  z-index: 2;
+  top: 18rpx;
+  right: 12rpx;
+  left: 12rpx;
+  height: 4rpx;
+  border-radius: 999rpx;
+  background: rgba(230, 126, 95, 0.76);
+  box-shadow: 0 0 14rpx rgba(230, 126, 95, 0.5);
+  content: '';
+  animation: loadingScanLine 2.4s ease-in-out infinite;
+}
+
+.loading-scan-ring {
+  position: absolute;
+  z-index: 0;
+  width: 294rpx;
+  height: 294rpx;
+  border: 3rpx solid rgba(215, 197, 179, 0.5);
+  border-top-color: var(--coral);
+  border-right-color: rgba(230, 126, 95, 0.35);
+  border-radius: 50%;
+  animation: loadingScanRing 2.8s linear infinite;
 }
 
 .loading-cat {
@@ -174,6 +203,41 @@ page {
 .loading-dots view:nth-child(2) { animation-delay: 0.16s; }
 .loading-dots view:nth-child(3) { animation-delay: 0.32s; }
 
+.loading-time-hint {
+  margin-top: 12rpx;
+  color: var(--terracotta);
+  font-size: 18rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.loading-progress {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 18rpx;
+}
+
+.loading-progress-track {
+  position: relative;
+  width: 246rpx;
+  height: 6rpx;
+  overflow: hidden;
+  border-radius: 999rpx;
+  background: rgba(215, 197, 179, 0.58);
+}
+
+.loading-progress-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -36%;
+  width: 36%;
+  border-radius: 999rpx;
+  background: var(--coral);
+  animation: loadingProgress 2.2s ease-in-out infinite;
+}
+
 .loading-knowledge-card {
   width: 100%;
   margin-top: 34rpx;
@@ -218,6 +282,21 @@ page {
 @keyframes loadingCatBob {
   0%, 100% { transform: translateY(2rpx) rotate(-1deg); }
   50% { transform: translateY(-8rpx) rotate(1deg); }
+}
+
+@keyframes loadingScanLine {
+  0%, 100% { transform: translateY(0); opacity: 0.35; }
+  45%, 60% { transform: translateY(190rpx); opacity: 0.9; }
+}
+
+@keyframes loadingScanRing {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loadingProgress {
+  0% { transform: translateX(0); }
+  70%, 100% { transform: translateX(380%); }
 }
 
 @keyframes loadingDot {

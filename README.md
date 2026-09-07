@@ -41,6 +41,7 @@ maomi-kaka/
 
 ## 文档
 
+- [页面功能说明与媒体字段契约 v1.2](./docs/PAGE_FUNCTION_SPEC_V1.md)
 - [游戏设计文档 (GDD)](./docs/GAME_DESIGN.md)
 - [首页说明](./docs/HOME_PAGE_SPEC.md)
 - [罐罐扣减规则](./docs/CAN_CONSUMPTION_RULES_V0_1.md)

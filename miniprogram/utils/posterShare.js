@@ -50,6 +50,31 @@ function saveToAlbum(filePath) {
     return Promise.reject(createError('POSTER_SAVE_UNSUPPORTED', '当前设备不支持保存海报'));
   }
 
+  const getAlbumAuthorization = () => new Promise(resolve => {
+    if (typeof wx.getSetting !== 'function') {
+      resolve('unknown');
+      return;
+    }
+    wx.getSetting({
+      success: result => {
+        const authSetting = result && result.authSetting ? result.authSetting : {};
+        if (authSetting['scope.writePhotosAlbum'] === true) {
+          resolve('authorized');
+          return;
+        }
+        if (authSetting['scope.writePhotosAlbum'] === false) {
+          resolve('denied');
+          return;
+        }
+        resolve('undetermined');
+      },
+      fail: error => {
+        console.warn('[PosterShare] 读取相册授权状态失败:', error);
+        resolve('unknown');
+      },
+    });
+  });
+
   const save = () => new Promise((resolve, reject) => {
     wx.saveImageToPhotosAlbum({
       filePath,
@@ -58,7 +83,15 @@ function saveToAlbum(filePath) {
     });
   });
 
-  return save().catch(error => {
+  const deniedError = () => createError(
+    'POSTER_SAVE_DENIED',
+    '请前往微信设置开启保存到相册权限后再试',
+  );
+
+  return getAlbumAuthorization().then(status => {
+    if (status === 'denied') throw deniedError();
+    return save();
+  }).catch(error => {
     const message = String(error && (error.errMsg || error.message) || '');
     const detail = `${message} ${String(error && error.errno || '')}`;
     if (/api scope is not declared in the privacy agreement|api not declared in privacypolicy|errno.?112/i.test(detail)) {
@@ -67,23 +100,11 @@ function saveToAlbum(filePath) {
         '请先在微信后台隐私指引中声明“相册（仅写入）”，再保存海报',
       );
     }
-    if (!/auth|authorize|permission|denied/i.test(message) || typeof wx.openSetting !== 'function') {
+    if (!/auth|authorize|permission|denied/i.test(message)) {
       throw error;
     }
-    return new Promise((resolve, reject) => {
-      wx.openSetting({
-        success: setting => {
-          const granted = setting && setting.authSetting
-            && setting.authSetting['scope.writePhotosAlbum'];
-          if (!granted) {
-            reject(createError('POSTER_SAVE_DENIED', '没有获得保存到相册的权限'));
-            return;
-          }
-          save().then(resolve).catch(reject);
-        },
-        fail: reject,
-      });
-    });
+    // 被拒后不自动打开设置页，交给页面用明确弹窗引导用户主动前往设置。
+    throw deniedError();
   });
 }
 

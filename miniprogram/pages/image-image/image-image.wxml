@@ -1,16 +1,16 @@
-<!-- 猫咪图生图测试页：只验证主体 PNG 处理，不写入猫卡。 -->
-<navigation-bar title="猫咪图生图" back="{{true}}" color="#332824" background="#FFFDF8" />
+<!-- 图片处理页：从相册选择照片并生成透明猫咪主体，不写入猫卡。 -->
+<navigation-bar title="图片处理" back="{{true}}" color="#332824" background="#FFFDF8" />
 
 <view class="image-image-page">
   <scroll-view class="image-image-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="image-image-content">
       <view class="image-image-hero">
         <view class="image-image-hero-tape"></view>
-        <text class="image-image-kicker">CAT IMAGE → IMAGE</text>
-        <text class="image-image-title">只留下猫咪主体</text>
-        <text class="image-image-subtitle">测试照片到透明 PNG 的主体处理效果</text>
+        <text class="image-image-kicker">CAT IMAGE · PROCESS</text>
+        <text class="image-image-title">选择图片，留下猫咪</text>
+        <text class="image-image-subtitle">从相册上传照片，生成透明 PNG 猫咪主体</text>
         <view class="image-image-note">
-          <text>只测试抠图链路，不识别、不评分、不写入猫卡。</text>
+          <text>不消耗罐罐，不写入猫卡，只处理图片。</text>
         </view>
       </view>
 
@@ -86,8 +86,8 @@
       <view class="image-test-footnote">
         <view class="image-test-footnote-mark">✓</view>
         <view>
-          <text class="image-test-footnote-title">测试结果不会进入正式流程</text>
-          <text class="image-test-footnote-subtitle">确认效果后，再回到拍猫流程收录猫咪。</text>
+          <text class="image-test-footnote-title">处理结果不会进入猫卡档案</text>
+          <text class="image-test-footnote-subtitle">如需收录猫咪，请返回首页使用“开始拍照”。</text>
         </view>
       </view>
 

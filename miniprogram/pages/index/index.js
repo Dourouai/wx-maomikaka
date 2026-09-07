@@ -17,11 +17,13 @@ Page({
     latestPhoto: '',
     latestName: '',
     isOpeningCamera: false,
+    isOpeningImageProcess: false,
     showException: false,
     exceptionEyebrow: '相遇入口',
     exceptionTitle: '',
     exceptionMessage: '',
     exceptionPrimaryText: '再试一次',
+    exceptionPrimaryAction: 'camera',
     pageHeaderTop: 48,
     headerRightInset: 0,
   },
@@ -86,7 +88,11 @@ Page({
   async _refreshLatestPhotoURL(record) {
     if (!record || storage.getRecordDisplayPath(record)) return;
 
-    for (const fileID of [record.cutoutFileID, record.originalFileID].filter(Boolean)) {
+    for (const fileID of [
+      storage.getRecordSubjectFileID(record),
+      record.originalFileID,
+      storage.getRecordPosterSourceFileID(record),
+    ].filter(Boolean)) {
       try {
         const latestPhoto = await cloudFiles.getTempFileURL(fileID);
         if (latestPhoto) {
@@ -94,7 +100,7 @@ Page({
           return;
         }
       } catch (error) {
-        // 主体图地址失效时继续尝试原图。
+        // 主体图地址失效时才尝试拍摄原图，最后兼容封面图。
       }
     }
   },
@@ -116,6 +122,7 @@ Page({
         exceptionTitle: '罐罐用完啦',
         exceptionMessage: '今天已经遇见 3 只猫，明天再来继续收集吧。',
         exceptionPrimaryText: '知道了',
+        exceptionPrimaryAction: 'camera',
       });
       return;
     }
@@ -128,6 +135,7 @@ Page({
           showException: true,
           exceptionTitle: '相机没有打开',
           exceptionMessage: '这次相遇还在门外，再试一次就好',
+          exceptionPrimaryAction: 'camera',
         });
       },
       complete: () => {
@@ -136,8 +144,34 @@ Page({
     });
   },
 
+  goImageProcess() {
+    if (this.data.isOpeningImageProcess) return;
+    this.setData({ isOpeningImageProcess: true });
+
+    wx.navigateTo({
+      url: '/pages/image-image/image-image',
+      fail: () => {
+        this.setData({
+          showException: true,
+          exceptionEyebrow: '图片处理入口',
+          exceptionTitle: '图片处理没有打开',
+          exceptionMessage: '这次上传入口没有打开，再试一次就好',
+          exceptionPrimaryText: '重新打开',
+          exceptionPrimaryAction: 'image-process',
+        });
+      },
+      complete: () => {
+        this.setData({ isOpeningImageProcess: false });
+      },
+    });
+  },
+
   onExceptionPrimary() {
     this.setData({ showException: false });
+    if (this.data.exceptionPrimaryAction === 'image-process') {
+      this.goImageProcess();
+      return;
+    }
     if (this.data.remainingCans > 0) this.goCamera();
   },
 

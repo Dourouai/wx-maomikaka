@@ -81,20 +81,28 @@ Page({
       const bestEncounter = catScoring.getBestEncounter(catRecords);
       const levelCode = bestEncounter ? bestEncounter.levelCode : 'C';
       const level = catScoring.getLevelMeta(levelCode);
+      const posterSourcePhotoPath = storage.getRecordPosterSourcePath(displayRecord);
+      const posterSourceFileID = storage.getRecordPosterSourceFileID(displayRecord);
+      const subjectPhotoPath = storage.getRecordSubjectPath(displayRecord);
+      const subjectFileID = storage.getRecordSubjectFileID(displayRecord);
+      const originalPhotoPath = storage.getRecordOriginalPath(displayRecord);
+      const originalFileID = displayRecord && displayRecord.originalFileID
+        ? displayRecord.originalFileID
+        : '';
 
       return {
         ...cat,
         unlocked,
-        photoPath: storage.getRecordDisplayPath(displayRecord),
-        originalPhotoPath: displayRecord
-          ? (displayRecord.photoPath || displayRecord.photo || '')
-          : '',
-        photoFileID: displayRecord && (displayRecord.cutoutFileID || displayRecord.originalFileID)
-          ? (displayRecord.cutoutFileID || displayRecord.originalFileID)
-          : '',
-        originalFileID: displayRecord && displayRecord.originalFileID
-          ? displayRecord.originalFileID
-          : '',
+        // 列表主图展示透明主体；cover 只作为没有主体和原图时的兼容回退。
+        photoPath: subjectPhotoPath
+          || (subjectFileID ? '' : (originalPhotoPath || (posterSourceFileID ? '' : posterSourcePhotoPath))),
+        posterSourcePhotoPath,
+        posterSourceFileID,
+        subjectPhotoPath,
+        subjectFileID,
+        originalPhotoPath,
+        photoFileID: subjectFileID || originalFileID || posterSourceFileID,
+        originalFileID,
         isNew: false,
         levelCode,
         levelLabel: level.label,
@@ -127,17 +135,21 @@ Page({
 
   async _refreshPhotoURLs(catList) {
     await Promise.all(catList.map(async cat => {
-      if (!cat.photoFileID) return;
+      if (!cat.photoFileID || (cat.photoPath && !cat.posterSourceFileID)) return;
 
       try {
-        const fileIDs = [cat.photoFileID, cat.originalFileID].filter(Boolean);
+        const fileIDs = [
+          cat.subjectFileID,
+          cat.originalFileID,
+          cat.posterSourceFileID,
+        ].filter(Boolean);
         let photoPath = '';
         for (const fileID of fileIDs) {
           try {
             photoPath = await cloudFiles.getTempFileURL(fileID);
             if (photoPath) break;
           } catch (error) {
-            // 主体图失效时继续尝试安全校验后的原图 fileID。
+            // 主体图地址失效时继续尝试拍摄原图，最后才兼容封面图。
           }
         }
         if (!photoPath) throw new Error('云存储文件地址不可用');
@@ -155,14 +167,23 @@ Page({
         const catIndex = this.data.catList.findIndex(item => item.id === cat.id);
         if (catIndex >= 0) {
           const patch = {};
-          patch[`catList[${catIndex}].photoPath`] = cat.originalPhotoPath || '';
+          patch[`catList[${catIndex}].photoPath`] = cat.subjectPhotoPath
+            || cat.originalPhotoPath
+            || cat.posterSourcePhotoPath
+            || '';
           const filteredIndex = this.data.filteredList.findIndex(item => item.id === cat.id);
           if (filteredIndex >= 0) {
-            patch[`filteredList[${filteredIndex}].photoPath`] = cat.originalPhotoPath || '';
+            patch[`filteredList[${filteredIndex}].photoPath`] = cat.subjectPhotoPath
+              || cat.originalPhotoPath
+              || cat.posterSourcePhotoPath
+              || '';
           }
           const pagedIndex = this.data.pagedList.findIndex(item => item.id === cat.id);
           if (pagedIndex >= 0) {
-            patch[`pagedList[${pagedIndex}].photoPath`] = cat.originalPhotoPath || '';
+            patch[`pagedList[${pagedIndex}].photoPath`] = cat.subjectPhotoPath
+              || cat.originalPhotoPath
+              || cat.posterSourcePhotoPath
+              || '';
           }
           this.setData(patch);
         }

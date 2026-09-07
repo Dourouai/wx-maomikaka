@@ -65,8 +65,8 @@ Page({
     posterCopy: '',
     imageChecked: false,
     capturedAtText: '',
-    loadingTitle: '正在收录这次相遇',
-    loadingSubtitle: '先把这次相遇收好',
+    loadingTitle: 'AI 正在识别中',
+    loadingSubtitle: '正在为这次相遇整理档案',
     loadingKnowledge: catKnowledge.getFallbackKnowledge(),
     loadingKnowledgeSource: 'FIELD NOTE',
     fallbackIcon: '/assets/cat-placeholder.svg',
@@ -187,8 +187,8 @@ Page({
         photo: safePhoto,
         originalPhoto: safePhoto,
         imageChecked: true,
-        loadingTitle: '正在识别猫咪',
-        loadingSubtitle: '识别猫猫与整理主体同时进行',
+        loadingTitle: 'AI 正在识别中',
+        loadingSubtitle: '正在识别猫咪 · 整理透明主体',
       });
     } catch (err) {
       console.error('[Reveal] 内容安全检测失败:', err);
@@ -282,6 +282,7 @@ Page({
         captureId: this._captureId || null,
         catId: result.catId || catData.id,
         photoPath: safePhoto,
+        originalPhotoPath: safePhoto,
         originalFileID: sourceFileID || cutout.originalFileID || '',
         originalContentType: sourceContentType,
         cutoutFileID: cutout.cutoutFileID,
@@ -483,20 +484,25 @@ Page({
       content = '靠近一点、光线亮一点';
       contentDetail = '再拍一张清楚的猫猫试试。';
     } else if (code === 'VISION_NOT_CONFIGURED') {
-      title = '识别服务还差一步';
+      title = '识别接口未就绪';
       titleEm = '';
-      content = '猫咪识别服务还没有准备好';
-      contentDetail = '完成配置后，再回来遇见猫猫。';
+      content = '猫咪识别接口暂时没有正常配置';
+      contentDetail = '请前往「我的」→「功能建议及问题反馈」联系我们，也可以稍后再试。';
     } else if (code === 'VISION_AUTH_FAILED') {
-      title = '识别服务需要检查';
+      title = '识别接口授权异常';
       titleEm = '';
-      content = '猫咪识别服务授权暂时不可用';
-      contentDetail = '检查配置后，再试一次吧。';
+      content = '猫咪识别接口暂时无法完成授权';
+      contentDetail = '请前往「我的」→「功能建议及问题反馈」联系我们，也可以稍后再试。';
+    } else if (code === 'VISION_INVALID_RESPONSE') {
+      title = '识别接口异常';
+      titleEm = '';
+      content = '猫咪识别接口没有正常返回结果';
+      contentDetail = '请前往「我的」→「功能建议及问题反馈」联系我们，也可以稍后再试。';
     } else if (code === 'VISION_UNAVAILABLE') {
-      title = '猫咪识别休息中';
+      title = '识别接口暂时不可用';
       titleEm = '';
-      content = '识别服务暂时不可用';
-      contentDetail = '等服务缓一缓，再试一次吧。';
+      content = '猫咪识别接口暂时没有响应';
+      contentDetail = '请前往「我的」→「功能建议及问题反馈」联系我们，也可以稍后再试。';
     }
 
     this._openErrorPage({

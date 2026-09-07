@@ -44,6 +44,17 @@
         <text>使用 1 个罐罐</text>
       </view>
 
+      <view class="home-upload-entry" bindtap="goImageProcess" aria-role="button" aria-label="选择图片处理">
+        <view class="home-upload-entry-icon">
+          <image src="/assets/icon-album-white.svg" mode="aspectFit" />
+        </view>
+        <view class="home-upload-entry-copy">
+          <text class="home-upload-entry-title">选择图片处理</text>
+          <text class="home-upload-entry-subtitle">从相册上传猫咪照片，提取透明主体</text>
+        </view>
+        <image class="home-upload-entry-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
+      </view>
+
       <view class="home-bottom-safe"></view>
     </view>
   </scroll-view>

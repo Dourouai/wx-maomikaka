@@ -84,7 +84,27 @@ async function inspectCat(photoPath, options = {}) {
     const response = await callVision(fileID, contentType);
     const result = response && response.result ? response.result : response;
     if (!result || result.ok !== true) {
-      throw createError((result && result.code) || 'VISION_UNAVAILABLE', '猫咪识别服务暂时不可用');
+      console.error('[CatVision] 云函数返回失败:', {
+        code: result && result.code,
+        stage: result && result.stage,
+        reason: result && result.reason,
+        causeCode: result && result.causeCode,
+        statusCode: result && result.statusCode,
+        providerContentType: result && result.providerContentType,
+      });
+      const error = createError(
+        (result && result.code) || 'VISION_UNAVAILABLE',
+        '猫咪识别服务暂时不可用'
+      );
+      // 云函数只返回脱敏后的诊断信息，不把上游响应正文暴露给小程序。
+      if (result && result.stage) error.stage = result.stage;
+      if (result && result.reason) error.reason = result.reason;
+      if (result && result.causeCode) error.causeCode = result.causeCode;
+      if (result && typeof result.statusCode === 'number') error.statusCode = result.statusCode;
+      if (result && result.providerContentType) {
+        error.providerContentType = result.providerContentType;
+      }
+      throw error;
     }
     return result;
   } catch (error) {

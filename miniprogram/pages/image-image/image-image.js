@@ -1,4 +1,4 @@
-// 猫咪图生图测试页：只验证主体 PNG 处理，不识别、不评分、不写入猫卡。
+// 图片处理页：支持从相册选择照片生成透明主体，不识别、不评分、不写入猫卡。
 const storage = require('../../utils/storage');
 const catTransform = require('../../utils/catTransform');
 
@@ -31,7 +31,7 @@ Page({
       return;
     }
 
-    const localPath = latest.photoPath || latest.photo || '';
+    const localPath = storage.getRecordOriginalPath(latest);
     if (!latest.originalFileID) {
       if (localPath) {
         this.setData({
@@ -211,7 +211,7 @@ Page({
       return { title: '主体图没有回来', message: '这次没有拿到有效的猫咪主体，请换一张清楚的照片' };
     }
     if (code === 'CLOUDBASE_IMAGE_API_ERROR' || code === 'NATIVE_IMAGE_API_ERROR') {
-      return { title: '主体服务暂时不可用', message: '模型接口没有接通，请稍后再试', detail: '这只是开发模式测试，不会影响正式猫卡。' };
+        return { title: '主体服务暂时不可用', message: '模型接口没有接通，请稍后再试', detail: '本次只处理图片，不会影响正式猫卡。' };
     }
     return { title: '猫咪主体没抠好', message: '只保留猫咪的处理暂时没完成，请换一张照片再试' };
   },

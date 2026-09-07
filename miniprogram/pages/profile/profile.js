@@ -91,7 +91,8 @@ Page({
     const profile = storage.getUserProfile();
     const stats = storage.getUserStats();
     const membership = memberLevel.getMemberLevel(stats.pawGrowth);
-    const catList = this._buildLocalCats();
+    // 我的主页展示猫生图封面原图；猫卡列表和档案详情不复用这套优先级。
+    const catList = this._buildLocalCats({ preferCover: true });
     const isLoggedIn = state.userBound === true;
     const activeShareId = isLoggedIn ? String(this.profileShareId || '').trim() : '';
     this.profileShareId = activeShareId;
@@ -122,7 +123,8 @@ Page({
     this._refreshPhotoURLs(catList);
   },
 
-  _buildLocalCats() {
+  _buildLocalCats(options = {}) {
+    const preferCover = options && options.preferCover === true;
     const collection = storage.getCollection();
     const records = storage.getAllRecords();
     const recordsByCat = records.reduce((map, record) => {
@@ -145,10 +147,14 @@ Page({
       const best = catScoring.getBestEncounter(catRecords);
       const bestRecord = best && best.record ? best.record : (featured || catRecords[0]);
       const level = catScoring.getLevelMeta(best && best.levelCode ? best.levelCode : 'C');
-      const savedPosterID = bestRecord && bestRecord.posterResult && bestRecord.posterResult.posterImage
-        && bestRecord.posterResult.posterImage.fileID;
-      const coverFileID = savedPosterID || (bestRecord && bestRecord.coverFileID ? bestRecord.coverFileID : '');
-      const fallbackFileID = bestRecord && (bestRecord.cutoutFileID || bestRecord.originalFileID);
+      const posterSourcePhotoPath = storage.getRecordPosterSourcePath(bestRecord);
+      const posterSourceFileID = storage.getRecordPosterSourceFileID(bestRecord);
+      const subjectPhotoPath = storage.getRecordSubjectPath(bestRecord);
+      const subjectFileID = storage.getRecordSubjectFileID(bestRecord);
+      const originalPhotoPath = storage.getRecordOriginalPath(bestRecord);
+      const originalFileID = bestRecord && bestRecord.originalFileID
+        ? bestRecord.originalFileID
+        : '';
       const description = trimText(
         entry.displayDescription || (bestRecord && bestRecord.catDescription) || cat.story,
         cat.story,
@@ -169,16 +175,29 @@ Page({
         ),
         description,
         archiveCode: trimText(bestRecord && bestRecord.archiveCode, '', 32),
-        photoPath: savedPosterID ? '' : ((bestRecord && bestRecord.coverPhotoPath)
-          || storage.getRecordDisplayPath(bestRecord) || ''),
-        photoFileID: coverFileID || fallbackFileID || '',
-        originalPhotoPath: bestRecord && (bestRecord.photoPath || bestRecord.photo) || '',
+        // 我的主页优先展示猫生图封面原图；不使用最终排版海报。
+        photoPath: preferCover
+          ? (posterSourcePhotoPath
+            || (posterSourceFileID ? '' : (subjectPhotoPath || (subjectFileID ? '' : originalPhotoPath))))
+          : (subjectPhotoPath
+            || (subjectFileID ? '' : (originalPhotoPath || (posterSourceFileID ? '' : posterSourcePhotoPath)))),
+        photoFileID: preferCover
+          ? (posterSourceFileID || subjectFileID || originalFileID || '')
+          : (subjectFileID || originalFileID || posterSourceFileID || ''),
+        fallbackPhotoFileIDs: preferCover
+          ? [subjectFileID, originalFileID].filter(Boolean)
+          : [originalFileID, posterSourceFileID].filter(Boolean),
+        preferCover,
+        posterSourceFileID,
+        posterSourcePhotoPath,
+        subjectPhotoPath,
+        originalPhotoPath,
       };
     }).filter(Boolean);
   },
 
   _refreshPreviewOther() {
-    const catList = this._buildLocalCats();
+    const catList = this._buildLocalCats({ preferCover: true });
     this.setData({
       isSelf: false,
       isPreview: true,
@@ -292,16 +311,41 @@ Page({
 
   async _refreshPhotoURLs(catList) {
     await Promise.all((catList || []).map(async cat => {
-      if (!cat || cat.photoPath || !cat.photoFileID) return;
+      if (!cat || !cat.photoFileID || (cat.photoPath && !cat.posterSourceFileID)) return;
       try {
-        const photoPath = await cloudFiles.getTempFileURL(cat.photoFileID);
-        if (!photoPath) return;
+        let photoPath = '';
+        const fallbackFileIDs = Array.isArray(cat.fallbackPhotoFileIDs)
+          ? cat.fallbackPhotoFileIDs
+          : [cat.fallbackPhotoFileID];
+        for (const fileID of [cat.photoFileID, ...fallbackFileIDs].filter(Boolean)) {
+          try {
+            photoPath = await cloudFiles.getTempFileURL(fileID);
+            if (photoPath) break;
+          } catch (error) {
+            // 主体图地址失效时再尝试拍摄原图，最后兼容封面图，不回退到最终海报。
+          }
+        }
+        if (!photoPath) {
+          const fallbackPath = cat.subjectPhotoPath
+            || cat.originalPhotoPath
+            || cat.posterSourcePhotoPath
+            || '';
+          if (fallbackPath) {
+            const index = this.data.catList.findIndex(item => item.id === cat.id);
+            if (index >= 0) this.setData({ [`catList[${index}].photoPath`]: fallbackPath });
+          }
+          return;
+        }
         const index = this.data.catList.findIndex(item => item.id === cat.id);
         if (index >= 0) this.setData({ [`catList[${index}].photoPath`]: photoPath });
       } catch (error) {
         const index = this.data.catList.findIndex(item => item.id === cat.id);
-        if (index >= 0 && cat.originalPhotoPath) {
-          this.setData({ [`catList[${index}].photoPath`]: cat.originalPhotoPath });
+        if (index >= 0 && (cat.subjectPhotoPath || cat.originalPhotoPath || cat.posterSourcePhotoPath)) {
+          this.setData({
+            [`catList[${index}].photoPath`]: cat.subjectPhotoPath
+              || cat.originalPhotoPath
+              || cat.posterSourcePhotoPath,
+          });
         }
       }
     }));

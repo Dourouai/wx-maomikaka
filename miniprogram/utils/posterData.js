@@ -109,6 +109,43 @@ function sortRecords(records) {
       - timestampValue(left.createdAt || left.capturedAt));
 }
 
+/**
+ * 读取已经生成的海报封面引用。
+ *
+ * coverPhotoPath / coverTempURL 只是短期或本地地址，真正能保证下次复用的是
+ * coverFileID；旧数据也可能只把它保存在 posterResult.coverImage 或 sourceImage。
+ */
+function getRecordCoverRef(record) {
+  const value = record && typeof record === 'object' ? record : {};
+  const posterResult = value.posterResult && typeof value.posterResult === 'object'
+    ? value.posterResult
+    : {};
+  const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : {};
+  const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
+    ? posterResult.sourceImage
+    : {};
+  const fileID = String(
+    storage.getRecordPosterSourceFileID(value)
+      || coverImage.fileID
+      || (sourceImage.kind === 'cover' ? sourceImage.fileID : '')
+      || '',
+  ).trim();
+  const status = String(
+    value.coverStatus
+      || posterResult.coverStatus
+      || coverImage.status
+      || (fileID ? 'ready' : ''),
+  ).trim();
+  const path = value.coverPhotoPath
+    || value.coverTempURL
+    || coverImage.path
+    || (sourceImage.kind === 'cover' ? sourceImage.path : '')
+    || '';
+  return { fileID, status, path, coverImage, posterResult };
+}
+
 function normalizeSharedRecord(source, fallbackCatId) {
   const item = source && typeof source === 'object' ? source : {};
   const display = item.display && typeof item.display === 'object' ? item.display : {};
@@ -119,9 +156,28 @@ function normalizeSharedRecord(source, fallbackCatId) {
   const score = item.score && typeof item.score === 'object' ? item.score : {};
   const scoreSources = [score, item.scores, item];
   const id = item.localRecordId || item.clientRecordId || item.recordId || item.encounterId || '';
+  const posterResult = media.posterResult || item.posterResult || null;
+  const posterCover = posterResult && posterResult.coverImage
+    && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : {};
+  const posterSource = posterResult && posterResult.sourceImage
+    && typeof posterResult.sourceImage === 'object'
+    ? posterResult.sourceImage
+    : {};
   const originalTempURL = media.originalTempURL || item.originalTempURL || '';
   const cutoutTempURL = media.cutoutTempURL || item.cutoutTempURL || '';
   const coverTempURL = media.coverTempURL || item.coverTempURL || '';
+  const coverFileID = media.coverFileID
+    || item.coverFileID
+    || posterCover.fileID
+    || (posterSource.kind === 'cover' ? posterSource.fileID : '')
+    || '';
+  const coverStatus = media.coverStatus
+    || item.coverStatus
+    || (posterResult && posterResult.coverStatus)
+    || posterCover.status
+    || (coverFileID ? 'ready' : '');
 
   return {
     recordId: id,
@@ -131,7 +187,7 @@ function normalizeSharedRecord(source, fallbackCatId) {
     catName: display.name || item.catName || '',
     catDescription: display.description || item.catDescription || '',
     posterCopy: display.posterCopy || item.posterCopy || '',
-    posterResult: media.posterResult || null,
+    posterResult,
     copyVersion: display.copyVersion || item.copyVersion || '',
     photoPath: item.photoPath || item.photo || originalTempURL || cutoutTempURL,
     photo: item.photo || originalTempURL,
@@ -141,9 +197,10 @@ function normalizeSharedRecord(source, fallbackCatId) {
     originalFileID: media.originalFileID || item.originalFileID || '',
     originalContentType: media.originalContentType || item.originalContentType || '',
     cutoutFileID: media.cutoutFileID || item.cutoutFileID || '',
-    coverFileID: media.coverFileID || item.coverFileID || '',
+    coverFileID,
     originalTempURL,
     cutoutTempURL,
+    coverTempURL,
     cutoutContentType: media.cutoutContentType || item.cutoutContentType || '',
     cutoutProvider: media.cutoutProvider || item.cutoutProvider || '',
     cutoutOperation: media.cutoutOperation || item.cutoutOperation || '',
@@ -155,7 +212,7 @@ function normalizeSharedRecord(source, fallbackCatId) {
     coverOperation: media.coverOperation || item.coverOperation || '',
     coverPromptVersion: media.coverPromptVersion || item.coverPromptVersion || '',
     coverTargetRatio: media.coverTargetRatio || item.coverTargetRatio || '359:537',
-    coverStatus: media.coverStatus || item.coverStatus || '',
+    coverStatus,
     coverRequestId: media.coverRequestId || item.coverRequestId || '',
     coverCreatedAt: media.coverCreatedAt || item.coverCreatedAt || '',
     coverRejectReason: media.coverRejectReason || item.coverRejectReason || '',
@@ -187,14 +244,15 @@ function normalizeSharedRecord(source, fallbackCatId) {
 
 function getImagePathCandidates(record) {
   const value = record || {};
-  const hasCurrentCover = value.coverStatus === 'ready';
+  const cover = getRecordCoverRef(value);
+  const hasCurrentCover = cover.status === 'ready' && Boolean(cover.fileID || cover.path);
   const candidates = [
     // 只有明确标记 ready 的封面图才可以替代原图进入海报。
     ...(hasCurrentCover
       ? [{
-        path: value.coverPhotoPath || value.coverTempURL,
+        path: cover.path,
         kind: 'cover',
-        fileID: value.coverFileID || '',
+        fileID: cover.fileID,
       }]
       : []),
     // 海报采用满幅照片方向，优先使用安全校验后的原图；主体图作为回退。
@@ -236,7 +294,11 @@ function getImageInfo(path) {
 async function resolveRecordImage(record) {
   if (!record) return null;
 
-  for (const candidate of getImagePathCandidates(record)) {
+  const cover = getRecordCoverRef(record);
+  const candidates = getImagePathCandidates(record);
+
+  // 已有封面时必须先尝试封面；不能因为原图本地路径仍然有效，就绕过已生成的猫生图。
+  for (const candidate of candidates.filter(item => item.kind === 'cover')) {
     try {
       const info = await getImageInfo(candidate.path);
       return { ...candidate, ...info };
@@ -245,12 +307,31 @@ async function resolveRecordImage(record) {
     }
   }
 
+  const coverFileCandidate = cover.status === 'ready' && cover.fileID
+    ? { fileID: cover.fileID, kind: 'cover' }
+    : null;
+  if (coverFileCandidate) {
+    try {
+      const path = await cloudFiles.getTempFileURL(coverFileCandidate.fileID);
+      const info = await getImageInfo(path);
+      return { ...coverFileCandidate, ...info };
+    } catch (error) {
+      // 已保存的封面文件不可用时，才允许回退到原图或主体图。
+    }
+  }
+
+  for (const candidate of candidates.filter(item => item.kind !== 'cover')) {
+    try {
+      const info = await getImageInfo(candidate.path);
+      return { ...candidate, ...info };
+    } catch (error) {
+      // 临时地址失效时继续尝试 fileID。
+    }
+  }
+
   const fileCandidates = [
-    ...(record.coverStatus === 'ready'
-      ? [{ fileID: record.coverFileID, kind: 'cover' }]
-      : []),
     { fileID: record.originalFileID, kind: 'original' },
-    { fileID: record.cutoutFileID, kind: 'cutout' },
+    { fileID: storage.getRecordSubjectFileID(record), kind: 'cutout' },
   ].filter(item => item.fileID);
   for (const candidate of fileCandidates) {
     try {
@@ -321,7 +402,11 @@ function buildPublicArchive(catId, records, profile, featuredRecordId) {
       breed: profile.breed,
       traits: profile.traits,
     },
-    records: records.slice(0, 50).map(record => ({
+    records: records.slice(0, 50).map(record => {
+      // 兼容旧记录：封面可能只保存在 posterResult.coverImage。
+      const cover = getRecordCoverRef(record);
+      const coverImage = cover.coverImage || {};
+      return {
       clientRecordId: recordId(record),
       catalogCatId: catId,
       archiveCode: getRecordArchiveCode(record, catId),
@@ -340,14 +425,14 @@ function buildPublicArchive(catId, records, profile, featuredRecordId) {
         cutoutOperation: record.cutoutOperation || '',
         cutoutRequestId: record.cutoutRequestId || '',
         cutoutCheckerboardRemoved: record.cutoutCheckerboardRemoved === true,
-        coverFileID: record.coverFileID || '',
-        coverContentType: record.coverContentType || '',
-        coverProvider: record.coverProvider || '',
-        coverModel: record.coverModel || '',
-        coverOperation: record.coverOperation || '',
-        coverPromptVersion: record.coverPromptVersion || '',
+        coverFileID: record.coverFileID || cover.fileID || '',
+        coverContentType: record.coverContentType || coverImage.contentType || '',
+        coverProvider: record.coverProvider || coverImage.provider || '',
+        coverModel: record.coverModel || coverImage.model || '',
+        coverOperation: record.coverOperation || coverImage.operation || '',
+        coverPromptVersion: record.coverPromptVersion || coverImage.promptVersion || '',
         coverTargetRatio: record.coverTargetRatio || '359:537',
-        coverStatus: record.coverStatus || '',
+        coverStatus: record.coverStatus || cover.status || '',
         coverRequestId: record.coverRequestId || '',
         coverCreatedAt: record.coverCreatedAt || '',
         coverRejectReason: record.coverRejectReason || '',
@@ -379,7 +464,8 @@ function buildPublicArchive(catId, records, profile, featuredRecordId) {
       },
       createdAt: record.createdAt || record.capturedAt || Date.now(),
       capturedAt: record.capturedAt || record.createdAt || '',
-    })),
+      };
+    }),
   };
 }
 
@@ -522,21 +608,27 @@ async function buildPosterData(options = {}) {
     source.catId,
     source.archiveCode,
   );
+  const sourceCoverRef = getRecordCoverRef(sourceResult.record);
+  const sourceCoverMeta = sourceCoverRef.coverImage || {};
   const sourceCover = sourceResult.image.kind === 'cover'
     ? {
       path: sourceResult.image.path,
       fileID: sourceResult.image.fileID || '',
       width: sourceResult.image.width,
       height: sourceResult.image.height,
-      contentType: sourceResult.record.coverContentType || '',
-      provider: sourceResult.record.coverProvider || '',
-      model: sourceResult.record.coverModel || '',
-      operation: sourceResult.record.coverOperation || 'image-to-image-poster-cover',
-      promptVersion: sourceResult.record.coverPromptVersion || COVER_PROMPT_VERSION,
+      contentType: sourceResult.record.coverContentType || sourceCoverMeta.contentType || '',
+      provider: sourceResult.record.coverProvider || sourceCoverMeta.provider || '',
+      model: sourceResult.record.coverModel || sourceCoverMeta.model || '',
+      operation: sourceResult.record.coverOperation
+        || sourceCoverMeta.operation
+        || 'image-to-image-poster-cover',
+      promptVersion: sourceResult.record.coverPromptVersion
+        || sourceCoverMeta.promptVersion
+        || COVER_PROMPT_VERSION,
       targetRatio: sourceResult.record.coverTargetRatio || '359:537',
-      status: 'ready',
-      requestId: sourceResult.record.coverRequestId || '',
-      createdAt: sourceResult.record.coverCreatedAt || '',
+      status: sourceCoverRef.status || 'ready',
+      requestId: sourceResult.record.coverRequestId || sourceCoverMeta.requestId || '',
+      createdAt: sourceResult.record.coverCreatedAt || sourceCoverMeta.createdAt || '',
       version: 'cat-cover.v0.3',
     }
     : null;
@@ -580,7 +672,7 @@ async function buildPosterData(options = {}) {
         : (sourceResult.image.kind === 'cutout' ? 'cat-transform.v1' : 'safe-original.v1'),
     },
     coverImage: sourceCover,
-    coverStatus: sourceResult.record.coverStatus || '',
+    coverStatus: sourceCoverRef.status || '',
     coverRejectReason: sourceResult.record.coverRejectReason || '',
     posterImage: {
       mode: 'cover-crop',
@@ -697,12 +789,22 @@ function buildPosterPersistencePayload(result) {
 async function getSavedPosterResult(options) {
   const source = await loadArchiveSource(options);
   const selectedId = options.recordId || source.featuredRecordId || recordId(source.records[0]);
+  const localRecord = source.records.find(item => recordId(item) === selectedId)
+    || source.records[0]
+    || null;
+  const localSaved = localRecord && localRecord.posterResult;
   let saved;
   if (source.isShared) {
-    const record = source.records.find(item => recordId(item) === selectedId) || source.records[0];
-    saved = record && record.posterResult;
+    saved = localSaved;
   } else {
-    saved = await require('./userData').getPosterResult(source.catId, selectedId);
+    try {
+      saved = await require('./userData').getPosterResult(source.catId, selectedId);
+    } catch (error) {
+      if (!localSaved) throw error;
+      // 云端暂不可用时，仍可复用本地已经保存的完整海报快照。
+      saved = null;
+    }
+    saved = saved || localSaved;
     if (saved && saved.coverImage && saved.coverImage.fileID) {
       storage.updateRecordCover(selectedId, saved.coverImage);
     }

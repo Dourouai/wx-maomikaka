@@ -310,6 +310,73 @@ page {
   text-align: center;
 }
 
+.home-upload-entry {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 96rpx;
+  margin-top: 26rpx;
+  padding: 18rpx 20rpx;
+  border: 2rpx solid rgba(155, 68, 42, 0.36);
+  border-radius: 18rpx;
+  background: rgba(255, 253, 248, 0.78);
+}
+
+.home-upload-entry:active {
+  background: #fff0e8;
+  transform: translateY(2rpx);
+}
+
+.home-upload-entry-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 54rpx;
+  height: 54rpx;
+  border-radius: 16rpx;
+  background: var(--coral);
+}
+
+.home-upload-entry-icon image {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.home-upload-entry-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: 16rpx;
+}
+
+.home-upload-entry-title {
+  color: var(--ink);
+  font-size: 25rpx;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.home-upload-entry-subtitle {
+  margin-top: 6rpx;
+  overflow: hidden;
+  color: var(--muted-ink);
+  font-size: 18rpx;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-upload-entry-arrow {
+  flex: none;
+  width: 28rpx;
+  height: 28rpx;
+  margin-left: 12rpx;
+}
+
 .home-bottom-safe {
   height: 26rpx;
 }

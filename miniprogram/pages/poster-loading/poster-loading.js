@@ -85,7 +85,6 @@ Page({
   },
 
   async _getCachedPosterResult() {
-    if (userData.isUserBound()) return null;
     if (this.options.shareId || !this.options.catId || !this.options.recordId) return null;
     const cached = posterData.getCachedPosterResult(
       this.options.catId,
@@ -134,7 +133,16 @@ Page({
 
     try {
       // 云端成品优先；读取失败只提示重试，不能触发隐式重新生成。
-      const saved = await posterData.getSavedPosterResult(this.options);
+      let saved = null;
+      try {
+        saved = await posterData.getSavedPosterResult(this.options);
+      } catch (error) {
+        // 云端海报读取失败时继续查本地固定缓存和 coverFileID，避免把已有图片误判成未生成。
+        console.warn('[PosterLoading] 云端海报读取失败，继续复用本地图片:', {
+          code: error && (error.code || error.errCode) ? String(error.code || error.errCode) : '',
+          message: error && (error.message || error.errMsg) ? String(error.message || error.errMsg) : '',
+        });
+      }
       if (this._cancelled) return;
       if (saved) {
         posterData.savePosterResult(this.posterJobId, saved);

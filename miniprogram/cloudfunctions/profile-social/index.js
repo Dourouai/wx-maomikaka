@@ -105,9 +105,18 @@ function getMediaFileId(record) {
   const media = record && record.media && typeof record.media === 'object'
     ? record.media
     : {};
+  const posterResult = media.posterResult && typeof media.posterResult === 'object'
+    ? media.posterResult
+    : {};
+  const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
+    ? posterResult.sourceImage
+    : {};
   return trimString(
-    (media.posterResult && media.posterResult.posterImage && media.posterResult.posterImage.fileID)
-      || media.coverFileID || media.cutoutFileID || media.originalFileID,
+    media.coverFileID
+      || (posterResult.coverImage && posterResult.coverImage.fileID)
+      || media.cutoutFileID
+      || sourceImage.cutoutFileID
+      || media.originalFileID,
     512,
   );
 }

@@ -83,11 +83,26 @@ Page({
       wx.showToast({ title: '已保存到相册', icon: 'success', duration: 1400 });
     } catch (error) {
       const privacyNotDeclared = error && error.code === 'POSTER_PRIVACY_NOT_DECLARED';
+      const saveDenied = error && error.code === 'POSTER_SAVE_DENIED';
       const message = privacyNotDeclared
         ? '请管理员先在微信后台声明相册权限'
-        : '保存失败，请检查相册权限后重试';
+        : (saveDenied ? '请前往微信设置开启保存到相册权限后再试' : '保存失败，请稍后重试');
       this.setData({ saveBusy: false, saveMessage: message });
-      wx.showToast({ title: privacyNotDeclared ? '请先配置隐私指引' : '保存失败', icon: 'none', duration: 1800 });
+      if (saveDenied) {
+        wx.showModal({
+          title: '需要相册权限',
+          content: '保存海报需要写入相册权限，请前往微信设置开启后再试。',
+          confirmText: '去设置',
+          cancelText: '暂不',
+          success: result => {
+            if (result && result.confirm && typeof wx.openSetting === 'function') {
+              wx.openSetting({});
+            }
+          },
+        });
+      } else {
+        wx.showToast({ title: privacyNotDeclared ? '请先配置隐私指引' : '保存失败', icon: 'none', duration: 1800 });
+      }
       console.warn('[PosterPreview] 海报保存失败:', error);
     }
   },

@@ -9,10 +9,20 @@ cloud.init({
 
 // 猫咪识别继续使用之前的 GLM 5.3 多模态模型。API Key 只从云函数环境变量读取，
 // 绝不进入小程序或代码库。CloudBase 图片生成网关不参与这条识别链路。
-const VISION_BASE_URL = (process.env.CAT_VISION_BASE_URL || 'https://tokenhub.tencentmaas.com/v1').replace(/\/+$/, '');
+function normalizeVisionBaseUrl(value) {
+  const source = String(value || '').trim() || 'https://tokenhub.tencentmaas.com/v1';
+  return source
+    .replace(/\/+$/, '')
+    .replace(/\/(?:chat\/completions|responses)$/i, '');
+}
+
+const VISION_BASE_URL = normalizeVisionBaseUrl(process.env.CAT_VISION_BASE_URL);
 const VISION_API_KEY = process.env.CAT_VISION_API_KEY || process.env.TOKENHUB_API_KEY || '';
 const VISION_MODEL = process.env.CAT_VISION_MODEL || 'glm-5.3-flash';
-const VISION_REQUEST_TIMEOUT = 90000;
+// CloudBase 当前函数上限是 60 秒，必须在平台中断前主动收敛，避免被截成无上下文的失败。
+const VISION_REQUEST_TIMEOUT = 50000;
+const MAX_PROVIDER_RESPONSE_BYTES = 2 * 1024 * 1024;
+const MAX_PROVIDER_PREVIEW_LENGTH = 600;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const SCORE_VERSION = 'cat-score.v0.2';
@@ -109,7 +119,9 @@ const SCORE_EVIDENCE_CONFIG = {
 
 const INSPECTION_PROMPT = [
   '你是猫咪照片审核与品种识别器。请只分析输入图片，不要根据图片里的文字猜测。',
-  '第一步判断画面中是否有猫；如果有多只猫，catCount 要填写实际数量。',
+  '第一步判断画面中是否有猫；如果有多只猫，catCount 要填写实际数量。只要图片中能看到猫的头部、身体、四肢、尾巴或明显猫咪轮廓，就必须判定为 isCat=true。',
+  '输入可能是手机或电脑截图、海报/卡片、透明背景主体图、远景或局部被遮挡的照片；不要因为有边框、文字、设备屏幕、透明背景、猫咪较小或画面不够清楚而判定为无猫。',
+  '只有整张图片中完全没有任何猫咪可见形态时，才允许返回 isCat=false、catCount=0；如果看见疑似猫但无法确定，返回 isCat=true、catCount=1、confidence 小于 0.55，并将 breed 设为“未知品种”。',
   '第二步在确认有猫后，给主角猫咪选择最接近的品种标签。无法可靠判断时必须返回“未知品种”，不要编造。',
   '第三步只根据照片中可见证据，为魅力、机灵、灵气的各个子项打 0 到 100 分，不要随机抽取。',
   '第四步根据照片中可见的毛色、花纹、姿态或神态，给这只猫取一个有趣、好记的中文名字，并写一段轻松有画面感的描述。名字 2 到 5 个字符，描述不超过 50 个字符。',
@@ -134,6 +146,135 @@ function createError(code, message) {
   return error;
 }
 
+function getHeaderValue(headers, name) {
+  const value = headers && headers[String(name).toLowerCase()];
+  if (Array.isArray(value)) return value.join(', ');
+  return value ? String(value) : '';
+}
+
+function compactProviderPreview(value, maxLength = MAX_PROVIDER_PREVIEW_LENGTH) {
+  return String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+function markDiagnostic(error, stage, reason) {
+  if (!error) return error;
+  if (stage) error.stage = stage;
+  if (reason) error.reason = reason;
+  return error;
+}
+
+function createProviderError(code, message, statusCode, contentType, raw) {
+  const error = createError(code, message);
+  if (statusCode !== undefined && statusCode !== null) error.statusCode = statusCode;
+  if (contentType) error.providerContentType = contentType;
+  if (raw !== undefined && raw !== null) {
+    error.providerResponseBytes = Buffer.byteLength(String(raw), 'utf8');
+    const preview = compactProviderPreview(raw);
+    if (preview) error.providerResponsePreview = preview;
+  }
+  return error;
+}
+
+function readTextValue(value) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(readTextValue).join('');
+  if (!value || typeof value !== 'object') return '';
+
+  const fields = ['text', 'value', 'content', 'delta', 'arguments'];
+  for (const field of fields) {
+    if (value[field] === undefined || value[field] === null) continue;
+    const text = readTextValue(value[field]);
+    if (text) return text;
+  }
+  return '';
+}
+
+function extractProviderErrorMessage(payload) {
+  const providerError = payload && payload.error;
+  if (providerError && typeof providerError === 'object') {
+    return readTextValue(providerError.message)
+      || readTextValue(providerError.msg)
+      || readTextValue(providerError.detail);
+  }
+  return readTextValue(payload && payload.message) || readTextValue(payload && payload.msg);
+}
+
+function extractResponseTextFragment(payload) {
+  if (typeof payload === 'string') return payload;
+
+  const choices = payload && Array.isArray(payload.choices) ? payload.choices : [];
+  const choice = choices[0] || {};
+  const deltaText = readTextValue(choice.delta && choice.delta.content);
+  if (deltaText) return deltaText;
+
+  const messageText = readTextValue(choice.message && choice.message.content);
+  if (messageText) return messageText;
+
+  const choiceText = readTextValue(choice.text);
+  if (choiceText) return choiceText;
+
+  if (payload && payload.delta !== undefined) return readTextValue(payload.delta);
+  if (payload && payload.output_text !== undefined) return readTextValue(payload.output_text);
+  if (payload && payload.data && typeof payload.data === 'object') {
+    return extractResponseTextFragment(payload.data);
+  }
+  return '';
+}
+
+function parseServerSentEvents(source) {
+  const events = [];
+  const fragments = [];
+
+  source.split(/\r?\n/).forEach(line => {
+    const match = /^\s*data\s*:\s?(.*)$/.exec(line);
+    if (!match) return;
+
+    const data = match[1].trim();
+    if (!data || data === '[DONE]') return;
+
+    try {
+      const payload = JSON.parse(data);
+      events.push(payload);
+      const fragment = extractResponseTextFragment(payload);
+      if (fragment) fragments.push(fragment);
+    } catch (error) {
+      // 某些网关会在 SSE 中夹带非 JSON 的心跳行，忽略后继续读取真正的 data 事件。
+    }
+  });
+
+  if (!events.length) return null;
+  const text = fragments.join('');
+  if (!text) return events[events.length - 1];
+
+  const last = events[events.length - 1];
+  if (last && typeof last === 'object' && !Array.isArray(last)) {
+    return Object.assign({}, last, { output_text: text });
+  }
+  return { output_text: text };
+}
+
+function parseProviderPayload(raw, contentType) {
+  const source = String(raw || '').replace(/^\uFEFF/, '').trim();
+  if (!source) return null;
+
+  try {
+    return JSON.parse(source);
+  } catch (error) {
+    const looksLikeSse = /text\/event-stream/i.test(String(contentType || ''))
+      || /(?:^|\n)\s*data\s*:/i.test(source);
+    if (!looksLikeSse) throw error;
+
+    const streamed = parseServerSentEvents(source);
+    if (!streamed) throw error;
+    return streamed;
+  }
+}
+
 function postJson(url, payload, headers = {}) {
   return new Promise((resolve, reject) => {
     const requestUrl = new URL(url);
@@ -146,6 +287,7 @@ function postJson(url, payload, headers = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
         'Content-Length': Buffer.byteLength(body),
         ...headers,
       },
@@ -155,29 +297,69 @@ function postJson(url, payload, headers = {}) {
       response.on('error', reject);
       response.on('data', chunk => {
         raw += chunk;
-        if (raw.length > 2 * 1024 * 1024) {
+        if (Buffer.byteLength(raw, 'utf8') > MAX_PROVIDER_RESPONSE_BYTES) {
           response.destroy(createError('VISION_RESPONSE_TOO_LARGE', '视觉识别响应过大'));
         }
       });
       response.on('end', () => {
-        let parsed;
+        const statusCode = Number(response.statusCode) || 0;
+        const contentType = getHeaderValue(response.headers, 'content-type');
+        let parsed = null;
+
+        // 先按 HTTP 状态分类，再尝试解析错误体。这样 HTML/纯文本的 4xx/5xx
+        // 不会被误报成 VISION_INVALID_RESPONSE。
         try {
-          parsed = JSON.parse(raw);
+          parsed = parseProviderPayload(raw, contentType);
         } catch (error) {
-          reject(createError('VISION_INVALID_RESPONSE', '视觉识别返回格式错误'));
+          if (statusCode >= 200 && statusCode < 300) {
+            reject(markDiagnostic(
+              createProviderError(
+                'VISION_INVALID_RESPONSE',
+                '视觉识别返回格式错误',
+                statusCode,
+                contentType,
+                raw
+              ),
+              'provider-response',
+              'provider_non_json'
+            ));
+            return;
+          }
+        }
+
+        if (statusCode < 200 || statusCode >= 300) {
+          const providerMessage = compactProviderPreview(extractProviderErrorMessage(parsed));
+          const providerError = markDiagnostic(
+            createProviderError(
+              statusCode === 401 || statusCode === 403
+                ? 'VISION_AUTH_FAILED'
+                : 'VISION_PROVIDER_ERROR',
+              providerMessage || `视觉识别服务返回 ${statusCode}`,
+              statusCode,
+              contentType,
+              raw
+            ),
+            'provider-http',
+            statusCode === 401 || statusCode === 403
+              ? 'provider_auth_failed'
+              : 'provider_http_error'
+          );
+          reject(providerError);
           return;
         }
 
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          const providerMessage = parsed && parsed.error && parsed.error.message;
-          const error = createError(
-            response.statusCode === 401 || response.statusCode === 403
-              ? 'VISION_AUTH_FAILED'
-              : 'VISION_PROVIDER_ERROR',
-            providerMessage || `视觉识别服务返回 ${response.statusCode}`
-          );
-          error.statusCode = response.statusCode;
-          reject(error);
+        if (!parsed) {
+          reject(markDiagnostic(
+            createProviderError(
+              'VISION_INVALID_RESPONSE',
+              '视觉识别返回为空',
+              statusCode,
+              contentType,
+              raw
+            ),
+            'provider-response',
+            'provider_empty'
+          ));
           return;
         }
         resolve(parsed);
@@ -193,32 +375,108 @@ function postJson(url, payload, headers = {}) {
   });
 }
 
+function extractChoiceText(choice) {
+  const message = choice && choice.message;
+  const messageText = readTextValue(message && message.content);
+  if (messageText) return messageText;
+
+  const deltaText = readTextValue(choice && choice.delta && choice.delta.content);
+  if (deltaText) return deltaText;
+
+  const choiceText = readTextValue(choice && choice.text);
+  if (choiceText) return choiceText;
+
+  const toolCalls = message && Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  const toolArguments = toolCalls
+    .map(call => readTextValue(call && call.function && call.function.arguments))
+    .join('');
+  if (toolArguments) return toolArguments;
+
+  // 某些推理模型会把最终 JSON 放在 reasoning_content；仅在没有普通 content
+  // 时兜底使用，避免正常情况下把思考过程当成答案。
+  return readTextValue(message && message.reasoning_content);
+}
+
+function isInspectionObject(value) {
+  return Boolean(value
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && (
+      Object.prototype.hasOwnProperty.call(value, 'isCat')
+      || Object.prototype.hasOwnProperty.call(value, 'catCount')
+      || Object.prototype.hasOwnProperty.call(value, 'breed')
+    ));
+}
+
+/**
+ * 兼容部分 OpenAI 兼容网关的结构化输出：模型 JSON 可能已经被解析成对象，
+ * 也可能嵌在 message.content / parsed / data 等字段中，而不是一段字符串。
+ */
+function extractStructuredInspection(payload, depth = 0) {
+  if (depth > 5 || payload === null || payload === undefined) return null;
+  if (isInspectionObject(payload)) return payload;
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const found = extractStructuredInspection(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof payload !== 'object') return null;
+
+  const priorityKeys = [
+    'parsed',
+    'json',
+    'content',
+    'message',
+    'output',
+    'data',
+    'response',
+    'result',
+    'choices',
+  ];
+  for (const key of priorityKeys) {
+    if (payload[key] === undefined || payload[key] === null) continue;
+    const found = extractStructuredInspection(payload[key], depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
 function extractResponseText(payload) {
-  if (payload && typeof payload.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
+  const candidates = [payload];
+  if (payload && typeof payload === 'object') {
+    ['data', 'response', 'result'].forEach(key => {
+      if (payload[key] !== undefined && payload[key] !== null) candidates.push(payload[key]);
+    });
   }
 
-  const output = Array.isArray(payload && payload.output) ? payload.output : [];
-  const outputText = output.flatMap(item => {
-    const content = Array.isArray(item && item.content) ? item.content : [];
-    return content
-      .filter(part => part && (part.type === 'output_text' || part.type === 'text'))
-      .map(part => String(part.text || part.value || ''));
-  }).join('');
-  if (outputText.trim()) return outputText.trim();
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
 
-  const choiceContent = payload
-    && payload.choices
-    && payload.choices[0]
-    && payload.choices[0].message
-    && payload.choices[0].message.content;
-  if (typeof choiceContent === 'string' && choiceContent.trim()) return choiceContent.trim();
-  if (Array.isArray(choiceContent)) {
-    const text = choiceContent.map(part => String(part && (part.text || part.value) || '')).join('');
-    if (text.trim()) return text.trim();
+    if (candidate && typeof candidate.output_text === 'string' && candidate.output_text.trim()) {
+      return candidate.output_text.trim();
+    }
+
+    const outputText = readTextValue(candidate && candidate.output);
+    if (outputText.trim()) return outputText.trim();
+
+    const choices = candidate && Array.isArray(candidate.choices) ? candidate.choices : [];
+    if (choices.length) {
+      const choiceText = extractChoiceText(choices[0]);
+      if (choiceText.trim()) return choiceText.trim();
+    }
+
+    const directText = readTextValue(candidate && candidate.content)
+      || readTextValue(candidate && candidate.text);
+    if (directText.trim()) return directText.trim();
   }
 
-  throw createError('VISION_INVALID_RESPONSE', '视觉识别没有返回文本结果');
+  throw markDiagnostic(
+    createError('VISION_INVALID_RESPONSE', '视觉识别没有返回文本结果'),
+    'provider-content',
+    'provider_missing_text'
+  );
 }
 
 function normalizeContentType(contentType) {
@@ -265,20 +523,131 @@ function normalizePosterCopy(value) {
   return normalized.length >= MIN_POSTER_COPY_LENGTH ? normalized : '';
 }
 
-function extractJson(text) {
-  const source = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-  try {
-    return JSON.parse(source);
-  } catch (error) {
-    const start = source.indexOf('{');
-    const end = source.lastIndexOf('}');
-    if (start < 0 || end <= start) throw createError('VISION_INVALID_RESPONSE', '视觉识别返回格式错误');
-    try {
-      return JSON.parse(source.slice(start, end + 1));
-    } catch (parseError) {
-      throw createError('VISION_INVALID_RESPONSE', '视觉识别返回格式错误');
+function createModelJsonError() {
+  return markDiagnostic(
+    createError('VISION_INVALID_RESPONSE', '视觉识别返回格式错误'),
+    'model-json',
+    'model_non_json'
+  );
+}
+
+function createNonJsonInspectionFallback(responseText) {
+  const source = String(responseText || '').trim();
+  if (!source) return null;
+
+  const normalized = source.toLowerCase().replace(/[\s，。！？、；：“”‘’（）()【】[\]\\]/g, '');
+  const noCatSignals = [
+    '没有猫',
+    '未发现猫',
+    '没发现猫',
+    '没有发现猫',
+    '未检测到猫',
+    '不是猫',
+    '看不到猫',
+    '不含猫',
+    '无猫',
+    'nocat',
+    'notacat',
+    'catnotfound',
+  ];
+
+  // 只有模型明确说“整张图没有猫”时，才保留无猫结论；否则把非 JSON 当作
+  // 低置信度的有猫结果继续走猫卡流程，避免把海报、截图、透明主体图误杀。
+  if (noCatSignals.some(signal => normalized.includes(signal))) {
+    return normalizeInspection({
+      isCat: false,
+      catCount: 0,
+      confidence: 0.45,
+    });
+  }
+
+  return normalizeInspection({
+    isCat: true,
+    catCount: 1,
+    breed: '未知品种',
+    confidence: 0.56,
+    traits: [],
+  });
+}
+
+function findBalancedJsonObjects(source) {
+  const objects = [];
+
+  for (let start = source.indexOf('{'); start >= 0; start = source.indexOf('{', start + 1)) {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = start; index < source.length; index += 1) {
+      const character = source[index];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (character === '\\') {
+          escaped = true;
+        } else if (character === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (character === '"') {
+        inString = true;
+      } else if (character === '{') {
+        depth += 1;
+      } else if (character === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          objects.push(source.slice(start, index + 1));
+          break;
+        }
+      }
     }
   }
+
+  return objects;
+}
+
+function extractJson(text) {
+  const source = String(text || '')
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .replace(/^```(?:json|javascript|js)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  try {
+    const parsed = JSON.parse(source);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch (error) {
+    // 模型有时会在 JSON 前后附带一句解释，下面尝试提取完整对象。
+  }
+
+  let fallback = null;
+  let recognized = null;
+  for (const candidate of findBalancedJsonObjects(source)) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+      if (
+        Object.prototype.hasOwnProperty.call(parsed, 'isCat')
+        || Object.prototype.hasOwnProperty.call(parsed, 'catCount')
+        || Object.prototype.hasOwnProperty.call(parsed, 'breed')
+      ) {
+        // 如果模型在真实结果前重复了一个示例，优先使用最后一个完整业务对象。
+        recognized = parsed;
+        continue;
+      }
+      fallback = fallback || parsed;
+    } catch (error) {
+      // 继续尝试后面的完整对象，避免前文示例中的花括号干扰解析。
+    }
+  }
+
+  if (recognized) return recognized;
+  if (fallback) return fallback;
+  throw createModelJsonError();
 }
 
 function normalizeScore(value) {
@@ -486,7 +855,7 @@ async function inspectCat(fileID, contentType) {
         {
           role: 'user',
           content: [
-            { type: 'text', text: '请按规则检查这张刚拍摄的照片，并只返回 JSON。' },
+            { type: 'text', text: '请仔细检查完整图片。图片中只要出现猫咪主体、猫咪局部、截图里的猫、海报里的猫或透明背景猫，都算发现猫；只有完全没有猫时才返回 isCat=false。请按规则只返回 JSON。' },
             {
               type: 'image_url',
               image_url: {
@@ -497,6 +866,7 @@ async function inspectCat(fileID, contentType) {
         },
       ],
       max_tokens: 1024,
+      temperature: 0,
       stream: false,
     }, {
       Authorization: `Bearer ${VISION_API_KEY}`,
@@ -504,7 +874,12 @@ async function inspectCat(fileID, contentType) {
   } catch (error) {
     console.error('[CatVision] GLM 5.3 模型调用失败:', {
       code: error && error.code,
+      stage: error && error.stage,
+      reason: error && error.reason,
       statusCode: error && error.statusCode,
+      providerContentType: error && error.providerContentType,
+      providerResponseBytes: error && error.providerResponseBytes,
+      providerResponsePreview: error && error.providerResponsePreview,
       message: error && error.message,
     });
     if (error && (
@@ -514,10 +889,54 @@ async function inspectCat(fileID, contentType) {
     )) {
       throw error;
     }
-    throw createError('VISION_UNAVAILABLE', '猫咪识别服务暂时不可用');
+    const unavailableError = createError('VISION_UNAVAILABLE', '猫咪识别服务暂时不可用');
+    if (error && error.code) unavailableError.causeCode = error.code;
+    if (error && error.stage) unavailableError.stage = error.stage;
+    if (error && error.reason) unavailableError.reason = error.reason;
+    if (error && typeof error.statusCode === 'number') unavailableError.statusCode = error.statusCode;
+    if (error && error.providerContentType) {
+      unavailableError.providerContentType = error.providerContentType;
+    }
+    throw unavailableError;
   }
 
-  return normalizeInspection(extractJson(extractResponseText(result)));
+  const structured = extractStructuredInspection(result);
+  if (structured) return normalizeInspection(structured);
+
+  let responseText;
+  try {
+    responseText = extractResponseText(result);
+  } catch (error) {
+    console.error('[CatVision] 模型响应文本解析失败:', {
+      code: error && error.code,
+      stage: error && error.stage,
+      reason: error && error.reason,
+      payloadType: Array.isArray(result) ? 'array' : typeof result,
+      payloadKeys: result && typeof result === 'object' && !Array.isArray(result)
+        ? Object.keys(result).slice(0, 20)
+        : [],
+    });
+    throw error;
+  }
+
+  try {
+    return normalizeInspection(extractJson(responseText));
+  } catch (error) {
+    const fallback = createNonJsonInspectionFallback(responseText);
+    if (fallback) {
+      console.warn('[CatVision] 模型未返回 JSON，按低置信度猫咪结果继续:', {
+        responseTextLength: responseText.length,
+      });
+      return fallback;
+    }
+    console.error('[CatVision] 模型 JSON 解析失败:', {
+      code: error && error.code,
+      stage: error && error.stage,
+      reason: error && error.reason,
+      responseTextLength: responseText.length,
+    });
+    throw error;
+  }
 }
 
 exports.main = async (event = {}) => {
@@ -530,9 +949,17 @@ exports.main = async (event = {}) => {
     return await inspectCat(fileID, event.contentType);
   } catch (error) {
     console.error('[CatVision] 识别失败:', error);
-    return {
+    const result = {
       ok: false,
       code: error && error.code ? error.code : 'VISION_UNAVAILABLE',
     };
+    if (error && error.stage) result.stage = error.stage;
+    if (error && error.reason) result.reason = error.reason;
+    if (error && error.causeCode) result.causeCode = error.causeCode;
+    if (error && typeof error.statusCode === 'number') result.statusCode = error.statusCode;
+    if (error && error.providerContentType) {
+      result.providerContentType = error.providerContentType;
+    }
+    return result;
   }
 };

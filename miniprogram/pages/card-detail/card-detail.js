@@ -218,6 +218,7 @@ Page({
       || `shared_${Date.now()}`;
     const cutoutTempURL = media.cutoutTempURL || item.cutoutTempURL || '';
     const originalTempURL = media.originalTempURL || item.originalTempURL || '';
+    const coverTempURL = media.coverTempURL || item.coverTempURL || '';
 
     return {
       recordId,
@@ -228,12 +229,17 @@ Page({
       catDescription: display.description || item.catDescription || '',
       posterCopy: display.posterCopy || item.posterCopy || '',
       copyVersion: display.copyVersion || item.copyVersion || '',
-      photoPath: cutoutTempURL || originalTempURL,
+      photoPath: cutoutTempURL || originalTempURL || coverTempURL,
       photo: originalTempURL,
       originalPhotoPath: originalTempURL,
       cutoutPhotoPath: cutoutTempURL,
+      coverPhotoPath: coverTempURL,
+      coverTempURL,
       originalFileID: media.originalFileID || item.originalFileID || '',
       cutoutFileID: media.cutoutFileID || item.cutoutFileID || '',
+      coverFileID: media.coverFileID || item.coverFileID || '',
+      coverStatus: media.coverStatus || item.coverStatus || '',
+      posterResult: media.posterResult || item.posterResult || null,
       originalTempURL,
       cutoutTempURL,
       cutoutContentType: media.cutoutContentType || item.cutoutContentType || '',
@@ -526,7 +532,12 @@ Page({
       return;
     }
 
-    const fileIDs = [record.cutoutFileID, record.originalFileID].filter(Boolean);
+    const fileIDs = [
+      storage.getRecordSubjectFileID(record),
+      record.originalFileID,
+      storage.getRecordPosterSourceFileID(record),
+      record.coverFileID,
+    ].filter(Boolean);
     if (!fileIDs.length) return;
 
     try {
@@ -536,14 +547,17 @@ Page({
           photoPath = await cloudFiles.getTempFileURL(fileID);
           if (photoPath) break;
         } catch (error) {
-          // 主体图失效时继续尝试安全校验后的原图 fileID。
+          // 主体图地址失效时继续尝试拍摄原图，最后才兼容封面图 fileID。
         }
       }
       if (!photoPath) throw new Error('云存储文件地址不可用');
       this.setData({ featuredPhoto: photoPath });
       this._queueShareThumbnail(photoPath);
     } catch (error) {
-      const fallback = record.originalPhotoPath || record.photoPath || record.photo || '';
+      const fallback = storage.getRecordSubjectPath(record)
+        || storage.getRecordOriginalPath(record)
+        || storage.getRecordPosterSourcePath(record)
+        || '';
       if (fallback) {
         this.setData({ featuredPhoto: fallback });
         this._queueShareThumbnail(fallback);

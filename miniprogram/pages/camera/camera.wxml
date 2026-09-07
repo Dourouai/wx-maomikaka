@@ -85,7 +85,7 @@
             <cover-view
               class="location-consent-button location-consent-secondary"
               catchtap="skipLocationConsent"
-            >暂不记录</cover-view>
+            >不记录位置</cover-view>
           </cover-view>
         </cover-view>
       </cover-view>

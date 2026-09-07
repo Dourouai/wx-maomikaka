@@ -14,8 +14,10 @@ const KEY_DEVICE_ID = 'maomikaka_device_id';
 const KEY_SHARE_IDS = 'maomikaka_share_ids';
 const KEY_USER_PROFILE = 'maomikaka_user_profile';
 const KEY_PENDING_CAPTURE = 'maomikaka_pending_capture';
+const KEY_LOCATION_CONSENT = 'maomikaka_location_consent';
 const SYNC_SCHEMA_VERSION = 1;
 const LOCATION_STATUSES = ['captured', 'skipped', 'denied', 'unavailable'];
+const LOCATION_CONSENTS = ['skipped'];
 const COVER_STATUSES = ['ready', 'rejected', 'pending'];
 const COVER_TARGET_RATIO = '359:537';
 
@@ -168,6 +170,25 @@ function clearPendingCapture(captureId) {
   if (!pending || !captureId || String(pending.captureId) === String(captureId)) {
     _set(KEY_PENDING_CAPTURE, null);
   }
+}
+
+function getLocationConsent() {
+  const consent = String(_get(KEY_LOCATION_CONSENT) || '').trim();
+  return LOCATION_CONSENTS.includes(consent) ? consent : '';
+}
+
+function setLocationConsent(consent) {
+  const normalized = String(consent || '').trim();
+  if (!LOCATION_CONSENTS.includes(normalized)) {
+    _set(KEY_LOCATION_CONSENT, null);
+    return '';
+  }
+  _set(KEY_LOCATION_CONSENT, normalized);
+  return normalized;
+}
+
+function clearLocationConsent() {
+  _set(KEY_LOCATION_CONSENT, null);
 }
 
 function _getShareScope() {
@@ -393,13 +414,98 @@ function setFeaturedRecord(catId, recordId) {
 }
 
 /**
+ * 获取记录的原始拍摄图。
+ * 原图是重新处理和主体图缺失时的事实来源，与主体生图、海报分开保存。
+ */
+function getRecordOriginalPath(record) {
+  if (!record) return '';
+  return record.originalPhotoPath
+    || record.originalPhoto
+    || record.photo
+    || record.photoPath
+    || record.originalTempURL
+    || '';
+}
+
+/**
+ * 获取记录的猫咪主体图。
+ * 主体图是猫卡和档案详情的首选主图；它和海报封面、带排版的海报不是同一张媒体。
+ */
+function getRecordSubjectPath(record) {
+  if (!record) return '';
+  return record.cutoutPhotoPath
+    || record.cutoutPhoto
+    || record.cutoutTempURL
+    || '';
+}
+
+/**
+ * 获取记录的透明主体云文件 ID。
+ * 旧海报快照可能只在 sourceImage.cutoutFileID 保存主体 ID，也要兼容读取。
+ */
+function getRecordSubjectFileID(record) {
+  if (!record) return '';
+  const posterResult = record.posterResult && typeof record.posterResult === 'object'
+    ? record.posterResult
+    : {};
+  const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
+    ? posterResult.sourceImage
+    : {};
+  return record.cutoutFileID
+    || posterResult.cutoutFileID
+    || sourceImage.cutoutFileID
+    || '';
+}
+
+/**
+ * 获取海报里的生成主视觉原图。
+ * 这是 cover 生成图，不是带文字排版的 posterImage，也不是用户拍摄原图。
+ */
+function getRecordPosterSourcePath(record) {
+  if (!record) return '';
+  const posterResult = record.posterResult && typeof record.posterResult === 'object'
+    ? record.posterResult
+    : {};
+  const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : {};
+  const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
+    ? posterResult.sourceImage
+    : {};
+  return record.coverPhotoPath
+    || record.coverTempURL
+    || coverImage.path
+    || (sourceImage.kind === 'cover' ? sourceImage.path : '')
+    || '';
+}
+
+function getRecordPosterSourceFileID(record) {
+  if (!record) return '';
+  const posterResult = record.posterResult && typeof record.posterResult === 'object'
+    ? record.posterResult
+    : {};
+  const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : {};
+  const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
+    ? posterResult.sourceImage
+    : {};
+  return record.coverFileID
+    || coverImage.fileID
+    || (sourceImage.kind === 'cover' ? sourceImage.fileID : '')
+    || '';
+}
+
+/**
  * 获取记录在界面上的展示图。
- * 新记录优先展示主体处理结果；没有处理结果时才展示安全校验后的原图。
- * 旧版本的模型展示图不再作为展示图，避免继续展示历史生图结果。
+ * 列表和档案主图优先展示透明主体，其次是用户原图；cover 只作为旧记录没有主体时的兼容回退。
+ * 海报封面和最终海报始终由 posterData/posterShare 单独使用。
  */
 function getRecordDisplayPath(record) {
   if (!record) return '';
-  return record.cutoutPhotoPath || record.cutoutPhoto || record.photoPath || record.photo || '';
+  return getRecordSubjectPath(record)
+    || getRecordOriginalPath(record)
+    || getRecordPosterSourcePath(record);
 }
 
 /**
@@ -412,7 +518,13 @@ function saveRecord(recordData) {
   const localRecordId = data.clientRecordId
     || `rec_${now}_${Math.random().toString(36).slice(2, 7)}`;
   const catId = data.catId || (data.catData && data.catData.id);
-  const photoPath = data.photoPath || data.photo || '';
+  const originalPhotoPath = data.originalPhotoPath
+    || data.originalPhoto
+    || data.photoPath
+    || data.photo
+    || '';
+  // photoPath/photo 是历史字段，继续保存为原图，避免旧页面把海报当成主图。
+  const photoPath = originalPhotoPath;
   const catName = data.catName
     || data.generatedName
     || (data.catData && data.catData.name)
@@ -467,6 +579,7 @@ function saveRecord(recordData) {
     photoPath,
     // 保留 photo 字段，方便旧页面或历史数据读取。
     photo: photoPath,
+    originalPhotoPath,
     originalFileID: data.originalFileID || null,
     originalContentType: data.originalContentType || null,
     cutoutFileID: data.cutoutFileID || null,
@@ -901,8 +1014,9 @@ function _normalizeRemoteRecord(remote) {
     catDescription: display.description || source.catDescription || null,
     posterCopy: _normalizePosterCopy(display.posterCopy || source.posterCopy),
     copyVersion: display.copyVersion || source.copyVersion || null,
-    photoPath: '',
-    photo: '',
+    photoPath: media.originalTempURL || source.originalTempURL || '',
+    photo: media.originalTempURL || source.originalTempURL || '',
+    originalPhotoPath: media.originalTempURL || source.originalTempURL || '',
     originalFileID: media.originalFileID || source.originalFileID || null,
     originalContentType: media.originalContentType || source.originalContentType || null,
     cutoutFileID: media.cutoutFileID || source.cutoutFileID || null,
@@ -914,7 +1028,7 @@ function _normalizeRemoteRecord(remote) {
     cutoutCheckerboardRemoved: media.cutoutCheckerboardRemoved === true
       || source.cutoutCheckerboardRemoved === true,
     coverFileID: media.coverFileID || source.coverFileID || null,
-    coverPhotoPath: '',
+    coverPhotoPath: media.coverTempURL || source.coverTempURL || '',
     coverContentType: media.coverContentType || source.coverContentType || null,
     coverProvider: media.coverProvider || source.coverProvider || null,
     coverModel: media.coverModel || source.coverModel || null,
@@ -995,7 +1109,17 @@ function mergeRemoteRecords(remoteRecords) {
         // 临时 URL 只服务于当前设备，不能被云端空值覆盖。
         photoPath: normalized.photoPath || existing.photoPath || '',
         photo: normalized.photo || existing.photo || '',
+        originalPhotoPath: normalized.originalPhotoPath || existing.originalPhotoPath
+          || existing.photoPath || existing.photo || '',
+        originalFileID: normalized.originalFileID || existing.originalFileID || null,
         cutoutPhotoPath: normalized.cutoutPhotoPath || existing.cutoutPhotoPath || '',
+        cutoutFileID: normalized.cutoutFileID || existing.cutoutFileID || null,
+        cutoutContentType: normalized.cutoutContentType || existing.cutoutContentType || null,
+        cutoutProvider: normalized.cutoutProvider || existing.cutoutProvider || null,
+        cutoutOperation: normalized.cutoutOperation || existing.cutoutOperation || null,
+        cutoutRequestId: normalized.cutoutRequestId || existing.cutoutRequestId || null,
+        cutoutCheckerboardRemoved: normalized.cutoutCheckerboardRemoved
+          || existing.cutoutCheckerboardRemoved === true,
         coverFileID: normalized.coverFileID || existing.coverFileID || null,
         coverPhotoPath: normalized.coverPhotoPath || existing.coverPhotoPath || '',
         coverContentType: normalized.coverContentType || existing.coverContentType || null,
@@ -1238,6 +1362,9 @@ module.exports = {
   savePendingCapture,
   getPendingCapture,
   clearPendingCapture,
+  getLocationConsent,
+  setLocationConsent,
+  clearLocationConsent,
   getShareId,
   setShareId,
   getOrCreateShareId,
@@ -1250,6 +1377,11 @@ module.exports = {
   getAllRecords,
   getRecordById,
   getRecordsForCat,
+  getRecordOriginalPath,
+  getRecordSubjectPath,
+  getRecordSubjectFileID,
+  getRecordPosterSourcePath,
+  getRecordPosterSourceFileID,
   getRecordDisplayPath,
   getUserStats,
   setFeaturedRecord,

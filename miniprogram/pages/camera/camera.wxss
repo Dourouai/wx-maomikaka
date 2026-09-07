@@ -355,17 +355,20 @@ page {
 }
 
 .location-consent-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* cover-view 在部分微信版本上对 flex 子项的文字基线处理不一致，
+   * 用固定高度 + 同值行高锁定按钮文字的上下居中。 */
+  display: block;
   flex: 1;
+  height: 82rpx;
   min-height: 82rpx;
+  padding: 0;
   box-sizing: border-box;
   border-radius: 14rpx;
   font-size: 24rpx;
   font-weight: 700;
   text-align: center;
-  line-height: 1.2;
+  line-height: 82rpx;
+  white-space: nowrap;
 }
 
 .location-consent-primary {

@@ -12,7 +12,7 @@ Page({
     resultFileID: '',
     isTransforming: false,
     resultStatus: '等待一张猫咪照片',
-    modelLabel: 'CloudBase 主体处理',
+    modelLabel: '主体图片处理',
     showException: false,
     exceptionEyebrow: '猫咪图生图',
     exceptionTitle: '',
@@ -145,7 +145,7 @@ Page({
       this.setData({
         resultPath,
         resultFileID: result.cutoutFileID || '',
-        modelLabel: result.cutoutProvider === 'hunyuan-image' ? 'CloudBase 混元图像模型' : 'CloudBase 主体处理',
+        modelLabel: '主体图片处理',
         resultStatus: '主体 PNG 已生成',
       });
     } catch (error) {
@@ -169,7 +169,7 @@ Page({
       return { title: '主体服务还差一步', message: '图像处理服务暂时没有准备好，请先检查云函数配置' };
     }
     if (code === 'CLOUDBASE_IMAGE_TIMEOUT') {
-      return { title: '主体图还在路上', message: '模型等待超时了，请稍后再试一次' };
+      return { title: '主体图还在路上', message: '图片处理等待超时了，请稍后再试一次' };
     }
     if (code === 'SOURCE_IMAGE_UNAVAILABLE' || code === 'SOURCE_UPLOAD_FAILED') {
       return { title: '原图没有送到', message: '这张照片暂时不可用，请重新选择一张清楚的猫咪照片' };
@@ -178,7 +178,7 @@ Page({
       return { title: '主体图没有回来', message: '这次没有拿到有效的猫咪主体，请换一张清楚的照片' };
     }
     if (code === 'CLOUDBASE_IMAGE_API_ERROR' || code === 'NATIVE_IMAGE_API_ERROR') {
-        return { title: '主体服务暂时不可用', message: '模型接口没有接通，请稍后再试', detail: '本次只处理图片，不会影响正式猫卡。' };
+        return { title: '主体服务暂时不可用', message: '图片处理服务没有接通，请稍后再试', detail: '本次只处理图片，不会影响正式猫卡。' };
     }
     return { title: '猫咪主体没抠好', message: '只保留猫咪的处理暂时没完成，请换一张照片再试' };
   },

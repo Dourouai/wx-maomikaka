@@ -185,17 +185,6 @@
         </view>
       </view>
 
-      <view class="ai-source-note" aria-label="Ai创作声明">
-        <view class="ai-source-icon">
-          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
-        </view>
-        <view class="ai-source-copy">
-          <text class="ai-source-title">Ai创作声明</text>
-          <text class="ai-source-subtitle">应用中所有图片与文案均有Ai参与二次创作</text>
-        </view>
-        <text class="ai-source-label">AI GENERATED</text>
-      </view>
-
       <view class="my-bottom-safe"></view>
     </view>
   </scroll-view>
@@ -308,17 +297,6 @@
           </view>
           <text class="setting-arrow">›</text>
         </view>
-      </view>
-
-      <view class="ai-source-note my-login-public-ai-note" aria-label="Ai创作声明">
-        <view class="ai-source-icon">
-          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
-        </view>
-        <view class="ai-source-copy">
-          <text class="ai-source-title">Ai创作声明</text>
-          <text class="ai-source-subtitle">应用中所有图片与文案均有Ai参与二次创作</text>
-        </view>
-        <text class="ai-source-label">AI GENERATED</text>
       </view>
 
       <view class="my-login-bottom-safe"></view>

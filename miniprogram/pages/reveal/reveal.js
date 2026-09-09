@@ -66,7 +66,7 @@ Page({
     posterCopy: '',
     imageChecked: false,
     capturedAtText: '',
-    loadingTitle: 'AI 正在识别中',
+    loadingTitle: '正在认识这位猫朋友',
     loadingSubtitle: '正在为这次相遇整理档案',
     loadingKnowledge: catKnowledge.getFallbackKnowledge(),
     loadingKnowledgeSource: 'FIELD NOTE',
@@ -75,7 +75,7 @@ Page({
 
   onLoad(options) {
     this._syncDeviceLayout();
-    // 仅用于开发验收：预览异常结果页时不调用模型、不扣罐罐、不写入记录。
+    // 仅用于开发验收：预览异常结果页时不调用识别服务、不扣罐罐、不写入记录。
     if (String(options && (options.preview || options.state) || '').toLowerCase() === 'error') {
       this._openErrorPage({
         title: '这次没拍清楚',
@@ -188,7 +188,7 @@ Page({
         photo: safePhoto,
         originalPhoto: safePhoto,
         imageChecked: true,
-        loadingTitle: 'AI 正在识别中',
+        loadingTitle: '正在认识这位猫朋友',
         loadingSubtitle: '正在识别猫咪 · 整理透明主体',
       });
     } catch (err) {
@@ -350,7 +350,7 @@ Page({
           `record:${result.catId || catData.id}:${saved.recordId}`,
           capturedAt || Date.now(),
         ),
-        // 结果页只使用产品固定短句，不把视觉模型返回的描述渲染成页面文案。
+        // 结果页只使用产品固定短句，不把视觉服务返回的描述渲染成页面文案。
         resultQuote: '在街角，它刚好回头看了你一眼。',
         isNew: saved.isNew,
         recordId: saved.recordId,
@@ -417,7 +417,7 @@ Page({
       contentDetail = '让猫猫完整进入画面，再试一次吧。';
     } else if (code === 'CUTOUT_IMAGE_UNAVAILABLE') {
       title = '主体图没有回来';
-      content = '图像模型没有返回可用的主体图片，请确认模型已启用后再试';
+      content = '暂时没有返回可用的主体图片，请稍后再试';
       contentDetail = '确认服务正常后，再试一次吧。';
     } else if (code === 'CUTOUT_IMAGE_TIMEOUT') {
       title = '主体图走丢了';
@@ -425,19 +425,19 @@ Page({
       contentDetail = '等服务缓一缓，再试一次吧。';
     } else if (code === 'CUTOUT_IMAGE_FORMAT_UNSUPPORTED') {
       title = '主体图格式不对';
-      content = '图像模型返回的图片暂时无法使用，请稍后再试';
+      content = '返回的主体图片暂时无法使用，请稍后再试';
       contentDetail = '换一张照片，再试一次吧。';
     } else if (code === 'CLOUDBASE_IMAGE_NOT_CONFIGURED') {
       title = '主体服务还差一步';
-      content = 'CloudBase 图生图服务暂时没有准备好，请稍后再试';
+      content = '主体图片处理服务暂时没有准备好，请稍后再试';
       contentDetail = '完成配置后，再回来遇见猫猫。';
     } else if (code === 'CLOUDBASE_IMAGE_API_ERROR') {
       title = '主体服务没接通';
-      content = 'CloudBase 图生图暂时不可用，请检查模型配置后再试';
-      contentDetail = '确认模型配置后，再试一次吧。';
+      content = '主体图片处理暂时不可用，请稍后再试';
+      contentDetail = '确认服务恢复后，再试一次吧。';
     } else if (code === 'CLOUDBASE_IMAGE_TIMEOUT') {
       title = '主体图走丢了';
-      content = 'CloudBase 图生图等待超时，请稍后再试一张';
+      content = '主体图片处理等待超时，请稍后再试一张';
       contentDetail = '等服务缓一缓，再试一次吧。';
     }
 

@@ -12,12 +12,12 @@
       </view>
     </view>
     <text class="loading-title">{{loadingTitle}}</text>
-    <text class="loading-copy">猫猫马上就要出现啦</text>
-    <text class="loading-time-hint">AI 识别中 · 通常需要约 20–30 秒</text>
+    <text class="loading-copy">先别眨眼，猫猫马上登场</text>
+    <text class="loading-time-hint">正在识别中 · 通常需要约 20–30 秒</text>
     <view class="loading-dots" aria-hidden="true">
       <view></view><view></view><view></view>
     </view>
-    <view class="loading-progress" aria-label="AI 识别进度">
+    <view class="loading-progress" aria-label="识别进度">
       <view class="loading-progress-track">
         <view class="loading-progress-bar"></view>
       </view>

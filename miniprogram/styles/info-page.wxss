@@ -141,16 +141,6 @@ page {
   line-height: 1.5;
 }
 
-.info-ai-label {
-  flex: none;
-  color: var(--stamp);
-  font-size: 15rpx;
-  font-weight: 700;
-  letter-spacing: 2rpx;
-  line-height: 1.2;
-  text-align: right;
-}
-
 .info-section,
 .privacy-section {
   padding-top: 24rpx;
@@ -195,16 +185,14 @@ page {
   line-height: 1.65;
 }
 
-.privacy-permissions,
-.privacy-provider-list {
+.privacy-permissions {
   display: flex;
   flex-direction: column;
   gap: 12rpx;
   margin-top: 16rpx;
 }
 
-.privacy-permission,
-.privacy-provider {
+.privacy-permission {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -215,8 +203,7 @@ page {
   box-sizing: border-box;
 }
 
-.privacy-permission-icon,
-.privacy-provider-mark {
+.privacy-permission-icon {
   display: flex;
   flex: none;
   align-items: center;
@@ -226,55 +213,31 @@ page {
   background: var(--blush);
 }
 
-.privacy-provider-mark {
-  background: rgba(201, 154, 73, 0.25);
-}
-
-.privacy-permission-icon image,
-.privacy-provider-mark image {
+.privacy-permission-icon image {
   width: 30rpx;
   height: 30rpx;
 }
 
-.privacy-permission-copy,
-.privacy-provider-copy {
+.privacy-permission-copy {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
 }
 
-.privacy-permission-title,
-.privacy-provider-title {
+.privacy-permission-title {
   color: var(--ink);
   font-size: 21rpx;
   font-weight: 700;
   line-height: 1.25;
 }
 
-.privacy-permission-copy text:last-child,
-.privacy-provider-copy text:last-child {
+.privacy-permission-copy text:last-child {
   display: block;
   margin-top: 6rpx;
   color: var(--muted-ink);
   font-size: 17rpx;
   line-height: 1.5;
-}
-
-.privacy-sdk {
-  padding: 18rpx;
-  margin-top: 16rpx;
-  border: 2rpx dashed var(--line);
-  color: var(--muted-ink);
-  background: rgba(248, 241, 231, 0.55);
-  font-size: 18rpx;
-  line-height: 1.6;
-  box-sizing: border-box;
-}
-
-.privacy-sdk-label {
-  color: var(--ink);
-  font-weight: 700;
 }
 
 .privacy-points {
@@ -410,10 +373,6 @@ page {
   color: var(--muted-ink);
   font-size: 16rpx;
   white-space: nowrap;
-}
-
-.about-ai-note {
-  margin-top: 22rpx;
 }
 
 .about-meta {

@@ -1,5 +1,5 @@
 // pages/dev-mode/dev-mode.js
-// 开发模式只承载模型测试入口，不改变正式拍猫和猫卡收录流程。
+// 开发模式只承载主体图片处理测试入口，不改变正式拍猫和猫卡收录流程。
 Page({
   data: {
     showException: false,

@@ -41,17 +41,6 @@
         </view>
       </view>
 
-      <view class="info-intro about-ai-note">
-        <view class="info-icon">
-          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
-        </view>
-        <view class="info-intro-copy">
-          <text class="info-intro-title">Ai创作声明</text>
-          <text>应用中所有图片与文案均有Ai参与二次创作</text>
-        </view>
-        <text class="info-ai-label">AI GENERATED</text>
-      </view>
-
       <view class="about-privacy-entry" bindtap="goPrivacy" aria-role="button" aria-label="打开隐私条款">
         <view class="about-privacy-entry-icon">
           <image src="/assets/paw.svg" mode="aspectFit" />

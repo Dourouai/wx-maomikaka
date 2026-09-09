@@ -1094,66 +1094,6 @@ page {
   line-height: 1;
 }
 
-.ai-source-note {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10rpx;
-  margin-top: 30rpx;
-  padding: 10rpx 2rpx 0;
-  border-top: 1rpx solid rgba(155, 68, 42, 0.16);
-  background: transparent;
-  box-sizing: border-box;
-}
-
-.ai-source-icon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 28rpx;
-  height: 28rpx;
-  background: transparent;
-  opacity: 0.5;
-}
-
-.ai-source-icon image {
-  width: 22rpx;
-  height: 22rpx;
-}
-
-.ai-source-copy {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.ai-source-title {
-  color: var(--muted-ink);
-  font-size: 17rpx;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.ai-source-subtitle {
-  margin-top: 2rpx;
-  color: var(--muted-ink);
-  font-size: 14rpx;
-  line-height: 1.35;
-  opacity: 0.78;
-}
-
-.ai-source-label {
-  flex-shrink: 0;
-  color: var(--muted-ink);
-  font-size: 11rpx;
-  font-weight: 600;
-  letter-spacing: 1rpx;
-  text-align: right;
-  opacity: 0.6;
-}
-
 .settings {
   display: flex;
   flex-direction: column;

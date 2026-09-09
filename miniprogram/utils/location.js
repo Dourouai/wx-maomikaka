@@ -1,7 +1,7 @@
 // 猫咪咔咔 - 可选的模糊位置能力
 //
 // 相机是拍摄的必要能力，由微信的 <camera> 组件负责申请；位置则只在
-// 用户明确选择“记录大概位置”后调用，不参与猫咪识别，也不上传给 AI 服务。
+// 用户明确选择“记录大概位置”后调用，不参与猫咪识别，也不上传给图片处理服务。
 const permissions = require('./permissions');
 const LOCATION_SCOPE = permissions.SCOPES.FUZZY_LOCATION;
 

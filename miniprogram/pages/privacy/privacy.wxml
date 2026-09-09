@@ -54,7 +54,7 @@
             </view>
             <view class="privacy-permission-copy">
               <text class="privacy-permission-title">模糊位置信息</text>
-              <text>拍照完成后，你可以选择是否授权微信读取大概位置；只记录在这张猫卡的拍照记录中，不持续定位，也不用于猫咪识别或 AI 处理。</text>
+              <text>拍照完成后，你可以选择是否授权微信读取大概位置；只记录在这张猫卡的拍照记录中，不持续定位，也不用于猫咪识别、评分或图片处理。</text>
             </view>
           </view>
           <view class="privacy-permission">
@@ -84,47 +84,6 @@
               <text>登录时经你主动点击并完成微信头像昵称填写能力后，取得你选择的微信头像和昵称，用于展示个人档案和绑定当前微信账号；本地会保留展示所需资料，绑定后账号资料会保存到当前微信账号的云端。微信填写的昵称不走自定义文本审核；不参与猫咪识别或建立用户画像。</text>
             </view>
           </view>
-        </view>
-      </view>
-
-      <view class="privacy-section">
-        <view class="info-section-head">
-          <text class="info-section-head-title">第三方 AI 服务</text>
-          <text class="info-section-head-code">AI PROCESSING</text>
-        </view>
-        <text class="privacy-body">为完成猫咪图片识别、结果生成、主体图处理和处理页科普短句，在你主动发起识别后，提交的照片以及完成相应功能所必需的文本和参数，可能通过 API 传输至下列服务进行处理。</text>
-        <view class="privacy-provider-list">
-          <view class="privacy-provider">
-            <view class="privacy-provider-mark">
-              <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
-            </view>
-            <view class="privacy-provider-copy">
-              <text class="privacy-provider-title">混元图像服务 · CloudBase</text>
-              <text>用途：猫咪主体图处理及开发测试页的图像生成；处理数据：本次提交的照片和必要参数。</text>
-            </view>
-          </view>
-          <view class="privacy-provider">
-            <view class="privacy-provider-mark">
-              <image src="/assets/doodle-spark.svg" mode="aspectFit" />
-            </view>
-            <view class="privacy-provider-copy">
-              <text class="privacy-provider-title">GLM-5.3 · TokenHub</text>
-              <text>用途：猫咪识别、评分和档案文案整理；处理数据：本次提交的照片和必要参数。</text>
-            </view>
-          </view>
-          <view class="privacy-provider">
-            <view class="privacy-provider-mark">
-              <image src="/assets/paw.svg" mode="aspectFit" />
-            </view>
-            <view class="privacy-provider-copy">
-              <text class="privacy-provider-title">Hy3 · TokenHub</text>
-              <text>用途：图片处理期间生成猫咪科普短句；处理数据：固定科普提示词，不上传本次照片或个人信息。</text>
-            </view>
-          </view>
-        </view>
-        <view class="privacy-sdk">
-          <text class="privacy-sdk-label">处理边界：</text>
-          <text>相关数据可能由上述服务商处理，但不等同于向第三方公开发布。是否用于模型训练、保存多久、删除方式及是否发生跨境传输，须以实际服务协议、控制台配置和服务商官方规则核验为准。</text>
         </view>
       </view>
 
@@ -186,7 +145,7 @@
           <text class="info-section-head-title">信息对外提供</text>
           <text class="info-section-head-code">DISCLOSURE</text>
         </view>
-        <text class="privacy-body">开发者不会主动公开发布你的照片或档案。为完成已经说明的识别和生成能力，必要数据可能交由本页面列明的服务商处理；如需超出本指引范围共享或转让，将依法另行告知并征得同意。</text>
+        <text class="privacy-body">开发者不会主动公开发布你的照片或档案。为完成已经说明的识别和生成能力，必要数据可能交由处理服务商处理；如需超出本指引范围共享或转让，将依法另行告知并征得同意。</text>
       </view>
 
       <view class="privacy-section privacy-section-last">

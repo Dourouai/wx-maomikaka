@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const crypto = require('crypto');
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -10,14 +11,19 @@ const db = cloud.database();
 const USERS_COLLECTION = 'users';
 const PROFILES_COLLECTION = 'cat_profiles';
 const ENCOUNTERS_COLLECTION = 'encounters';
+const GUEST_ENCOUNTERS_COLLECTION = 'guest_encounters';
 const REWARD_LEDGER_COLLECTION = 'user_reward_ledger';
+const CAN_USAGE_COLLECTION = 'can_usage_ledger';
 const USER_SCHEMA_VERSION = 1;
 const DATA_SCHEMA_VERSION = 1;
 const REWARD_SCHEMA_VERSION = 1;
 const POSTER_RESULT_SCHEMA_VERSION = 1;
 const MAX_IMPORT_RECORDS = 20;
 const MAX_QUERY_RECORDS = 1000;
+const GUEST_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const PRIVACY_POLICY_VERSION = 'V0.2';
 const VALID_EVIDENCE_GROUPS = ['charm', 'cleverness', 'aura'];
+const VISIBILITIES = ['public', 'private'];
 const ARCHIVE_CODE_PATTERN = /^\d{8}[0-9A-Z]{6}$/;
 
 function createError(code, message) {
@@ -57,6 +63,16 @@ async function safeGet(query) {
 
 function trimString(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
+}
+
+function normalizeSourceType(value) {
+  const sourceType = trimString(value, 20).toLowerCase();
+  return sourceType === 'live' ? 'live' : 'photo';
+}
+
+function normalizeVisibility(value) {
+  const visibility = trimString(value, 20).toLowerCase();
+  return VISIBILITIES.includes(visibility) ? visibility : '';
 }
 
 function clampNumber(value, min, max) {
@@ -246,12 +262,20 @@ function normalizeRecord(input) {
   const createdAt = normalizeDate(source.createdAt || source.capturedAt);
   const capturedAt = toISOString(source.capturedAt || source.createdAt) || (createdAt && createdAt.toISOString());
   const location = normalizeLocation(source.location, capturedAt);
+  const rawVisibility = source.visibility !== undefined
+    ? source.visibility
+    : source.publicVisibility;
 
   return {
     clientRecordId,
     captureId: trimString(source.captureId, 128),
+    sourceType: normalizeSourceType(
+      source.sourceType || source.captureSource || source.inputSource,
+    ),
     catalogCatId,
+    visibility: normalizeVisibility(rawVisibility),
     archiveCode: normalizeArchiveCode(source.archiveCode),
+    canUsageSource: normalizeCanUsageSource(source.canUsageSource),
     display: {
       name: trimString(display.name || source.catName, 40),
       description: trimString(display.description || source.catDescription, 240),
@@ -331,6 +355,107 @@ function normalizeRecord(input) {
   };
 }
 
+function normalizeGuestToken(value) {
+  const token = trimString(value, 256);
+  return token.length >= 32 ? token : '';
+}
+
+function hashGuestToken(token) {
+  return crypto.createHash('sha256').update(String(token || ''), 'utf8').digest('hex');
+}
+
+function createGuestRecordKey(guestTokenHash, deviceId, clientRecordId) {
+  return crypto.createHash('sha256')
+    .update(`${guestTokenHash}:${deviceId}:${clientRecordId}`, 'utf8')
+    .digest('hex')
+    .slice(0, 48);
+}
+
+function getDateTimestamp(value) {
+  if (value instanceof Date) return value.getTime();
+  if (value && typeof value === 'object' && value.$date) {
+    const numeric = Number(value.$date);
+    if (Number.isFinite(numeric)) return numeric;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function getGuestEncounter(guestRecordKey) {
+  try {
+    const response = await db.collection(GUEST_ENCOUNTERS_COLLECTION).doc(guestRecordKey).get();
+    return response && response.data ? response.data : null;
+  } catch (error) {
+    if (isDocumentMissing(error)) return null;
+    throw error;
+  }
+}
+
+async function stageGuestRecords(event) {
+  const deviceId = trimString(event.deviceId, 128);
+  const guestToken = normalizeGuestToken(event.guestToken);
+  if (!deviceId) throw createError('DEVICE_ID_REQUIRED', '缺少本地设备编号');
+  if (!guestToken) throw createError('GUEST_TOKEN_REQUIRED', '匿名记录凭证不可用');
+
+  const inputs = Array.isArray(event.records)
+    ? event.records.slice(0, MAX_IMPORT_RECORDS)
+    : [];
+  const guestTokenHash = hashGuestToken(guestToken);
+  const rejected = [];
+  let stagedCount = 0;
+  let skippedCount = 0;
+
+  for (const input of inputs) {
+    const record = normalizeRecord(input);
+    if (record.error) {
+      rejected.push({
+        localRecordId: trimString(input && (input.clientRecordId || input.recordId), 128),
+        reason: record.error,
+      });
+      continue;
+    }
+
+    const guestRecordKey = createGuestRecordKey(
+      guestTokenHash,
+      deviceId,
+      record.clientRecordId,
+    );
+    const existing = await getGuestEncounter(guestRecordKey);
+    if (existing && existing.status === 'claimed') {
+      skippedCount += 1;
+      continue;
+    }
+
+    await db.collection(GUEST_ENCOUNTERS_COLLECTION).doc(guestRecordKey).set({
+      data: {
+        schemaVersion: DATA_SCHEMA_VERSION,
+        guestRecordKey,
+        guestTokenHash,
+        clientDeviceId: deviceId,
+        clientRecordId: record.clientRecordId,
+        source: trimString(event.source || 'guest-stage', 40),
+        storageScope: 'guest-temporary',
+        clientPrivacyPolicyVersion: trimString(event.privacyPolicyVersion, 32) || null,
+        serverPrivacyPolicyVersion: PRIVACY_POLICY_VERSION,
+        retentionDays: 30,
+        status: 'pending',
+        record,
+        createdAt: existing && existing.createdAt ? existing.createdAt : db.serverDate(),
+        updatedAt: db.serverDate(),
+        expiresAt: new Date(Date.now() + GUEST_RETENTION_MS),
+      },
+    });
+    stagedCount += 1;
+  }
+
+  return {
+    ok: true,
+    stagedCount,
+    skippedCount,
+    rejected,
+  };
+}
+
 async function getUser(userId) {
   try {
     const response = await db.collection(USERS_COLLECTION).doc(userId).get();
@@ -350,7 +475,13 @@ async function ensureUser(userId) {
         data: {
           schemaVersion: USER_SCHEMA_VERSION,
           status: 'active',
-          stats: { totalPhotos: 0, unlockedCount: 0, pawGrowth: 0, pointBalance: 0 },
+          stats: {
+            totalPhotos: 0,
+            unlockedCount: 0,
+            pawGrowth: 0,
+            pointBalance: 0,
+            purchasedCanBalance: 0,
+          },
           createdAt: db.serverDate(),
           updatedAt: db.serverDate(),
           lastSeenAt: db.serverDate(),
@@ -397,6 +528,7 @@ async function createProfile(userId, record) {
       identityStatus: 'catalog-role',
       status: 'active',
       catalogCatId: record.catalogCatId,
+      visibility: record.visibility || 'public',
       displayName: record.display.name || null,
       displayDescription: record.display.description || null,
       displayPosterCopy: record.display.posterCopy || null,
@@ -418,6 +550,7 @@ async function createProfile(userId, record) {
   return {
     _id: profileId,
     catalogCatId: record.catalogCatId,
+    visibility: record.visibility || 'public',
     displayName: record.display.name || null,
     displayDescription: record.display.description || null,
     displayPosterCopy: record.display.posterCopy || null,
@@ -440,6 +573,17 @@ async function getOrCreateProfile(userId, record, cache) {
   return profile;
 }
 
+async function updateProfileVisibility(profileId, visibility) {
+  const normalized = normalizeVisibility(visibility);
+  if (!profileId || !normalized) return;
+  await db.collection(PROFILES_COLLECTION).doc(profileId).update({
+    data: {
+      visibility: normalized,
+      updatedAt: db.serverDate(),
+    },
+  });
+}
+
 async function findExistingEncounter(userId, clientRecordKey) {
   const result = await safeGet(db.collection(ENCOUNTERS_COLLECTION)
     .where({ ownerOpenId: userId, clientRecordKey, status: 'active' })
@@ -457,6 +601,12 @@ function normalizeRewardSource(source) {
   if (source === 'capture') return 'legacy-client-capture';
   if (source === 'guest-import') return 'guest-import';
   return 'legacy-client-sync';
+}
+
+function normalizeCanUsageSource(source) {
+  if (source === 'purchased') return 'purchased';
+  if (source === 'daily-gift') return 'daily-gift';
+  return '';
 }
 
 function normalizeRewardDelta(value) {
@@ -534,6 +684,139 @@ async function ensureRewardLedgerForEncounters(userId, encounters, source) {
   return entries;
 }
 
+function createCanUsageLedgerId(encounterId) {
+  const normalized = trimString(encounterId, 100).replace(/[^A-Za-z0-9_-]/g, '_');
+  return normalized ? `can_usage_${normalized}` : '';
+}
+
+async function getCanUsageLedgerEntry(ledgerId) {
+  if (!ledgerId) return null;
+  try {
+    const response = await db.collection(CAN_USAGE_COLLECTION).doc(ledgerId).get();
+    return response && response.data ? response.data : null;
+  } catch (error) {
+    if (isDocumentMissing(error)) return null;
+    throw error;
+  }
+}
+
+async function ensureCanUsageLedgerEntry(userId, encounter) {
+  const source = normalizeCanUsageSource(encounter && encounter.canUsageSource);
+  if (source !== 'purchased') return null;
+
+  const encounterId = trimString(encounter && (encounter._id || encounter.encounterId), 128);
+  const ledgerId = createCanUsageLedgerId(encounterId);
+  if (!encounterId || !ledgerId) return null;
+
+  const existing = await getCanUsageLedgerEntry(ledgerId);
+  if (existing) {
+    if (existing.ownerOpenId && existing.ownerOpenId !== userId) {
+      throw createError('CAN_USAGE_LEDGER_CONFLICT', '罐罐使用流水归属校验失败');
+    }
+    return { ...existing, _id: ledgerId };
+  }
+
+  const data = {
+    schemaVersion: 1,
+    ownerOpenId: userId,
+    encounterId,
+    clientRecordId: trimString(encounter && encounter.clientRecordId, 128),
+    source,
+    debit: 1,
+    status: 'pending',
+    occurredAt: normalizeDate(encounter && (encounter.createdAt || encounter.capturedAt)) || db.serverDate(),
+    createdAt: db.serverDate(),
+    updatedAt: db.serverDate(),
+  };
+
+  try {
+    await db.collection(CAN_USAGE_COLLECTION).doc(ledgerId).set({ data });
+    return { ...data, _id: ledgerId };
+  } catch (error) {
+    if (String(error && (error.errMsg || error.message) || '').toLowerCase().includes('exist')) {
+      return getCanUsageLedgerEntry(ledgerId);
+    }
+    throw error;
+  }
+}
+
+/**
+ * 购买罐罐的扣减也必须在服务端落账，避免客户端同步后又被远端余额覆盖。
+ * ledger 先落幂等键，再用事务把用户余额和 ledger 状态一起结算。
+ */
+async function settleCanUsageLedger(userId, ledger) {
+  if (!ledger || !ledger._id || ledger.status === 'settled') {
+    return { debited: 0, alreadySettled: true };
+  }
+
+  return db.runTransaction(async transaction => {
+    const ledgerRef = transaction.collection(CAN_USAGE_COLLECTION).doc(ledger._id);
+    const ledgerSnapshot = await ledgerRef.get();
+    const currentLedger = ledgerSnapshot && ledgerSnapshot.data;
+    if (!currentLedger || currentLedger.status === 'settled') {
+      return { debited: 0, alreadySettled: true };
+    }
+
+    const userRef = transaction.collection(USERS_COLLECTION).doc(userId);
+    let user = null;
+    try {
+      const userSnapshot = await userRef.get();
+      user = userSnapshot && userSnapshot.data ? userSnapshot.data : null;
+    } catch (error) {
+      if (!isDocumentMissing(error)) throw error;
+    }
+
+    const stats = user && user.stats && typeof user.stats === 'object'
+      ? { ...user.stats }
+      : {
+        totalPhotos: 0,
+        unlockedCount: 0,
+        pawGrowth: 0,
+        pointBalance: 0,
+        purchasedCanBalance: 0,
+      };
+    const currentBalance = Math.max(0, Math.floor(Number(stats.purchasedCanBalance) || 0));
+    const debited = currentBalance > 0 ? 1 : 0;
+    stats.purchasedCanBalance = currentBalance - debited;
+
+    if (user) {
+      await userRef.update({
+        data: {
+          stats,
+          updatedAt: db.serverDate(),
+        },
+      });
+    } else {
+      await userRef.set({
+        data: {
+          schemaVersion: USER_SCHEMA_VERSION,
+          status: 'active',
+          stats,
+          createdAt: db.serverDate(),
+          updatedAt: db.serverDate(),
+          lastSeenAt: db.serverDate(),
+        },
+      });
+    }
+
+    await ledgerRef.update({
+      data: {
+        status: 'settled',
+        debited,
+        settledAt: db.serverDate(),
+        updatedAt: db.serverDate(),
+      },
+    });
+    return { debited, alreadySettled: false };
+  });
+}
+
+async function settleEncounterCanUsage(userId, encounter) {
+  const ledger = await ensureCanUsageLedgerEntry(userId, encounter);
+  if (!ledger) return { debited: 0, skipped: true };
+  return settleCanUsageLedger(userId, ledger);
+}
+
 async function getActiveRewardLedger(userId) {
   const result = await safeGet(db.collection(REWARD_LEDGER_COLLECTION)
     .where({ ownerOpenId: userId, status: 'active' })
@@ -557,6 +840,8 @@ async function createEncounter(userId, deviceId, clientRecordKey, record, profil
       catalogCatId: record.catalogCatId,
       archiveCode: record.archiveCode || null,
       captureId: record.captureId || null,
+      sourceType: normalizeSourceType(record.sourceType),
+      canUsageSource: normalizeCanUsageSource(record.canUsageSource) || 'daily-gift',
       display: record.display,
       media: record.media,
       observation: record.observation,
@@ -599,28 +884,59 @@ function chooseLaterLocation(current, candidate) {
   return getLocationTimestamp(candidate) >= getLocationTimestamp(current) ? candidate : current;
 }
 
-async function updateProfilesAfterImport(profileCounts, profileLatestRecords, profileLocationStats, profileCache) {
-  await Promise.all(Object.keys(profileCounts).map(async profileId => {
-    const latest = profileLatestRecords[profileId];
-    const profile = profileCache[profileId] || {};
-    const existingSummary = normalizeLocationSummary(profile.locationSummary);
-    const incoming = profileLocationStats[profileId] || {
-      count: 0,
-      first: null,
-      latest: null,
+async function updateProfilesAfterImport(userId, affectedProfiles, profileCacheById) {
+  await Promise.all(Object.keys(affectedProfiles).map(async profileId => {
+    const profile = profileCacheById[profileId] || {};
+    const encounterResult = await safeGet(db.collection(ENCOUNTERS_COLLECTION)
+      .where({ ownerOpenId: userId, catProfileId: profileId, status: 'active' })
+      .limit(MAX_QUERY_RECORDS)
+    );
+    const encounters = encounterResult && Array.isArray(encounterResult.data)
+      ? encounterResult.data.slice()
+      : [];
+    encounters.sort((left, right) => (
+      getDateTimestamp(left && (left.createdAt || left.capturedAt))
+      - getDateTimestamp(right && (right.createdAt || right.capturedAt))
+    ));
+
+    let firstLocation = null;
+    let latestLocation = null;
+    let locationCount = 0;
+    encounters.forEach(encounter => {
+      const location = normalizeLocation(
+        encounter && encounter.location,
+        encounter && (encounter.capturedAt || encounter.createdAt),
+      );
+      if (!location) return;
+      locationCount += 1;
+      firstLocation = chooseEarlierLocation(firstLocation, location);
+      latestLocation = chooseLaterLocation(latestLocation, location);
+    });
+
+    const first = encounters[0];
+    const latest = encounters[encounters.length - 1];
+    const nextLocationSummary = {
+      firstLocation,
+      latestLocation,
+      locationCount,
     };
     const data = {
       updatedAt: db.serverDate(),
-      lastSeenAt: latest && latest.createdAt ? latest.createdAt : db.serverDate(),
-      locationSummary: {
-        firstLocation: chooseEarlierLocation(existingSummary.firstLocation, incoming.first),
-        latestLocation: chooseLaterLocation(existingSummary.latestLocation, incoming.latest),
-        locationCount: existingSummary.locationCount + incoming.count,
-      },
+      firstSeenAt: first && (first.createdAt || first.capturedAt)
+        ? first.createdAt || first.capturedAt
+        : (profile.firstSeenAt || db.serverDate()),
+      lastSeenAt: latest && (latest.createdAt || latest.capturedAt)
+        ? latest.createdAt || latest.capturedAt
+        : db.serverDate(),
+      // 历史数据可能是 null 或旧结构，整段替换避免 CloudBase 深层合并时
+      // 尝试在 locationSummary.firstLocation/null 上创建 archiveCode 等字段。
+      locationSummary: db.command && typeof db.command.set === 'function'
+        ? db.command.set(nextLocationSummary)
+        : nextLocationSummary,
+      // 按当前用户的有效相遇记录重算，兼容上一次导入已写入 encounter、
+      // 但更新 cat_profiles 聚合字段失败的半成功状态。
+      encounterCount: encounters.length,
     };
-    const increment = db.command && db.command.inc;
-    if (increment) data.encounterCount = increment(profileCounts[profileId]);
-    else data.encounterCount = (Number(profile.encounterCount) || 0) + profileCounts[profileId];
     if (latest && latest.display) {
       if (latest.display.name) data.displayName = latest.display.name;
       if (latest.display.description) data.displayDescription = latest.display.description;
@@ -690,7 +1006,17 @@ async function calculateStats(userId) {
 }
 
 async function updateUserStats(userId) {
-  const stats = await calculateStats(userId);
+  const [stats, user] = await Promise.all([
+    calculateStats(userId),
+    getUser(userId),
+  ]);
+  const purchasedCanBalance = Number(
+    user && user.stats && user.stats.purchasedCanBalance
+  );
+  if (Number.isFinite(purchasedCanBalance)) {
+    // 购买余额不是奖励流水的计算结果，刷新相遇统计时必须原样保留。
+    stats.purchasedCanBalance = Math.max(0, Math.floor(purchasedCanBalance));
+  }
   await db.collection(USERS_COLLECTION).doc(userId).update({
     data: {
       stats,
@@ -706,6 +1032,7 @@ function toClientProfile(profile) {
     catProfileId: profile._id,
     catalogCatId: profile.catalogCatId,
     identityStatus: profile.identityStatus || 'catalog-role',
+    visibility: profile.visibility === 'private' ? 'private' : 'public',
     displayName: profile.displayName || null,
     displayDescription: profile.displayDescription || null,
     displayPosterCopy: profile.displayPosterCopy || null,
@@ -735,6 +1062,8 @@ function toClientEncounter(encounter) {
     catProfileId: encounter.catProfileId || null,
     catalogCatId: encounter.catalogCatId || '',
     archiveCode: normalizeArchiveCode(encounter.archiveCode),
+    sourceType: normalizeSourceType(encounter.sourceType),
+    canUsageSource: normalizeCanUsageSource(encounter.canUsageSource),
     display: encounter.display || {},
     media: encounter.media || {},
     // 特征向量和 GLM 结构化参数仅停留在数据库内部，不回传给小程序。
@@ -799,15 +1128,79 @@ async function getSnapshot(userId) {
   };
 }
 
+function mergeEncounterMedia(existingMedia, incomingMedia) {
+  const current = existingMedia && typeof existingMedia === 'object' ? existingMedia : {};
+  const incoming = incomingMedia && typeof incomingMedia === 'object' ? incomingMedia : {};
+  const merged = { ...current };
+
+  Object.keys(incoming).forEach(key => {
+    const value = incoming[key];
+    const hasValue = value === true
+      || typeof value === 'number'
+      || (typeof value === 'string' && value.trim())
+      || (value && typeof value === 'object');
+    if (hasValue) merged[key] = value;
+  });
+  return merged;
+}
+
+async function mergeExistingEncounterMedia(existing, record) {
+  if (!existing || !existing._id) return existing;
+  const currentMedia = existing.media && typeof existing.media === 'object'
+    ? existing.media
+    : {};
+  const nextMedia = mergeEncounterMedia(currentMedia, record && record.media);
+  if (JSON.stringify(currentMedia) === JSON.stringify(nextMedia)) return existing;
+
+  await db.collection(ENCOUNTERS_COLLECTION).doc(existing._id).update({
+    data: {
+      media: nextMedia,
+      updatedAt: db.serverDate(),
+    },
+  });
+  return { ...existing, media: nextMedia };
+}
+
+function hasCompleteStoredScore(score) {
+  if (!score || typeof score !== 'object' || score.scorePending === true) return false;
+  return ['charmScore', 'clevernessScore', 'auraScore', 'overallScore'].every(key => (
+    Number.isFinite(Number(score[key]))
+  ));
+}
+
+async function mergeExistingEncounterScore(existing, record) {
+  if (!existing || !existing._id) return existing;
+
+  const incomingScore = record && record.score && typeof record.score === 'object'
+    ? record.score
+    : null;
+  if (!hasCompleteStoredScore(incomingScore)) return existing;
+
+  const currentScore = existing.score && typeof existing.score === 'object'
+    ? existing.score
+    : null;
+  if (hasCompleteStoredScore(currentScore)) return existing;
+
+  // 整段替换评分对象，避免旧记录中残留的 null/旧版字段触发深层结构冲突。
+  await db.collection(ENCOUNTERS_COLLECTION).doc(existing._id).update({
+    data: {
+      score: db.command && typeof db.command.set === 'function'
+        ? db.command.set(incomingScore)
+        : incomingScore,
+      updatedAt: db.serverDate(),
+    },
+  });
+  return { ...existing, score: incomingScore };
+}
+
 async function importRecords(userId, event) {
   const deviceId = trimString(event.deviceId, 128);
   if (!deviceId) throw createError('DEVICE_ID_REQUIRED', '缺少本地设备编号');
   const inputs = Array.isArray(event.records) ? event.records.slice(0, MAX_IMPORT_RECORDS) : [];
   const source = event.source === 'capture' ? 'capture' : 'guest-import';
   const profileCache = {};
-  const profileCounts = {};
-  const profileLatestRecords = {};
-  const profileLocationStats = {};
+  const affectedProfiles = {};
+  const profileCacheById = {};
   const mappings = [];
   const rejected = [];
   let importedCount = 0;
@@ -827,18 +1220,35 @@ async function importRecords(userId, event) {
     const existing = await findExistingEncounter(userId, clientRecordKey);
     if (existing) {
       alreadySyncedCount += 1;
-      await ensureRewardLedgerEntry(userId, existing, source);
+      const mergedExistingMedia = await mergeExistingEncounterMedia(existing, record);
+      const mergedExisting = await mergeExistingEncounterScore(mergedExistingMedia, record);
+      // 历史客户端会把缺省状态规范化成 public，不能让普通导入覆盖用户已经
+      // 设置的 private；公开/私密切换统一通过 set-cat-visibility 操作完成。
+      if (record.visibility === 'private') {
+        await updateProfileVisibility(existing.catProfileId, record.visibility);
+      }
+      await ensureRewardLedgerEntry(userId, mergedExisting, source);
+      await settleEncounterCanUsage(userId, mergedExisting);
+      if (existing.catProfileId) {
+        affectedProfiles[existing.catProfileId] = true;
+        profileCacheById[existing.catProfileId] = { _id: existing.catProfileId };
+      }
       mappings.push({
         localRecordId: record.clientRecordId,
-        encounterId: existing._id,
-        catProfileId: existing.catProfileId || null,
-        catalogCatId: existing.catalogCatId || record.catalogCatId,
+        encounterId: mergedExisting._id,
+        catProfileId: mergedExisting.catProfileId || null,
+        catalogCatId: mergedExisting.catalogCatId || record.catalogCatId,
         alreadyExisted: true,
       });
       continue;
     }
 
     const profile = await getOrCreateProfile(userId, record, profileCache);
+    if (record.visibility === 'private') {
+      await updateProfileVisibility(profile._id, record.visibility);
+    }
+    affectedProfiles[profile._id] = true;
+    profileCacheById[profile._id] = profile;
     const encounterId = await createEncounter(
       userId,
       deviceId,
@@ -853,37 +1263,13 @@ async function importRecords(userId, event) {
       clientRecordKey,
       catProfileId: profile._id,
     }, source);
+    await settleEncounterCanUsage(userId, {
+      _id: encounterId,
+      ...record,
+      clientRecordKey,
+      catProfileId: profile._id,
+    });
     importedCount += 1;
-    profileCounts[profile._id] = (profileCounts[profile._id] || 0) + 1;
-    profileLatestRecords[profile._id] = profileLatestRecords[profile._id]
-      && profileLatestRecords[profile._id].createdAt
-      && record.createdAt
-      && profileLatestRecords[profile._id].createdAt > record.createdAt
-      ? profileLatestRecords[profile._id]
-      : record;
-    if (record.location) {
-      const locationStats = profileLocationStats[profile._id] || {
-        count: 0,
-        first: null,
-        latest: null,
-      };
-      locationStats.count += 1;
-      if (!locationStats.first || (
-        record.createdAt
-        && locationStats.first.createdAt
-        && record.createdAt < locationStats.first.createdAt
-      )) {
-        locationStats.first = record;
-      }
-      if (!locationStats.latest || (
-        record.createdAt
-        && locationStats.latest.createdAt
-        && record.createdAt >= locationStats.latest.createdAt
-      )) {
-        locationStats.latest = record;
-      }
-      profileLocationStats[profile._id] = locationStats;
-    }
     mappings.push({
       localRecordId: record.clientRecordId,
       encounterId,
@@ -894,10 +1280,9 @@ async function importRecords(userId, event) {
   }
 
   await updateProfilesAfterImport(
-    profileCounts,
-    profileLatestRecords,
-    profileLocationStats,
-    profileCache
+    userId,
+    affectedProfiles,
+    profileCacheById
   );
   const stats = await updateUserStats(userId);
 
@@ -908,6 +1293,113 @@ async function importRecords(userId, event) {
     rejected,
     mappings,
     stats,
+  };
+}
+
+async function claimGuestRecords(userId, event) {
+  const deviceId = trimString(event.deviceId, 128);
+  const guestToken = normalizeGuestToken(event.guestToken);
+  if (!deviceId) throw createError('DEVICE_ID_REQUIRED', '缺少本地设备编号');
+  if (!guestToken) throw createError('GUEST_TOKEN_REQUIRED', '匿名记录凭证不可用');
+
+  const guestTokenHash = hashGuestToken(guestToken);
+  const result = await safeGet(db.collection(GUEST_ENCOUNTERS_COLLECTION)
+    .where({
+      guestTokenHash,
+      clientDeviceId: deviceId,
+      status: 'pending',
+    })
+    .limit(MAX_IMPORT_RECORDS)
+  );
+  const now = Date.now();
+  const documents = Array.isArray(result.data) ? result.data : [];
+  const pending = documents.filter(item => (
+    item
+    && item.record
+    && (!item.expiresAt || getDateTimestamp(item.expiresAt) > now)
+  ));
+  const expired = documents.filter(item => (
+    item
+    && item.expiresAt
+    && getDateTimestamp(item.expiresAt) <= now
+  ));
+
+  await Promise.all(expired.filter(item => item._id).map(item => (
+    db.collection(GUEST_ENCOUNTERS_COLLECTION).doc(item._id).update({
+      data: {
+        status: 'expired',
+        updatedAt: db.serverDate(),
+      },
+    }).catch(() => null)
+  )));
+
+  if (!pending.length) {
+    return {
+      ok: true,
+      claimedCount: 0,
+      importedCount: 0,
+      alreadySyncedCount: 0,
+      rejected: [],
+      mappings: [],
+    };
+  }
+
+  const imported = await importRecords(userId, {
+    deviceId,
+    source: 'guest-import',
+    records: pending.map(item => item.record),
+  });
+  const mappingByLocalId = (imported.mappings || []).reduce((map, mapping) => {
+    const localRecordId = trimString(mapping && mapping.localRecordId, 128);
+    if (localRecordId) map[localRecordId] = mapping;
+    return map;
+  }, {});
+  const rejectedByLocalId = (imported.rejected || []).reduce((map, item) => {
+    const localRecordId = trimString(item && item.localRecordId, 128);
+    if (localRecordId) map[localRecordId] = item.reason || '记录校验失败';
+    return map;
+  }, {});
+  let claimedCount = 0;
+
+  await Promise.all(pending.map(async item => {
+    if (!item || !item._id) return;
+    const localRecordId = trimString(
+      item.clientRecordId || item.record && item.record.clientRecordId,
+      128,
+    );
+    const mapping = mappingByLocalId[localRecordId];
+    if (mapping) {
+      await db.collection(GUEST_ENCOUNTERS_COLLECTION).doc(item._id).update({
+        data: {
+          status: 'claimed',
+          encounterId: mapping.encounterId || null,
+          claimedByOpenId: userId,
+          claimedAt: db.serverDate(),
+          updatedAt: db.serverDate(),
+        },
+      });
+      claimedCount += 1;
+      return;
+    }
+
+    if (rejectedByLocalId[localRecordId]) {
+      await db.collection(GUEST_ENCOUNTERS_COLLECTION).doc(item._id).update({
+        data: {
+          status: 'rejected',
+          rejectReason: trimString(rejectedByLocalId[localRecordId], 240),
+          updatedAt: db.serverDate(),
+        },
+      });
+    }
+  }));
+
+  return {
+    ok: true,
+    claimedCount,
+    importedCount: imported.importedCount || 0,
+    alreadySyncedCount: imported.alreadySyncedCount || 0,
+    rejected: imported.rejected || [],
+    mappings: imported.mappings || [],
   };
 }
 
@@ -953,6 +1445,9 @@ async function savePosterResult(userId, event) {
   if (posterResult.status !== 'ready') {
     throw createError('POSTER_RESULT_NOT_READY', '只能保存已完成的海报结果');
   }
+  if (!posterResult.posterImage || !posterResult.posterImage.fileID) {
+    throw createError('POSTER_IMAGE_FILE_REQUIRED', '海报成品尚未上传完成');
+  }
 
   const encounter = await findPosterEncounter(
     userId,
@@ -974,16 +1469,57 @@ async function savePosterResult(userId, event) {
   const media = encounter.media && typeof encounter.media === 'object'
     ? encounter.media
     : {};
-  if (media.posterResult && media.posterResult.posterImage && media.posterResult.posterImage.fileID) {
+  const existingPosterFileID = media.posterResult
+    && media.posterResult.posterImage
+    && trimString(media.posterResult.posterImage.fileID, 512);
+  const incomingPosterFileID = trimString(posterResult.posterImage.fileID, 512);
+  const nextMedia = {
+    ...media,
+    posterResult,
+  };
+  const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : null;
+  const coverFileID = coverImage && trimString(coverImage.fileID, 512);
+  const coverStatus = trimString(
+    (coverImage && coverImage.status) || posterResult.coverStatus,
+    20,
+  );
+  // posterResult 是派生快照，但封面 fileID 也同步落在 media 顶层，方便列表、
+  // 分享和后续迁移直接判断“是否已有猫生图”，不必依赖临时 URL。
+  if (coverFileID && coverStatus === 'ready') {
+    Object.assign(nextMedia, {
+      coverFileID,
+      coverContentType: trimString(coverImage.contentType, 64),
+      coverProvider: trimString(coverImage.provider, 80),
+      coverModel: trimString(coverImage.model, 160),
+      coverOperation: trimString(coverImage.operation, 120),
+      coverPromptVersion: trimString(coverImage.promptVersion, 120),
+      coverTargetRatio: trimString(coverImage.targetRatio, 20),
+      coverStatus: 'ready',
+      coverRequestId: trimString(coverImage.requestId, 160),
+      coverCreatedAt: trimString(coverImage.createdAt, 80),
+      coverRejectReason: '',
+    });
+  }
+  if (
+    existingPosterFileID
+    && existingPosterFileID === incomingPosterFileID
+    && JSON.stringify(nextMedia) === JSON.stringify(media)
+  ) {
     return { ok: true, saved: true, reused: true, posterResult: media.posterResult };
   }
+  // CloudBase 的普通 update 会对对象做深层合并：当历史数据里的
+  // media.posterResult 是 null 时，写入 posterResult.archiveCode 会被
+  // 解释成“在 null 上创建子字段”，最终触发 -502001。用 set 命令
+  // 明确替换整个 media 字段，兼容 null 和旧版本的海报快照。
+  const mediaUpdate = db.command && typeof db.command.set === 'function'
+    ? db.command.set(nextMedia)
+    : nextMedia;
   await db.collection(ENCOUNTERS_COLLECTION).doc(encounter._id).update({
     data: {
       // 仅替换 media 中的派生 posterResult，保留原图、主体图和既有封面字段。
-      media: {
-        ...media,
-        posterResult,
-      },
+      media: mediaUpdate,
       updatedAt: db.serverDate(),
     },
   });
@@ -1043,12 +1579,39 @@ async function deleteCatalogArchive(userId, catalogCatId) {
   };
 }
 
+async function setCatVisibility(userId, event) {
+  const catalogCatId = normalizeCatalogCatId(event && event.catalogCatId);
+  const visibility = normalizeVisibility(event && event.visibility);
+  if (!catalogCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少猫卡角色编号');
+  if (!visibility) throw createError('VISIBILITY_INVALID', '猫卡公开状态无效');
+
+  const profile = await findProfile(userId, catalogCatId);
+  if (!profile || !profile._id) {
+    throw createError('CAT_PROFILE_NOT_FOUND', '猫卡档案还未同步完成');
+  }
+
+  await db.collection(PROFILES_COLLECTION).doc(profile._id).update({
+    data: {
+      visibility,
+      updatedAt: db.serverDate(),
+    },
+  });
+  return { ok: true, catalogCatId, visibility };
+}
+
 exports.main = async (event = {}) => {
+  const action = event.action || 'import';
+  // 未绑定账号时只允许写入不带 ownerOpenId 的匿名临时集合，不创建 users 关系。
+  if (action === 'stage-guest-records') {
+    getOpenId();
+    return stageGuestRecords(event);
+  }
+
   const userId = getOpenId();
   await ensureUser(userId);
 
-  const action = event.action || 'import';
   if (action === 'import') return importRecords(userId, event);
+  if (action === 'claim-guest-records') return claimGuestRecords(userId, event);
   if (action === 'pull') {
     const snapshot = await getSnapshot(userId);
     return { ok: true, ...snapshot };
@@ -1061,5 +1624,6 @@ exports.main = async (event = {}) => {
   if (action === 'delete-catalog-archive') {
     return deleteCatalogArchive(userId, event.catalogCatId);
   }
+  if (action === 'set-cat-visibility') return setCatVisibility(userId, event);
   throw createError('INVALID_ACTION', '不支持的数据同步操作');
 };

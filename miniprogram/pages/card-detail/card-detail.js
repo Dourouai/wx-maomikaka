@@ -8,16 +8,50 @@ const catScoring = require('../../utils/catScoring');
 const deviceLayout = require('../../utils/deviceLayout');
 const archiveIds = require('../../utils/archiveCode');
 
+function formatSourceType(value) {
+  return storage.normalizeSourceType(value).toUpperCase();
+}
+
+function callPublicCatDetail(publicCatId) {
+  if (!wx.cloud || typeof wx.cloud.callFunction !== 'function') {
+    return Promise.reject(new Error('云端服务暂时不可用'));
+  }
+
+  return new Promise((resolve, reject) => {
+    wx.cloud.callFunction({
+      name: 'cat-friends',
+      data: {
+        action: 'detail',
+        publicCatId,
+      },
+      success(response) {
+        const result = response && response.result ? response.result : response;
+        if (!result || result.ok !== true) {
+          const error = new Error(result && result.message || '猫咪档案暂时打不开');
+          error.code = result && result.code || 'CAT_FRIEND_DETAIL_FAILED';
+          reject(error);
+          return;
+        }
+        resolve(result);
+      },
+      fail: reject,
+    });
+  });
+}
+
 Page({
   data: {
     catData: null,
     featuredPhoto: '',
     featuredRecordId: '',
+    currentRecordId: '',
     shareId: '',
     isSharedArchive: false,
+    isPublicGalleryArchive: false,
     shareLoading: false,
     shareError: '',
     currentLevelCode: 'C',
+    currentSourceType: 'PHOTO',
     currentLevelLabel: '街角',
     currentLevelShortLabel: '街角常客',
     currentOverallScore: null,
@@ -26,6 +60,9 @@ Page({
     currentPawReward: null,
     currentPointReward: null,
     currentScorePending: true,
+    currentOriginalFileID: '',
+    scoreRepairBusy: false,
+    scoreRepairError: '',
     posterEligible: false,
     posterUnavailableReason: '评分尚未完成，完成评分后才能生成海报',
     archiveCode: '',
@@ -38,6 +75,12 @@ Page({
     showDeleteConfirm: false,
     deleteBusy: false,
     deleteError: '',
+    publicVisibility: 'public',
+    visibilityPublic: true,
+    visibilityBusy: false,
+    visibilityError: '',
+    returnLabel: '返回猫卡',
+    returnAriaLabel: '返回猫卡',
     pageHeaderTop: 48,
     headerRightInset: 0,
   },
@@ -51,7 +94,19 @@ Page({
     } catch (error) {
       this.shareId = '';
     }
-    this.isSharedArchive = Boolean(this.shareId);
+    const rawPublicCatId = String(options.publicCatId || '');
+    try {
+      this.publicCatId = rawPublicCatId ? decodeURIComponent(rawPublicCatId).trim() : '';
+    } catch (error) {
+      this.publicCatId = '';
+    }
+    this.returnToFriends = Boolean(this.publicCatId && !this.shareId);
+    this.isPublicGalleryArchive = this.returnToFriends;
+    this.setData({
+      returnLabel: this.returnToFriends ? '返回猫友列表' : '返回猫卡',
+      returnAriaLabel: this.returnToFriends ? '返回猫友列表' : '返回猫卡',
+    });
+    this.isSharedArchive = Boolean(this.shareId || this.publicCatId);
     this._skipInitialShowRefresh = false;
     if (this.shareId) {
       this.setData({
@@ -60,6 +115,13 @@ Page({
         shareLoading: true,
       });
       this._loadSharedArchive(this.shareId);
+    } else if (this.publicCatId) {
+      this.setData({
+        isSharedArchive: true,
+        isPublicGalleryArchive: true,
+        shareLoading: true,
+      });
+      this._loadPublicGalleryArchive(this.publicCatId);
     } else if (this.catId) {
       // onLoad 后紧接着会触发第一次 onShow，首次展示不再重复读取和组装档案。
       this._skipInitialShowRefresh = true;
@@ -104,6 +166,13 @@ Page({
   },
 
   goBack() {
+    if (this.returnToFriends) {
+      wx.navigateBack({
+        delta: 1,
+        fail: () => wx.navigateTo({ url: '/pages/cat-friends/cat-friends' }),
+      });
+      return;
+    }
     wx.navigateBack({
       delta: 1,
       fail: () => wx.switchTab({ url: '/pages/collection/collection' }),
@@ -111,6 +180,7 @@ Page({
   },
 
   openPoster() {
+    if (this.isPublicGalleryArchive) return;
     if (!this.catId && !this.shareId) return;
     if (!this.data.posterEligible) {
       wx.showToast({
@@ -127,12 +197,46 @@ Page({
     } else if (this.catId) {
       query.push(`catId=${encodeURIComponent(this.catId)}`);
     }
-    if (this.data.featuredRecordId) {
-      query.push(`recordId=${encodeURIComponent(this.data.featuredRecordId)}`);
+    if (this.data.currentRecordId) {
+      query.push(`recordId=${encodeURIComponent(this.data.currentRecordId)}`);
     }
     wx.navigateTo({
       url: `/pages/poster-loading/poster-loading?${query.join('&')}`,
     });
+  },
+
+  async repairCurrentScore() {
+    if (
+      this.isSharedArchive
+      || !this.data.currentRecordId
+      || !this.data.currentOriginalFileID
+      || this.data.scoreRepairBusy
+    ) return;
+
+    this.setData({ scoreRepairBusy: true, scoreRepairError: '' });
+    try {
+      const result = await userData.repairRecordScore(this.data.currentRecordId);
+      if (result && result.skipped) {
+        const message = result.reason === 'SCORE_SOURCE_UNAVAILABLE'
+          ? '原始照片已不可用，请重新上传'
+          : '这次评分已经完成';
+        this.setData({ scoreRepairError: message });
+        wx.showToast({ title: message, icon: 'none', duration: 1800 });
+        return;
+      }
+
+      this._loadCatData(this.catId);
+      wx.showToast({ title: '评分已补回', icon: 'success' });
+    } catch (error) {
+      console.error('[CardDetail] 补评分失败:', error);
+      const message = error && error.code === 'SCORE_INCOMPLETE'
+        ? '这张照片暂时无法完成评分'
+        : '补评分失败，请稍后再试';
+      this.setData({ scoreRepairError: message });
+      wx.showToast({ title: message, icon: 'none', duration: 1800 });
+    } finally {
+      this.setData({ scoreRepairBusy: false });
+    }
   },
 
   _loadCatData(catId) {
@@ -150,6 +254,7 @@ Page({
         name: entry.displayName,
         description: entry.displayDescription,
         posterCopy: entry.posterCopy,
+        visibility: storage.getCatVisibility(catId),
       },
       isShared: false,
       shareId: storage.getShareId(catId),
@@ -189,6 +294,42 @@ Page({
     }
   },
 
+  async _loadPublicGalleryArchive(publicCatId) {
+    try {
+      const result = await callPublicCatDetail(publicCatId);
+      const archive = result && result.archive ? result.archive : {};
+      const catalogCatId = archive.catalogCatId || archive.catId || '';
+      const records = Array.isArray(archive.records)
+        ? archive.records.map(record => this._mapSharedRecord(record, catalogCatId))
+        : [];
+      if (!catalogCatId || !records.length) throw new Error('这只猫咪暂时没有公开档案');
+
+      this.catId = catalogCatId;
+      this._applyArchiveView({
+        catId: catalogCatId,
+        rawRecords: records,
+        featuredRecordId: archive.featuredRecordId || '',
+        profile: archive.profile || {},
+        displayArchiveCode: archive.archiveCode || '',
+        isShared: true,
+        shareId: '',
+      });
+      this.setData({ isPublicGalleryArchive: true });
+    } catch (error) {
+      if (error && error.code === 'CAT_FRIEND_NOT_FOUND') {
+        console.warn('[CardDetail] 猫友公开档案不存在或已设为私密');
+      } else {
+        console.error('[CardDetail] 猫友公开档案加载失败:', error);
+      }
+      this.setData({
+        shareLoading: false,
+        shareError: error && error.code === 'CAT_FRIEND_NOT_FOUND'
+          ? '这只猫咪已设为私密或暂时不可用'
+          : '猫咪档案暂时打不开',
+      });
+    }
+  },
+
   async _getSharedArchiveWithRetry(shareId) {
     let lastError = null;
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -219,6 +360,9 @@ Page({
     const cutoutTempURL = media.cutoutTempURL || item.cutoutTempURL || '';
     const originalTempURL = media.originalTempURL || item.originalTempURL || '';
     const coverTempURL = media.coverTempURL || item.coverTempURL || '';
+    const location = item.location && typeof item.location === 'object'
+      ? item.location
+      : null;
 
     return {
       recordId,
@@ -229,7 +373,8 @@ Page({
       catDescription: display.description || item.catDescription || '',
       posterCopy: display.posterCopy || item.posterCopy || '',
       copyVersion: display.copyVersion || item.copyVersion || '',
-      photoPath: cutoutTempURL || originalTempURL || coverTempURL,
+      // 档案详情只展示透明猫咪主体；原图和生图封面由其他业务入口单独使用。
+      photoPath: cutoutTempURL,
       photo: originalTempURL,
       originalPhotoPath: originalTempURL,
       cutoutPhotoPath: cutoutTempURL,
@@ -247,6 +392,9 @@ Page({
       cutoutOperation: media.cutoutOperation || item.cutoutOperation || '',
       cutoutRequestId: media.cutoutRequestId || item.cutoutRequestId || '',
       cutoutCheckerboardRemoved: media.cutoutCheckerboardRemoved === true,
+      sourceType: storage.normalizeSourceType(
+        item.sourceType || item.captureSource || item.inputSource,
+      ),
       levelCode: score.levelCode || item.levelCode || null,
       levelLabel: score.levelLabel || item.levelLabel || null,
       levelShortLabel: score.levelShortLabel || item.levelShortLabel || null,
@@ -263,6 +411,8 @@ Page({
       scoreVersion: score.scoreVersion || '',
       scoreEvidence: score.scoreEvidence || null,
       scoreCoverage: score.scoreCoverage || null,
+      location,
+      locationStatus: item.locationStatus || (location ? 'captured' : 'unavailable'),
       detectedBreed: observation.breed || item.detectedBreed || '',
       breedConfidence: observation.breedConfidence,
       detectedTraits: Array.isArray(observation.traits) ? observation.traits : [],
@@ -342,6 +492,8 @@ Page({
     // 详情页展示当前猫咪最近一次相遇的评分，不把历史最高分误标为历史最佳。
     const currentEncounter = lastRecord ? catScoring.getStoredEncounter(lastRecord) : null;
     const currentLevel = catScoring.getLevelMeta(currentEncounter ? currentEncounter.levelCode : 'C');
+    // 海报生成仍可使用原图或封面作为输入；这里只决定海报按钮是否可用，
+    // 不参与档案主图的展示优先级。
     const hasAnyImage = sourceRecords.some(record => Boolean(
       record
       && (storage.getRecordDisplayPath(record)
@@ -357,6 +509,9 @@ Page({
       : !hasAnyImage
         ? '还没有可用的猫咪照片'
         : '';
+    const visibility = isShared
+      ? 'public'
+      : storage.normalizeVisibility(profile.visibility || storage.getCatVisibility(catId));
 
     this.catId = catId;
     this.isSharedArchive = isShared === true;
@@ -368,14 +523,18 @@ Page({
       featuredRecordId: featuredRecord
         ? (featuredRecord.recordId || featuredRecord.clientRecordId || '')
         : '',
+      currentRecordId: lastRecord
+        ? (lastRecord.recordId || lastRecord.clientRecordId || '')
+        : '',
       featuredPhoto: featuredRecord
-        ? storage.getRecordDisplayPath(featuredRecord)
+        ? storage.getRecordSubjectPath(featuredRecord)
         : '',
       shareId: this.shareId,
       isSharedArchive: this.isSharedArchive,
       shareLoading: false,
       shareError: '',
       currentLevelCode: currentLevel.code,
+      currentSourceType: formatSourceType(featuredRecord && featuredRecord.sourceType),
       currentLevelLabel: currentLevel.label,
       currentLevelShortLabel: currentLevel.shortLabel,
       currentOverallScore: currentEncounter ? currentEncounter.overallScore : null,
@@ -386,6 +545,10 @@ Page({
       currentPawReward: currentEncounter ? currentEncounter.pawReward : null,
       currentPointReward: currentEncounter ? currentEncounter.pointReward : null,
       currentScorePending: currentEncounter ? currentEncounter.scorePending : true,
+      currentOriginalFileID: lastRecord && lastRecord.originalFileID
+        ? lastRecord.originalFileID
+        : '',
+      scoreRepairError: '',
       posterEligible,
       posterUnavailableReason,
       archiveCode,
@@ -395,6 +558,10 @@ Page({
       lastSeenText: lastRecord ? this._formatDate(lastRecord.createdAt) : '--',
       locationText,
       hasLocation: Boolean(locationText),
+      publicVisibility: visibility,
+      visibilityPublic: visibility === 'public',
+      visibilityBusy: false,
+      visibilityError: '',
     });
     this._refreshPhotoURL(featuredRecord);
   },
@@ -434,6 +601,7 @@ Page({
       records: rawRecords.slice(0, 50).map(record => ({
         clientRecordId: record.clientRecordId || record.recordId,
         catalogCatId: catId,
+        sourceType: storage.normalizeSourceType(record.sourceType),
         archiveCode: archiveIds.normalizeArchiveCode(record.archiveCode)
           || archiveIds.getOrCreateArchiveCode(
             `record:${catId}:${record.recordId || record.clientRecordId || 'latest'}`,
@@ -520,24 +688,14 @@ Page({
     if (!record) return;
 
     // 本地拍摄记录通常已经有临时地址，不必再次请求云存储；共享记录也优先使用已有地址。
-    const existingPath = storage.getRecordDisplayPath(record)
-      || record.photoPath
-      || record.photo
-      || record.cutoutTempURL
-      || record.originalTempURL
-      || '';
+    const existingPath = storage.getRecordSubjectPath(record);
     if (existingPath) {
       if (this.data.featuredPhoto !== existingPath) this.setData({ featuredPhoto: existingPath });
       this._queueShareThumbnail(existingPath);
       return;
     }
 
-    const fileIDs = [
-      storage.getRecordSubjectFileID(record),
-      record.originalFileID,
-      storage.getRecordPosterSourceFileID(record),
-      record.coverFileID,
-    ].filter(Boolean);
+    const fileIDs = [storage.getRecordSubjectFileID(record)].filter(Boolean);
     if (!fileIDs.length) return;
 
     try {
@@ -547,19 +705,16 @@ Page({
           photoPath = await cloudFiles.getTempFileURL(fileID);
           if (photoPath) break;
         } catch (error) {
-          // 主体图地址失效时继续尝试拍摄原图，最后才兼容封面图 fileID。
+          // 档案页不回退到原图或生图封面，避免把非透明图片当作猫咪主体。
         }
       }
       if (!photoPath) throw new Error('云存储文件地址不可用');
       this.setData({ featuredPhoto: photoPath });
       this._queueShareThumbnail(photoPath);
     } catch (error) {
-      const fallback = storage.getRecordSubjectPath(record)
-        || storage.getRecordOriginalPath(record)
-        || storage.getRecordPosterSourcePath(record)
-        || '';
+      const fallback = storage.getRecordSubjectPath(record);
+      this.setData({ featuredPhoto: fallback || '' });
       if (fallback) {
-        this.setData({ featuredPhoto: fallback });
         this._queueShareThumbnail(fallback);
       }
       console.warn('[CardDetail] 获取主图地址失败:', error);
@@ -696,12 +851,48 @@ Page({
   },
 
   goCollection() {
+    if (this.returnToFriends) {
+      wx.navigateBack({
+        delta: 1,
+        fail: () => wx.navigateTo({ url: '/pages/cat-friends/cat-friends' }),
+      });
+      return;
+    }
     wx.switchTab({ url: '/pages/collection/collection' });
   },
 
   openDeleteConfirm() {
     if (this.isSharedArchive || !this.catId || !this.data.catData || this.data.deleteBusy) return;
     this.setData({ showDeleteConfirm: true, deleteError: '' });
+  },
+
+  async onVisibilityChange(event) {
+    if (this.isSharedArchive || !this.catId || this.data.visibilityBusy) return;
+
+    const nextVisibility = event && event.detail && event.detail.value === true
+      ? 'public'
+      : 'private';
+    this.setData({ visibilityBusy: true, visibilityError: '' });
+    try {
+      await userData.setCatVisibility(this.catId, nextVisibility);
+      this.setData({
+        publicVisibility: nextVisibility,
+        visibilityPublic: nextVisibility === 'public',
+        visibilityBusy: false,
+      });
+      wx.showToast({
+        title: nextVisibility === 'public' ? '已去猫友图鉴串门' : '已回自己的小窝',
+        icon: 'success',
+        duration: 1500,
+      });
+    } catch (error) {
+      console.error('[CardDetail] 猫卡公开状态更新失败:', error);
+      this.setData({
+        visibilityBusy: false,
+        visibilityError: '公开状态更新失败，请稍后再试。',
+      });
+      wx.showToast({ title: '公开状态更新失败', icon: 'none', duration: 1800 });
+    }
   },
 
   stopDeletePropagation() {},
@@ -751,9 +942,7 @@ Page({
     const featuredRecord = entry.featuredRecordId
       ? storage.getRecordById(entry.featuredRecordId)
       : records[0];
-    return storage.getRecordDisplayPath(featuredRecord)
-      || (featuredRecord && (featuredRecord.photoPath || featuredRecord.photo))
-      || '';
+    return storage.getRecordSubjectPath(featuredRecord) || '';
   },
 
   onShareAppMessage() {
@@ -763,12 +952,15 @@ Page({
     const shareId = this.isSharedArchive
       ? this.shareId
       : (this.catId && (storage.getShareId(this.catId) || storage.getOrCreateShareId(this.catId)));
+    const publicCatId = this.isPublicGalleryArchive ? this.publicCatId : '';
     if (!this.isSharedArchive && this.catId && !this._shareReady) {
       this._prepareShare(this.catId, storage.getRecordsForCat(this.catId), this.data.featuredRecordId);
     }
     const share = {
       title: `我在街角遇见了「${name}」｜猫咪咔咔`,
-      path: shareId
+      path: publicCatId
+        ? `/pages/card-detail/card-detail?publicCatId=${encodeURIComponent(publicCatId)}`
+        : shareId
         ? `/pages/card-detail/card-detail?shareId=${encodeURIComponent(shareId)}`
         : `/pages/card-detail/card-detail?catId=${encodeURIComponent(this.catId || '')}&from=share`,
     };
@@ -784,12 +976,15 @@ Page({
     const shareId = this.isSharedArchive
       ? this.shareId
       : (this.catId && (storage.getShareId(this.catId) || storage.getOrCreateShareId(this.catId)));
+    const publicCatId = this.isPublicGalleryArchive ? this.publicCatId : '';
     if (!this.isSharedArchive && this.catId && !this._shareReady) {
       this._prepareShare(this.catId, storage.getRecordsForCat(this.catId), this.data.featuredRecordId);
     }
     const share = {
       title: `街角遇见「${name}」｜猫咪咔咔`,
-      query: shareId
+      query: publicCatId
+        ? `publicCatId=${encodeURIComponent(publicCatId)}`
+        : shareId
         ? `shareId=${encodeURIComponent(shareId)}`
         : `catId=${encodeURIComponent(this.catId || '')}&from=timeline`,
     };

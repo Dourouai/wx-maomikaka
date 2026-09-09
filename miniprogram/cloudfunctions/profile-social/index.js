@@ -17,6 +17,7 @@ const MAX_CATS = 60;
 const MAX_ENCOUNTERS = 300;
 const MAX_SHARE_ID_LENGTH = 96;
 const PROFILE_SHARE_PATTERN = /^profileshare_[A-Za-z0-9_-]{16,96}$/;
+const PLACEHOLDER_NICKNAMES = new Set(['微信用户']);
 const LEVELS = {
   C: { label: '街角' },
   U: { label: '偶见' },
@@ -35,6 +36,11 @@ function trimString(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
 }
 
+function getDisplayName(value, fallback) {
+  const name = trimString(value, 40);
+  return name && !PLACEHOLDER_NICKNAMES.has(name.toLowerCase()) ? name : fallback;
+}
+
 function normalizeShareId(value) {
   const shareId = trimString(value, MAX_SHARE_ID_LENGTH);
   return PROFILE_SHARE_PATTERN.test(shareId) ? shareId : '';
@@ -47,6 +53,15 @@ function getOpenId() {
   return openid;
 }
 
+function getOptionalOpenId() {
+  try {
+    const context = cloud.getWXContext();
+    return trimString(context && context.OPENID, 128);
+  } catch (error) {
+    return '';
+  }
+}
+
 function isMissing(error) {
   const code = String(error && (error.errCode || error.code) || '').toLowerCase();
   const message = String(error && (error.errMsg || error.message) || '').toLowerCase();
@@ -57,6 +72,34 @@ function isMissing(error) {
     || message.includes('not found')
     || (message.includes('collection') && message.includes('not'))
     || message.includes('不存在');
+}
+
+function createCollectionConfigError(collectionName, cause) {
+  const error = createError(
+    'PROFILE_SOCIAL_NOT_CONFIGURED',
+    `主页服务缺少数据库集合 ${collectionName}，请先完成数据库初始化`,
+  );
+  error.collection = collectionName;
+  error.cause = String(cause && (cause.errMsg || cause.message) || '');
+  return error;
+}
+
+async function setCollectionDocument(collectionName, documentId, data) {
+  try {
+    return await db.collection(collectionName).doc(documentId).set({ data });
+  } catch (error) {
+    if (isMissing(error)) throw createCollectionConfigError(collectionName, error);
+    throw error;
+  }
+}
+
+async function updateCollectionDocument(collectionName, documentId, data) {
+  try {
+    return await db.collection(collectionName).doc(documentId).update({ data });
+  } catch (error) {
+    if (isMissing(error)) throw createCollectionConfigError(collectionName, error);
+    throw error;
+  }
 }
 
 async function safeGet(query) {
@@ -111,29 +154,50 @@ function getMediaFileId(record) {
   const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
     ? posterResult.sourceImage
     : {};
-  return trimString(
+  const coverFileID = trimString(
     media.coverFileID
+      || record.coverFileID
       || (posterResult.coverImage && posterResult.coverImage.fileID)
+      || (sourceImage.kind === 'cover' ? sourceImage.fileID : ''),
+    512,
+  );
+  const coverStatus = trimString(
+    media.coverStatus
+      || (record && record.coverStatus)
+      || posterResult.coverStatus
+      || sourceImage.status
+      || (coverFileID ? 'ready' : ''),
+    20,
+  ).toLowerCase();
+  return trimString(
+    // 公开主页同样按 cover → cutout → original；完整海报永远不作为缩略图。
+    (coverStatus === 'ready' ? coverFileID : '')
       || media.cutoutFileID
       || sourceImage.cutoutFileID
-      || media.originalFileID,
+      || media.originalFileID
+      || sourceImage.originalFileID
+      || '',
     512,
   );
 }
 
 function getRecordTime(record) {
-  const value = record && (record.createdAt || record.capturedAt);
+  const value = record && (record.createdAt || record.capturedAt || record.importedAt);
+  if (value && typeof value === 'object') {
+    if (value.$date !== undefined) return getRecordTime({ createdAt: value.$date });
+    if (value.value !== undefined) return getRecordTime({ createdAt: value.value });
+    if (value.seconds !== undefined) return Number(value.seconds) * 1000;
+  }
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
   const time = Date.parse(String(value || ''));
   return Number.isFinite(time) ? time : 0;
 }
 
-function chooseBestEncounter(records) {
-  return (Array.isArray(records) ? records : []).reduce((best, current) => {
-    if (!best) return current;
-    const currentScore = normalizeScore(current && current.score);
-    const bestScore = normalizeScore(best && best.score);
-    if (currentScore !== bestScore) return currentScore > bestScore ? current : best;
-    return getRecordTime(current) > getRecordTime(best) ? current : best;
+function chooseCurrentEncounter(records) {
+  return (Array.isArray(records) ? records : []).reduce((latest, current) => {
+    if (!latest) return current;
+    return getRecordTime(current) > getRecordTime(latest) ? current : latest;
   }, null);
 }
 
@@ -167,16 +231,14 @@ async function createShare(event) {
   }
 
   const profileShareId = requested || createProfileShareId();
-  await db.collection(PROFILE_SHARES_COLLECTION).doc(profileShareId).set({
-    data: {
-      schemaVersion: DATA_SCHEMA_VERSION,
-      ownerOpenId,
-      profileShareId,
-      status: 'active',
-      createdAt: existing && existing.createdAt ? existing.createdAt : db.serverDate(),
-      updatedAt: db.serverDate(),
-      lastSharedAt: db.serverDate(),
-    },
+  await setCollectionDocument(PROFILE_SHARES_COLLECTION, profileShareId, {
+    schemaVersion: DATA_SCHEMA_VERSION,
+    ownerOpenId,
+    profileShareId,
+    status: 'active',
+    createdAt: existing && existing.createdAt ? existing.createdAt : db.serverDate(),
+    updatedAt: db.serverDate(),
+    lastSharedAt: db.serverDate(),
   });
 
   return { ok: true, profileShareId };
@@ -201,7 +263,10 @@ async function loadPublicCats(ownerOpenId) {
       .where({ ownerOpenId })
       .limit(MAX_ENCOUNTERS)),
   ]);
-  const profiles = profilesResult && Array.isArray(profilesResult.data) ? profilesResult.data : [];
+  // 猫卡私密是服务端边界：个人主页不能通过历史接口绕过猫卡隐私设置。
+  const profiles = profilesResult && Array.isArray(profilesResult.data)
+    ? profilesResult.data.filter(profile => profile && profile.visibility !== 'private')
+    : [];
   const encounters = encountersResult && Array.isArray(encountersResult.data)
     ? encountersResult.data.filter(item => item && item.status === 'active')
     : [];
@@ -216,9 +281,9 @@ async function loadPublicCats(ownerOpenId) {
   const rows = profiles.map(profile => {
     const catalogCatId = trimString(profile.catalogCatId, 64);
     const records = encountersByCat[catalogCatId] || [];
-    const best = chooseBestEncounter(records);
-    const display = (best && best.display) || {};
-    const level = getLevel(best && best.score);
+    const current = chooseCurrentEncounter(records);
+    const display = (current && current.display) || {};
+    const level = getLevel(current && current.score);
     const description = trimString(
       profile.displayDescription || display.description,
       120,
@@ -228,17 +293,20 @@ async function loadPublicCats(ownerOpenId) {
       displayName: trimString(profile.displayName || display.name || '未命名猫卡', 40),
       levelCode: level.code,
       levelLabel: level.label,
-      overallScore: normalizeScore(best && best.score),
+      overallScore: normalizeScore(current && current.score),
       recordCount: Math.max(0, Number(profile.encounterCount) || records.length),
       posterCopy: trimString(profile.displayPosterCopy || display.posterCopy || description, 52),
       description,
-      photoFileID: getMediaFileId(best),
-      archiveCode: trimString(best && best.archiveCode, 32),
+      photoFileID: getMediaFileId(current),
+      archiveCode: trimString(current && current.archiveCode, 32),
     };
   });
 
   rows.sort((left, right) => right.overallScore - left.overallScore);
-  return { cats: rows, recordCount: encounters.length };
+  return {
+    cats: rows,
+    recordCount: rows.reduce((total, row) => total + row.recordCount, 0),
+  };
 }
 
 async function countFollow(query) {
@@ -249,7 +317,8 @@ async function countFollow(query) {
 }
 
 async function getPublicProfile(event) {
-  const viewerOpenId = getOpenId();
+  // 公开主页只读内容不要求登录；只有关注操作才需要身份。
+  const viewerOpenId = getOptionalOpenId();
   const { profileShareId, ownerOpenId } = await resolveOwner(event && event.profileShareId);
   const [user, publicCats, followerCount, followingCount, followRecord] = await Promise.all([
     getDocument(USERS_COLLECTION, ownerOpenId),
@@ -289,7 +358,7 @@ async function getPublicProfile(event) {
     ok: true,
     profileShareId,
     profile: {
-      name: trimString(profile.nickName, 40) || '街角观察员',
+      name: getDisplayName(profile.nickName, '街角观察员'),
       avatarTempURL: urls[avatarFileID] || '',
     },
     stats: {
@@ -313,22 +382,18 @@ async function updateFollow(event, shouldFollow) {
   const followId = createFollowId(followerOpenId, ownerOpenId);
   const existing = await getDocument(FOLLOWS_COLLECTION, followId);
   if (shouldFollow) {
-    await db.collection(FOLLOWS_COLLECTION).doc(followId).set({
-      data: {
-        schemaVersion: DATA_SCHEMA_VERSION,
-        followerOpenId,
-        followingOpenId: ownerOpenId,
-        status: 'active',
-        createdAt: existing && existing.createdAt ? existing.createdAt : db.serverDate(),
-        updatedAt: db.serverDate(),
-      },
+    await setCollectionDocument(FOLLOWS_COLLECTION, followId, {
+      schemaVersion: DATA_SCHEMA_VERSION,
+      followerOpenId,
+      followingOpenId: ownerOpenId,
+      status: 'active',
+      createdAt: existing && existing.createdAt ? existing.createdAt : db.serverDate(),
+      updatedAt: db.serverDate(),
     });
   } else if (existing) {
-    await db.collection(FOLLOWS_COLLECTION).doc(followId).update({
-      data: {
-        status: 'removed',
-        updatedAt: db.serverDate(),
-      },
+    await updateCollectionDocument(FOLLOWS_COLLECTION, followId, {
+      status: 'removed',
+      updatedAt: db.serverDate(),
     });
   }
 

@@ -8,10 +8,10 @@ const archiveIds = require('./archiveCode');
 const posterResultSchema = require('./posterResult');
 const { getCatById } = require('./catData');
 
-const TEMPLATE_VERSION = 'cat-archive-poster-v0.9';
+const TEMPLATE_VERSION = 'cat-archive-poster-v0.10';
 const RESULT_KEY_PREFIX = 'maomikaka_poster_result_';
-const POSTER_CACHE_VERSION = 'cat-poster-cache.v0.7';
-const POSTER_RESET_VERSION = 'cat-poster-rules-reset.v0.7';
+const POSTER_CACHE_VERSION = 'cat-poster-cache.v0.8';
+const POSTER_RESET_VERSION = 'cat-poster-rules-reset.v0.9';
 const POSTER_RESET_KEY = 'maomikaka_poster_rules_reset';
 const COVER_PROMPT_VERSION = 'cat-cover-prompt.v0.3';
 const DEFAULT_COPY = '在城市风里，遇见一只安静的猫。';
@@ -107,6 +107,13 @@ function sortRecords(records) {
     .slice()
     .sort((left, right) => timestampValue(right.createdAt || right.capturedAt)
       - timestampValue(left.createdAt || left.capturedAt));
+}
+
+function getCurrentRecordId(catId) {
+  const normalizedCatId = String(catId || '').trim();
+  if (!normalizedCatId) return '';
+  const records = sortRecords(storage.getRecordsForCat(normalizedCatId));
+  return recordId(records[0]);
 }
 
 /**
@@ -345,22 +352,6 @@ async function resolveRecordImage(record) {
   return null;
 }
 
-async function findSourceImage(records, preferredRecordId) {
-  const ordered = sortRecords(records);
-  const preferred = preferredRecordId
-    ? ordered.find(record => recordId(record) === preferredRecordId)
-    : null;
-  const candidates = preferred
-    ? [preferred, ...ordered.filter(record => record !== preferred)]
-    : ordered;
-
-  for (const record of candidates) {
-    const image = await resolveRecordImage(record);
-    if (image) return { record, image };
-  }
-  return null;
-}
-
 function normalizeProfile(profile, catData, records) {
   const source = profile && typeof profile === 'object' ? profile : {};
   const latest = records[0] || {};
@@ -469,6 +460,31 @@ function buildPublicArchive(catId, records, profile, featuredRecordId) {
   };
 }
 
+// 云端只保存轻量 posterResult，不保存完整 shareArchive。
+// 重新打开已有海报时，必须从本机的当前猫卡记录重建同一份公开快照，
+// 否则 poster-preview 无法准备分享，或者分享时落到空的图鉴页。
+function buildLocalShareArchive(catId, records, profile, featuredRecordId) {
+  const catData = getCatById(catId);
+  const sortedRecords = sortRecords(records);
+  if (!catData || !sortedRecords.length) return null;
+  const collection = storage.getCollection();
+  const entry = collection[catId] || {};
+  const sourceProfile = profile && typeof profile === 'object' ? profile : {};
+  const normalizedProfile = normalizeProfile({
+    name: sourceProfile.name || entry.displayName,
+    description: sourceProfile.description || entry.displayDescription,
+    posterCopy: sourceProfile.posterCopy || entry.posterCopy,
+    breed: sourceProfile.breed,
+    traits: sourceProfile.traits,
+  }, catData, sortedRecords);
+  return buildPublicArchive(
+    catId,
+    sortedRecords,
+    normalizedProfile,
+    featuredRecordId || recordId(sortedRecords[0]),
+  );
+}
+
 function getFirstScoreValue(sources, key) {
   const fields = SCORE_FIELDS[key] || [key, `${key}Score`];
   for (const source of Array.isArray(sources) ? sources : [sources]) {
@@ -510,6 +526,121 @@ function normalizePosterScore(value) {
   const score = Number(value);
   if (!Number.isFinite(score)) return 0;
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function getPosterResetAt() {
+  try {
+    const marker = wx.getStorageSync(POSTER_RESET_KEY);
+    if (!marker || marker.version !== POSTER_RESET_VERSION) return 0;
+    return timestampValue(marker.resetAt);
+  } catch (error) {
+    return 0;
+  }
+}
+
+function isPosterResultAfterReset(result) {
+  const resetAt = getPosterResetAt();
+  if (!resetAt) return true;
+  // 规则迁移失败时云端可能还残留旧结果；旧快照不能绕过本地一次性清理。
+  return timestampValue(result && result.generatedAt) > resetAt;
+}
+
+function getPosterRecordProfile(record) {
+  const value = record && typeof record === 'object' ? record : {};
+  const catId = String(value.catId || '').trim();
+  const storedRecords = catId ? sortRecords(storage.getRecordsForCat(catId)) : [];
+  const records = storedRecords.length ? storedRecords : [value];
+  const currentRecord = records[0] || value;
+  const catData = getCatById(catId) || { name: '', story: '', trait: [] };
+  const collection = storage.getCollection();
+  const entry = collection[catId] || {};
+  return {
+    record: currentRecord,
+    records,
+    profile: normalizeProfile({
+      name: entry.displayName,
+      description: entry.displayDescription,
+      posterCopy: entry.posterCopy,
+    }, catData, records),
+  };
+}
+
+/**
+ * 检查已保存的最终海报是否仍对应当前相遇记录。
+ *
+ * 海报是排版快照：评分、等级、猫名或文案更新后，旧 PNG 不能继续复用；
+ * 但封面临时地址失效不应触发新的猫生图。只要旧快照的封面状态仍一致，
+ * 即使封面当前暂时无法换取临时地址，也允许继续复用已经保存的最终 PNG。
+ */
+function isPosterResultCurrent(result, record) {
+  const candidate = posterResultSchema.normalizePosterResult(result);
+  if (!candidate || !record) return false;
+
+  const source = getPosterRecordProfile(record);
+  const currentRecord = source.record || record;
+  const currentRecordId = recordId(currentRecord);
+  if (
+    candidate.sourceArchiveId !== String(currentRecord.catId || '').trim()
+    || candidate.sourceRecordId !== currentRecordId
+  ) return false;
+
+  const currentEncounter = catScoring.getStoredEncounter(currentRecord);
+  const currentLevel = catScoring.getLevelMeta(currentEncounter ? currentEncounter.levelCode : 'C');
+  const scores = buildScoreSnapshot(currentEncounter, currentRecord);
+  const formalScore = Boolean(
+    currentEncounter
+    && currentEncounter.scorePending !== true
+    && currentEncounter.overallScore !== null
+    && Array.isArray(currentEncounter.scoreItems)
+    && currentEncounter.scoreItems.length === METRIC_ORDER.length
+  );
+  const expectedScores = {
+    mika: normalizePosterScore(formalScore ? currentEncounter.overallScore : 0),
+    charm: scores.charm,
+    cleverness: scores.cleverness,
+    aura: scores.aura,
+  };
+  if (candidate.levelCode !== currentLevel.code) return false;
+  if (candidate.name !== source.profile.name
+    || candidate.breed !== source.profile.breed
+    || candidate.copy !== source.profile.posterCopy) return false;
+  if (Object.keys(expectedScores).some(key => candidate.scores[key] !== expectedScores[key])) {
+    return false;
+  }
+
+  const currentCover = getRecordCoverRef(currentRecord);
+  const currentCoverStatus = String(currentCover.status || '').trim();
+  const savedCoverFileID = candidate.coverImage && candidate.coverImage.fileID
+    ? String(candidate.coverImage.fileID).trim()
+    : '';
+  // 旧快照可能有 coverImage.fileID 但没有 coverStatus；按 fileID 兼容为 ready。
+  const candidateCoverStatus = candidate.coverStatus || (savedCoverFileID ? 'ready' : '');
+  if (candidateCoverStatus !== currentCoverStatus) return false;
+
+  const currentCoverFileID = currentCoverStatus === 'ready'
+    ? String(currentCover.fileID || '').trim()
+    : '';
+  if (currentCoverFileID && savedCoverFileID && currentCoverFileID !== savedCoverFileID) {
+    return false;
+  }
+  if (!currentCoverFileID && savedCoverFileID && currentCoverStatus !== 'ready') {
+    return false;
+  }
+  if (currentCoverFileID
+    && candidate.sourceImage
+    && candidate.sourceImage.kind === 'cover'
+    && candidate.sourceImage.fileID
+    && candidate.sourceImage.fileID !== currentCoverFileID) {
+    return false;
+  }
+  if (!currentCoverFileID
+    && currentCoverStatus !== 'ready'
+    && candidate.sourceImage
+    && candidate.sourceImage.kind === 'cover'
+    && candidate.sourceImage.fileID) {
+    return false;
+  }
+  return true;
 }
 
 async function loadArchiveSource(options = {}) {
@@ -554,18 +685,23 @@ async function loadArchiveSource(options = {}) {
   if (!catId) throw createError('POSTER_CAT_REQUIRED', '缺少猫咪档案');
   const collection = storage.getCollection();
   const entry = collection[catId] || {};
+  const records = sortRecords(storage.getRecordsForCat(catId));
+  const profile = {
+    name: entry.displayName,
+    description: entry.displayDescription,
+    posterCopy: entry.posterCopy,
+  };
+  const featuredRecordId = options.recordId
+    || entry.featuredRecordId
+    || recordId(records[0]);
   return {
     catId,
-    records: sortRecords(storage.getRecordsForCat(catId)),
-    profile: {
-      name: entry.displayName,
-      description: entry.displayDescription,
-      posterCopy: entry.posterCopy,
-    },
-    featuredRecordId: options.recordId || entry.featuredRecordId || '',
+    records,
+    profile,
+    featuredRecordId,
     archiveCode: '',
     shareId: storage.getShareId(catId),
-    shareArchive: null,
+    shareArchive: buildLocalShareArchive(catId, records, profile, featuredRecordId),
     isShared: false,
   };
 }
@@ -578,12 +714,13 @@ async function buildPosterData(options = {}) {
 
   const records = sortRecords(source.records);
   const profile = normalizeProfile(source.profile, catData, records);
-  const featuredRecordId = source.featuredRecordId || recordId(records[0]);
   const currentRecord = records[0];
+  const currentRecordId = recordId(currentRecord);
   const currentEncounter = currentRecord ? catScoring.getStoredEncounter(currentRecord) : null;
   const currentLevel = catScoring.getLevelMeta(currentEncounter ? currentEncounter.levelCode : 'C');
-  const sourceResult = await findSourceImage(records, featuredRecordId);
-  if (!sourceResult || !sourceResult.image || !sourceResult.image.path) {
+  // 海报只取当前（最新）相遇记录；精选记录只负责档案主图，不参与海报数据组装。
+  const currentImage = currentRecord ? await resolveRecordImage(currentRecord) : null;
+  if (!currentRecord || !currentRecordId || !currentImage || !currentImage.path) {
     throw createError('POSTER_IMAGE_UNAVAILABLE', '还没有可用的猫咪照片');
   }
 
@@ -600,35 +737,37 @@ async function buildPosterData(options = {}) {
     source.catId,
     records,
     profile,
-    sourceResult.record ? recordId(sourceResult.record) : featuredRecordId,
+    currentRecordId,
   );
   const scores = buildScoreSnapshot(currentEncounter, currentRecord);
   const sourceArchiveCode = getRecordArchiveCode(
-    sourceResult.record,
+    currentRecord,
     source.catId,
     source.archiveCode,
   );
-  const sourceCoverRef = getRecordCoverRef(sourceResult.record);
+  const sourceCoverRef = getRecordCoverRef(currentRecord);
+  const hasStoredCoverReference = sourceCoverRef.status === 'ready'
+    && Boolean(sourceCoverRef.fileID || sourceCoverRef.path);
   const sourceCoverMeta = sourceCoverRef.coverImage || {};
-  const sourceCover = sourceResult.image.kind === 'cover'
+  const sourceCover = currentImage.kind === 'cover'
     ? {
-      path: sourceResult.image.path,
-      fileID: sourceResult.image.fileID || '',
-      width: sourceResult.image.width,
-      height: sourceResult.image.height,
-      contentType: sourceResult.record.coverContentType || sourceCoverMeta.contentType || '',
-      provider: sourceResult.record.coverProvider || sourceCoverMeta.provider || '',
-      model: sourceResult.record.coverModel || sourceCoverMeta.model || '',
-      operation: sourceResult.record.coverOperation
+      path: currentImage.path,
+      fileID: currentImage.fileID || '',
+      width: currentImage.width,
+      height: currentImage.height,
+      contentType: currentRecord.coverContentType || sourceCoverMeta.contentType || '',
+      provider: currentRecord.coverProvider || sourceCoverMeta.provider || '',
+      model: currentRecord.coverModel || sourceCoverMeta.model || '',
+      operation: currentRecord.coverOperation
         || sourceCoverMeta.operation
         || 'image-to-image-poster-cover',
-      promptVersion: sourceResult.record.coverPromptVersion
+      promptVersion: currentRecord.coverPromptVersion
         || sourceCoverMeta.promptVersion
         || COVER_PROMPT_VERSION,
-      targetRatio: sourceResult.record.coverTargetRatio || '359:537',
+      targetRatio: currentRecord.coverTargetRatio || '359:537',
       status: sourceCoverRef.status || 'ready',
-      requestId: sourceResult.record.coverRequestId || sourceCoverMeta.requestId || '',
-      createdAt: sourceResult.record.coverCreatedAt || sourceCoverMeta.createdAt || '',
+      requestId: currentRecord.coverRequestId || sourceCoverMeta.requestId || '',
+      createdAt: currentRecord.coverCreatedAt || sourceCoverMeta.createdAt || '',
       version: 'cat-cover.v0.3',
     }
     : null;
@@ -637,7 +776,7 @@ async function buildPosterData(options = {}) {
     posterJobId: options.posterJobId || createPosterJobId(),
     templateVersion: TEMPLATE_VERSION,
     sourceArchiveId: source.catId,
-    sourceRecordId: sourceResult.record ? recordId(sourceResult.record) : featuredRecordId,
+    sourceRecordId: currentRecordId,
     archiveCode: sourceArchiveCode,
     levelCode: currentLevel.code,
     levelLabel: currentLevel.label,
@@ -655,25 +794,28 @@ async function buildPosterData(options = {}) {
       aura: scores.aura,
     },
     sourceImage: {
-      path: sourceResult.image.path,
-      kind: sourceResult.image.kind,
-      width: sourceResult.image.width,
-      height: sourceResult.image.height,
-      fileID: sourceResult.image.fileID || '',
-      originalFileID: sourceResult.record.originalFileID || '',
-      originalContentType: sourceResult.record.originalContentType || '',
-      cutoutFileID: sourceResult.record.cutoutFileID || '',
+      path: currentImage.path,
+      kind: currentImage.kind,
+      width: currentImage.width,
+      height: currentImage.height,
+      fileID: currentImage.fileID || '',
+      originalFileID: currentRecord.originalFileID || '',
+      originalContentType: currentRecord.originalContentType || '',
+      cutoutFileID: currentRecord.cutoutFileID || '',
       sceneSeed: sourceArchiveCode
         || source.catId
-        || recordId(sourceResult.record)
+        || currentRecordId
         || '',
-      version: sourceResult.image.kind === 'cover'
+      version: currentImage.kind === 'cover'
         ? 'cat-cover.v0.3'
-        : (sourceResult.image.kind === 'cutout' ? 'cat-transform.v1' : 'safe-original.v1'),
+        : (currentImage.kind === 'cutout' ? 'cat-transform.v1' : 'safe-original.v1'),
     },
     coverImage: sourceCover,
     coverStatus: sourceCoverRef.status || '',
-    coverRejectReason: sourceResult.record.coverRejectReason || '',
+    coverRejectReason: currentRecord.coverRejectReason || '',
+    // 只要数据库已有 ready 封面引用，就禁止因为临时地址失效而再次调用猫生图。
+    // resolveRecordImage 会尽力回退到原图/主体图，Canvas 仍可完成本次排版。
+    coverGenerationAllowed: !hasStoredCoverReference,
     posterImage: {
       mode: 'cover-crop',
       width: 718,
@@ -762,12 +904,12 @@ function savePosterResult(jobId, result) {
   if (!jobId || !result) return;
   wx.setStorageSync(key, result);
 
-  // 封面成功后按“猫档案 + 相遇记录 + 模板版本”固定缓存；
-  // 后续重复打开优先复用最终海报，临时 PNG 失效时也只重绘 Canvas。
+  // 按“猫档案 + 相遇记录 + 模板版本”固定缓存最终海报；
+  // 无论封面是否成功，只要最终 PNG 已生成，后续重复打开都不再调用图生图。
   if (result.isShared !== true
-    && result.coverStatus === 'ready'
     && result.sourceArchiveId
-    && result.sourceRecordId) {
+    && result.sourceRecordId
+    && (result.posterPath || (result.posterImage && result.posterImage.fileID))) {
     const cacheKey = getPosterCacheKey(result.sourceArchiveId, result.sourceRecordId);
     if (cacheKey) {
       wx.setStorageSync(cacheKey, {
@@ -788,10 +930,11 @@ function buildPosterPersistencePayload(result) {
 
 async function getSavedPosterResult(options) {
   const source = await loadArchiveSource(options);
-  const selectedId = options.recordId || source.featuredRecordId || recordId(source.records[0]);
-  const localRecord = source.records.find(item => recordId(item) === selectedId)
-    || source.records[0]
-    || null;
+  const currentRecord = sortRecords(source.records)[0] || null;
+  const selectedId = recordId(currentRecord);
+  // 海报只复用当前最新记录的成品；精选记录上的旧海报不能覆盖当前猫咪。
+  const localRecord = currentRecord;
+  if (!selectedId) return null;
   const localSaved = localRecord && localRecord.posterResult;
   let saved;
   if (source.isShared) {
@@ -804,10 +947,19 @@ async function getSavedPosterResult(options) {
       // 云端暂不可用时，仍可复用本地已经保存的完整海报快照。
       saved = null;
     }
-    saved = saved || localSaved;
-    if (saved && saved.coverImage && saved.coverImage.fileID) {
-      storage.updateRecordCover(selectedId, saved.coverImage);
+    // 海报模板升级后，旧快照不能继续复用，否则颜色和布局会被旧成品带回来。
+    const isCurrentTemplate = candidate => candidate
+      && candidate.templateVersion === TEMPLATE_VERSION;
+    const templateCandidates = [saved, localSaved].filter(candidate => (
+      isCurrentTemplate(candidate) && isPosterResultAfterReset(candidate)
+    ));
+    const coverCandidate = templateCandidates.find(candidate => (
+      candidate.coverImage && candidate.coverImage.fileID
+    ));
+    if (coverCandidate) {
+      storage.updateRecordCover(selectedId, coverCandidate.coverImage);
     }
+    saved = templateCandidates.find(candidate => isPosterResultCurrent(candidate, currentRecord)) || null;
   }
   if (!saved || !saved.posterImage || !saved.posterImage.fileID) return null;
   // 地址失效时重新换取地址；读取失败交给页面重试，不悄悄重新生成。
@@ -816,7 +968,10 @@ async function getSavedPosterResult(options) {
   return {
     ...saved, posterPath: image.path, isShared: source.isShared,
     shareId: source.shareId, shareArchive: source.shareArchive,
-    shareReady: Boolean(source.shareId), ratio: '9:16',
+    // 本地海报的 shareId 可能已过期或对应的云端快照已被清理；
+    // 预览页打开时重新幂等写入一次，避免把失效链接直接交给微信。
+    shareReady: source.isShared ? Boolean(source.shareId) : false,
+    ratio: '9:16',
   };
 }
 
@@ -826,10 +981,30 @@ function getCachedPosterResult(sourceArchiveId, sourceRecordId) {
   try {
     const result = wx.getStorageSync(key);
     if (!result || typeof result !== 'object') return null;
-    if (result.coverStatus !== 'ready' || !result.sourceArchiveId || !result.sourceRecordId) {
+    if (
+      result.templateVersion !== TEMPLATE_VERSION
+      || result.posterCacheVersion !== POSTER_CACHE_VERSION
+      || !result.sourceArchiveId
+      || !result.sourceRecordId
+      || (!result.posterPath && !(result.posterImage && result.posterImage.fileID))
+    ) {
       return null;
     }
-    return result;
+    if (!isPosterResultAfterReset(result)) return null;
+    let currentRecord = storage.getRecordById(String(sourceRecordId || '').trim())
+      || storage.getRecordsForCat(String(sourceArchiveId || '').trim()).find(record => (
+        recordId(record) === String(sourceRecordId || '').trim()
+      ));
+    if (!currentRecord) return null;
+    // 本地缓存仍有封面 fileID 时先回填记录，兼容旧版本只把封面保存在海报缓存、
+    // 或应用清理过临时路径但尚未完成媒体同步的情况。
+    if (result.coverImage && result.coverImage.fileID) {
+      storage.updateRecordCover(result.sourceRecordId, result.coverImage);
+      currentRecord = storage.getRecordById(String(sourceRecordId || '').trim()) || currentRecord;
+    }
+    if (!isPosterResultCurrent(result, currentRecord)) return null;
+    // 本地缓存里的 shareId 不能证明云端快照仍然存在，交给预览页重新确认。
+    return { ...result, shareReady: false, shareError: '' };
   } catch (error) {
     return null;
   }
@@ -922,28 +1097,26 @@ function deletePosterCoverFiles(fileIDs) {
 }
 
 /**
- * 海报规则升级时清理旧海报缓存和 poster-cover 产物。
- * 同步清理当前账号的云端分享快照与数据库封面字段，不删除原图、主体图、档案、评分或奖励数据。
+ * 海报规则升级时只清理本机的派生海报缓存。
+ *
+ * 猫生图封面是猫卡和猫友图鉴依赖的正式云端资产，`coverFileID`、
+ * `encounters.media`、`cat_profiles` 以及云存储文件都不能在启动迁移里删除。
+ * 海报 PNG 与猫生图是两种独立资产：前者用于保存/分享海报，后者用于猫卡展示。
  */
 async function resetPosterArtifacts(options = {}) {
   if (typeof wx === 'undefined') return { reset: false, skipped: 'wx_unavailable' };
 
   const force = options.force === true;
-  const pendingFileIDs = getPendingPosterCoverFileIDs();
   let marker = null;
   try {
     marker = wx.getStorageSync(POSTER_RESET_KEY);
   } catch (error) {
     marker = null;
   }
-  if (!force
-    && marker
-    && marker.version === POSTER_RESET_VERSION
-    && pendingFileIDs.length === 0) {
+  if (!force && marker && marker.version === POSTER_RESET_VERSION) {
     return { reset: false, version: POSTER_RESET_VERSION };
   }
 
-  const fileIDs = new Set(pendingFileIDs);
   let removedCacheCount = 0;
   let keys = [];
   try {
@@ -955,7 +1128,6 @@ async function resetPosterArtifacts(options = {}) {
 
   keys.filter(key => String(key).startsWith(RESULT_KEY_PREFIX)).forEach(key => {
     try {
-      collectPosterCoverFileIDs(wx.getStorageSync(key), fileIDs);
       wx.removeStorageSync(key);
       removedCacheCount += 1;
     } catch (error) {
@@ -963,67 +1135,35 @@ async function resetPosterArtifacts(options = {}) {
     }
   });
 
-  const cleared = storage.clearAllRecordCovers();
   const clearedShareIdCount = typeof storage.clearShareIds === 'function'
     ? storage.clearShareIds()
     : 0;
-  (cleared.fileIDs || []).forEach(fileID => addPosterCoverFileID(fileIDs, fileID));
-  let cloudCleanup = null;
-  let cloudCleanupFailed = false;
   try {
-    cloudCleanup = await catShare.clearPosterArtifacts();
-    if (!cloudCleanup || cloudCleanup.ok !== true) {
-      cloudCleanupFailed = true;
-    }
-    (cloudCleanup && Array.isArray(cloudCleanup.coverFileIDs)
-      ? cloudCleanup.coverFileIDs
-      : []
-    ).forEach(fileID => addPosterCoverFileID(fileIDs, fileID));
+    // 清掉旧版本可能留下的待删除队列，但永远不再消费其中的 fileID。
+    wx.removeStorageSync(`${POSTER_RESET_KEY}_pending`);
   } catch (error) {
-    cloudCleanupFailed = true;
-    cloudCleanup = {
-      ok: false,
-      code: String(error && (error.code || error.errCode) || 'POSTER_CLOUD_CLEANUP_FAILED'),
-      message: String(error && (error.message || error.errMsg) || '云端海报数据清理失败')
-        .replace(/\s+/g, ' ')
-        .slice(0, 240),
-    };
-    console.warn('[PosterData] 云端海报产物清理失败，将在下次生成时重试:', cloudCleanup);
-  }
-  const filesToDelete = Array.from(fileIDs);
-  try {
-    wx.setStorageSync(`${POSTER_RESET_KEY}_pending`, filesToDelete);
-  } catch (error) {
-    // 云文件删除仍可继续；失败时由当前结果记录提示。
+    // 本地清理标记写入失败不影响云端正式档案。
   }
 
-  const deletion = await deletePosterCoverFiles(filesToDelete);
   const result = {
     reset: true,
     version: POSTER_RESET_VERSION,
     resetAt: Date.now(),
-    clearedRecordCount: cleared.clearedCount || 0,
+    clearedRecordCount: 0,
     clearedShareIdCount,
     removedCacheCount,
-    deletedCoverCount: deletion.deleted,
-    failedCoverCount: deletion.failed,
-    cloudCleanup: cloudCleanup
-      ? {
-        ok: cloudCleanup.ok === true,
-        clearedShareCount: Number(cloudCleanup.clearedShareCount) || 0,
-        clearedEncounterCount: Number(cloudCleanup.clearedEncounterCount) || 0,
-        code: cloudCleanup.ok === true ? '' : String(cloudCleanup.code || ''),
-      }
-      : null,
+    deletedCoverCount: 0,
+    failedCoverCount: 0,
+    cloudCleanup: {
+      ok: true,
+      skipped: 'PRESERVE_CLOUD_ARCHIVE_ASSETS',
+    },
   };
 
-  if (deletion.failed === 0 && !cloudCleanupFailed) {
-    try {
-      wx.removeStorageSync(`${POSTER_RESET_KEY}_pending`);
-      wx.setStorageSync(POSTER_RESET_KEY, result);
-    } catch (error) {
-      // 标记写入失败不影响本次清理；下次进入时最多重复检查一次。
-    }
+  try {
+    wx.setStorageSync(POSTER_RESET_KEY, result);
+  } catch (error) {
+    // 标记写入失败不影响本次本地缓存清理。
   }
   return result;
 }
@@ -1036,9 +1176,12 @@ module.exports = {
   buildScoreSnapshot,
   createPosterJobId,
   getStablePosterJobId,
+  getCurrentRecordId,
   buildPosterData,
+  isPosterResultCurrent,
   applyPosterCover,
   buildPublicArchive,
+  buildLocalShareArchive,
   buildPosterPersistencePayload,
   getSavedPosterResult,
   savePosterResult,

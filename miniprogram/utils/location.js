@@ -2,33 +2,13 @@
 //
 // 相机是拍摄的必要能力，由微信的 <camera> 组件负责申请；位置则只在
 // 用户明确选择“记录大概位置”后调用，不参与猫咪识别，也不上传给 AI 服务。
-const LOCATION_SCOPE = 'scope.userFuzzyLocation';
+const permissions = require('./permissions');
+const LOCATION_SCOPE = permissions.SCOPES.FUZZY_LOCATION;
 
 function getAuthorizationStatus() {
-  if (typeof wx === 'undefined' || typeof wx.getSetting !== 'function') {
-    return Promise.resolve('unavailable');
-  }
-
-  return new Promise(resolve => {
-    wx.getSetting({
-      success: result => {
-        const authSetting = result && result.authSetting ? result.authSetting : {};
-        if (authSetting[LOCATION_SCOPE] === true) {
-          resolve('authorized');
-          return;
-        }
-        if (authSetting[LOCATION_SCOPE] === false) {
-          resolve('denied');
-          return;
-        }
-        resolve('undetermined');
-      },
-      fail: error => {
-        console.warn('[Location] 读取位置授权状态失败:', error);
-        resolve('unavailable');
-      },
-    });
-  });
+  return permissions.getFuzzyLocationStatus().then(status => (
+    status === 'unknown' ? 'unavailable' : status
+  ));
 }
 
 function getFuzzyLocation() {

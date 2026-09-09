@@ -1,0 +1,379 @@
+/* pages/cat-friends/cat-friends.wxss */
+page {
+  --ink: #332824;
+  --muted-ink: #8c7569;
+  --line: #d7c5b3;
+  --stamp: #9b442a;
+  --coral: #e67e5f;
+  --paper: #f8f1e7;
+  --surface: #fffdf8;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.friends-page {
+  min-height: 100vh;
+  background-color: var(--surface);
+  background-image: radial-gradient(rgba(155, 68, 42, 0.13) 1.4rpx, transparent 1.4rpx);
+  background-size: 32rpx 32rpx;
+}
+
+.friends-scroll {
+  height: calc(100vh - 130rpx - env(safe-area-inset-bottom));
+}
+
+.friends-content {
+  padding: 36rpx 36rpx 0;
+  box-sizing: border-box;
+}
+
+.friends-page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 42rpx;
+  box-sizing: border-box;
+}
+
+.friends-back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  margin-right: 18rpx;
+  border: 2rpx solid var(--line);
+  border-radius: 18rpx;
+  background: rgba(255, 253, 248, 0.86);
+  box-sizing: border-box;
+}
+
+.friends-back:active {
+  opacity: 0.68;
+}
+
+.friends-back image {
+  width: 26rpx;
+  height: 26rpx;
+}
+
+.friends-brand-mark {
+  display: flex;
+  align-items: center;
+}
+
+.friends-brand-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.friends-brand-name {
+  color: var(--ink);
+  font-size: 23rpx;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.friends-brand-sub {
+  margin-top: 5rpx;
+  color: var(--muted-ink);
+  font-size: 13rpx;
+  letter-spacing: 3rpx;
+  line-height: 1;
+}
+
+.friends-page-kicker {
+  display: block;
+  margin-bottom: 16rpx;
+  color: var(--stamp);
+  font-size: 18rpx;
+  font-weight: 800;
+  letter-spacing: 5rpx;
+}
+
+.friends-title {
+  display: flex;
+  align-items: baseline;
+  color: var(--ink);
+  font-size: 56rpx;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -2rpx;
+  line-height: 1.05;
+}
+
+.friends-title-em {
+  color: var(--stamp);
+}
+
+.friends-intro-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 34rpx;
+  padding-bottom: 18rpx;
+  border-bottom: 2rpx dashed var(--line);
+}
+
+.friends-intro-value {
+  color: var(--ink);
+  font-size: 25rpx;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.friends-intro-code {
+  color: var(--stamp);
+  font-size: 18rpx;
+  letter-spacing: 1rpx;
+}
+
+.friends-intro-copy {
+  display: block;
+  margin: 18rpx 0 30rpx;
+  color: var(--muted-ink);
+  font-size: 19rpx;
+  line-height: 1.55;
+}
+
+.friends-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+}
+
+.friends-card {
+  overflow: hidden;
+  border: 2rpx solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8rpx 0 rgba(74, 55, 40, 0.05);
+}
+
+.friends-card:active {
+  opacity: 0.78;
+  transform: translateY(2rpx);
+}
+
+.friends-card-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 猫生图统一为 359:537，图片区同步使用同一比例，避免上下裁切或视觉压扁。 */
+  height: 494rpx;
+  overflow: hidden;
+  border-bottom: 2rpx solid var(--line);
+  background: var(--paper);
+}
+
+.friends-cover {
+  width: 100%;
+  height: 100%;
+}
+
+.friends-level {
+  position: absolute;
+  top: 16rpx;
+  left: 16rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 58rpx;
+  min-height: 58rpx;
+  padding: 6rpx 8rpx;
+  border: 2rpx solid currentColor;
+  color: var(--stamp);
+  background: rgba(255, 253, 248, 0.94);
+  font-size: 14rpx;
+  line-height: 1.05;
+  box-sizing: border-box;
+}
+
+.friends-level.level-C {
+  color: #8fa783;
+}
+
+.friends-level text:first-child {
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.friends-level.level-U {
+  color: #9a8aa9;
+}
+
+.friends-level.level-R {
+  color: #b78445;
+}
+
+.friends-level.level-SR {
+  color: #b96b65;
+}
+
+.friends-level.level-UR {
+  color: #665378;
+}
+
+.friends-card-date {
+  position: absolute;
+  right: 14rpx;
+  bottom: 12rpx;
+  color: var(--surface);
+  text-shadow: 0 2rpx 4rpx rgba(51, 40, 36, 0.4);
+  font-size: 14rpx;
+  letter-spacing: 1rpx;
+}
+
+.friends-card-info {
+  min-height: 168rpx;
+  padding: 18rpx 18rpx 20rpx;
+  box-sizing: border-box;
+}
+
+.friends-card-name-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.friends-card-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 26rpx;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friends-card-score {
+  flex-shrink: 0;
+  color: var(--stamp);
+  font-size: 27rpx;
+  font-weight: 800;
+}
+
+.friends-card-meta {
+  display: block;
+  margin-top: 8rpx;
+  color: var(--muted-ink);
+  font-size: 15rpx;
+  line-height: 1.25;
+}
+
+.friends-card-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 14rpx;
+  color: var(--ink);
+  font-size: 18rpx;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.friends-pagination {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 34rpx;
+  padding: 16rpx 0;
+  border-top: 2rpx dashed var(--line);
+  border-bottom: 2rpx dashed var(--line);
+}
+
+.friends-pagination-action {
+  min-width: 128rpx;
+  padding: 12rpx 14rpx;
+  border: 2rpx solid var(--line);
+  border-radius: 999rpx;
+  color: var(--stamp);
+  background: var(--surface);
+  font-size: 20rpx;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.friends-pagination-action:active {
+  opacity: 0.62;
+}
+
+.friends-pagination-action-disabled {
+  border-color: var(--line);
+  color: var(--line);
+  background: var(--paper);
+}
+
+.friends-pagination-status {
+  min-width: 84rpx;
+  color: var(--muted-ink);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 18rpx;
+  text-align: center;
+}
+
+.friends-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 480rpx;
+  padding: 40rpx 30rpx;
+  border: 2rpx dashed var(--line);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.friends-state-mark {
+  width: 118rpx;
+  height: 118rpx;
+  margin-bottom: 22rpx;
+  opacity: 0.68;
+}
+
+.friends-state-title {
+  color: var(--ink);
+  font-size: 27rpx;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.friends-state-sub {
+  margin-top: 12rpx;
+  color: var(--muted-ink);
+  font-size: 19rpx;
+}
+
+.friends-retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 190rpx;
+  min-height: 70rpx;
+  margin-top: 26rpx;
+  border: 2rpx solid var(--stamp);
+  color: var(--stamp);
+  font-size: 21rpx;
+}
+
+.friends-retry:active {
+  opacity: 0.7;
+}
+
+.friends-footnote {
+  display: block;
+  margin-top: 34rpx;
+  color: var(--muted-ink);
+  font-size: 16rpx;
+  letter-spacing: 1rpx;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.friends-bottom-safe {
+  height: 180rpx;
+}

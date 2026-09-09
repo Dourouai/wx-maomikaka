@@ -1,0 +1,128 @@
+<!-- 猫友图鉴：公开展示有猫生图的猫卡，不要求登录。 -->
+<view class="friends-page">
+  <scroll-view
+    class="friends-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    scroll-top="{{scrollTop}}"
+    refresher-enabled="{{true}}"
+    refresher-triggered="{{isRefreshing}}"
+    refresher-background="#f8f1e5"
+    bindrefresherrefresh="onPullDownRefresh"
+    bindscrolltolower="onScrollToLower"
+  >
+    <view class="friends-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="friends-page-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="friends-back" bindtap="goBack" aria-role="button" aria-label="返回上一页">
+          <image src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="friends-brand-mark">
+          <view class="friends-brand-copy">
+            <text class="friends-brand-name">猫咪咔咔</text>
+            <text class="friends-brand-sub">CITY CAT ARCHIVE</text>
+          </view>
+        </view>
+      </view>
+
+      <text class="friends-page-kicker">CAT ARCHIVE · FRIENDS</text>
+      <view class="friends-title">
+        <text>猫友</text><text class="friends-title-em">图鉴</text>
+      </view>
+      <view class="friends-intro-row">
+        <text class="friends-intro-value">来串门的猫咪</text>
+        <text class="friends-intro-code">{{cats.length}} / {{total}} 只</text>
+      </view>
+      <text class="friends-intro-copy">这里收录已经拥有猫生图的猫咪。可以来看看，猫主人想安静一下，也能随时关门谢客。</text>
+
+      <view wx:if="{{loading && cats.length === 0}}" class="friends-state friends-state-loading">
+        <image class="friends-state-mark" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+        <text class="friends-state-title">猫咪们正在排队进场</text>
+        <text class="friends-state-sub">先把猫生图整理好，马上就能见面。</text>
+      </view>
+
+      <view wx:elif="{{error && cats.length === 0}}" class="friends-state friends-state-error">
+        <image class="friends-state-mark" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+        <text class="friends-state-title">{{error}}</text>
+        <view class="friends-retry" bindtap="retryLoad" aria-role="button" aria-label="重新加载猫友图鉴">
+          <text>重新加载</text>
+        </view>
+      </view>
+
+      <view wx:elif="{{cats.length > 0}}" class="friends-grid">
+        <view
+          wx:for="{{cats}}"
+          wx:for-item="cat"
+          wx:key="publicCatId"
+          class="friends-card"
+          bindtap="openCatArchive"
+          data-public-cat-id="{{cat.publicCatId}}"
+          aria-role="button"
+          aria-label="查看 {{cat.displayName}} 的猫咪档案"
+        >
+          <view class="friends-card-image">
+            <image class="friends-cover" src="{{cat.coverTempURL}}" mode="aspectFit" lazy-load="{{true}}" />
+            <view class="friends-level level-{{cat.levelCode}}">
+              <text>{{cat.levelCode}}</text>
+              <text>{{cat.levelLabel}}</text>
+            </view>
+            <text wx:if="{{cat.createdText}}" class="friends-card-date">{{cat.createdText}}</text>
+          </view>
+          <view class="friends-card-info">
+            <view class="friends-card-name-row">
+              <text class="friends-card-name">{{cat.displayName}}</text>
+              <text class="friends-card-score">{{cat.scoreText}}</text>
+            </view>
+            <text class="friends-card-meta">{{cat.levelCode}} · {{cat.levelLabel}} · {{cat.sourceLabel}}</text>
+            <text wx:if="{{cat.posterCopy}}" class="friends-card-copy">“{{cat.posterCopy}}”</text>
+            <text wx:else class="friends-card-copy">它把一次街角偶遇，认真存成了一张猫生图。</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="friends-state friends-state-empty">
+        <image class="friends-state-mark" src="/assets/cat-placeholder.svg" mode="aspectFit" />
+        <text class="friends-state-title">今天还没有猫来串门</text>
+        <text class="friends-state-sub">等一只猫带着它的猫生图，来这里报到。</text>
+      </view>
+
+      <view wx:if="{{totalPages > 1}}" class="friends-pagination">
+        <view
+          class="friends-pagination-action {{currentPage <= 1 ? 'friends-pagination-action-disabled' : ''}}"
+          bindtap="changePage"
+          data-page="{{currentPage - 1}}"
+          aria-role="button"
+          aria-label="上一页"
+        >
+          <text>上一页</text>
+        </view>
+        <text class="friends-pagination-status">{{currentPage}} / {{totalPages}}</text>
+        <view
+          class="friends-pagination-action {{currentPage >= totalPages ? 'friends-pagination-action-disabled' : ''}}"
+          bindtap="changePage"
+          data-page="{{currentPage + 1}}"
+          aria-role="button"
+          aria-label="下一页"
+        >
+          <text>下一页</text>
+        </view>
+      </view>
+
+      <text wx:if="{{loading}}" class="friends-footnote">猫咪们正在整理第 {{currentPage}} 页。</text>
+      <text wx:elif="{{pageError}}" class="friends-footnote">{{pageError}}</text>
+      <text wx:elif="{{totalPages > 1}}" class="friends-footnote">每页 12 只猫友，点击上一页或下一页继续发现。</text>
+      <text wx:elif="{{error}}" class="friends-footnote">{{error}}</text>
+      <text wx:else class="friends-footnote">猫友都到齐啦，先和它们打个招呼。</text>
+      <view class="friends-bottom-safe"></view>
+    </view>
+  </scroll-view>
+
+  <exception-modal
+    visible="{{showException}}"
+    eyebrow="{{exceptionEyebrow}}"
+    title="{{exceptionTitle}}"
+    message="{{exceptionMessage}}"
+    primary-text="{{exceptionPrimaryText}}"
+    bind:primary="onExceptionPrimary"
+  />
+</view>

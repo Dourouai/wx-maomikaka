@@ -52,6 +52,9 @@ function callCover(fileID, contentType, options = {}) {
         contentType,
         sourceKind: options.sourceKind || 'original',
         sceneSeed: options.sceneSeed || fileID,
+        sourceRecordId: options.sourceRecordId || '',
+        catalogCatId: options.catalogCatId || '',
+        deviceId: options.deviceId || '',
         targetRatio: TARGET_RATIO,
       },
       success: resolve,
@@ -174,6 +177,15 @@ async function generatePosterCover(source = {}, options = {}) {
     const response = await callCover(sourceFileID, contentType, {
       sourceKind: options.sourceKind || selected.sourceKind,
       sceneSeed,
+      sourceRecordId: options.sourceRecordId
+        || source.sourceRecordId
+        || source.recordId
+        || '',
+      catalogCatId: options.catalogCatId
+        || source.catalogCatId
+        || source.catId
+        || '',
+      deviceId: options.deviceId || source.deviceId || '',
     });
     const result = getResult(response);
     if (!result || result.ok !== true || !result.coverFileID) {

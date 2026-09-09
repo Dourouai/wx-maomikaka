@@ -5,6 +5,7 @@ const storage = require('../../utils/storage');
 const contentSafety = require('../../utils/contentSafety');
 const catTransform = require('../../utils/catTransform');
 const catScoring = require('../../utils/catScoring');
+const catVision = require('../../utils/catVision');
 const userData = require('../../utils/userData');
 const deviceLayout = require('../../utils/deviceLayout');
 const catKnowledge = require('../../utils/catKnowledge');
@@ -255,7 +256,28 @@ Page({
     const catData = result.catData || result;
     const breedLabel = result.breedLabel || catData.breed || '未知品种';
     // 传入完整识别结果，保留 scoreEvidence / scoreCoverage，避免部分证据被误当成正式评分。
-    const encounterScore = catScoring.scoreEncounter(result);
+    let encounterScore = catScoring.scoreEncounter(result);
+    if (encounterScore.scorePending && sourceFileID) {
+      // GLM 首轮偶尔只返回识别结果或不完整证据；用同一张安全检测后的原图
+      // 独立补评分，避免相册上传记录落成 U·偶见 / -- 占位状态。
+      try {
+        console.warn('[Reveal] 识别结果待评分，启动独立补评分');
+        const repairedResult = await catVision.scoreCat('', {
+          fileID: sourceFileID,
+          contentType: sourceContentType,
+        });
+        const repairedScore = catScoring.scoreEncounter(repairedResult);
+        if (!repairedScore.scorePending) {
+          encounterScore = repairedScore;
+          console.log('[Reveal] 独立补评分完成');
+        } else {
+          console.warn('[Reveal] 独立补评分仍不完整');
+        }
+      } catch (error) {
+        // 补评分失败不阻断识别结果展示，详情页仍可按原图再次补评分。
+        console.warn('[Reveal] 独立补评分失败，保留待评分状态:', error);
+      }
+    }
 
     let cutoutPhoto = cutout.cutoutPhotoPath || '';
     if (!cutoutPhoto) {
@@ -292,6 +314,7 @@ Page({
         cutoutOperation: cutout.cutoutOperation || 'image-to-image-subject-only',
         cutoutRequestId: cutout.cutoutRequestId || '',
         cutoutCheckerboardRemoved: cutout.checkerboardRemoved === true,
+        sourceType: this._captureContext && this._captureContext.sourceType,
         location: this._captureContext && this._captureContext.location,
         locationStatus: this._captureContext && this._captureContext.locationStatus,
         createdAt: capturedAt || undefined,
@@ -338,6 +361,11 @@ Page({
       if (userData.isUserBound()) {
         userData.syncLocalData({ source: 'capture' }).catch(error => {
           console.warn('[Reveal] 已绑定记录后台同步失败，保留本地待同步状态:', error);
+        });
+      } else {
+        userData.stageLocalData({ source: 'capture' }).catch(error => {
+          // 匿名临时入库失败不阻断结果页，本机记录仍保留，绑定账号时会再次补写。
+          console.warn('[Reveal] 匿名记录临时入库失败，保留本地待同步状态:', error);
         });
       }
     } catch (err) {

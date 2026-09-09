@@ -21,6 +21,7 @@ const VISION_API_KEY = process.env.CAT_VISION_API_KEY || process.env.TOKENHUB_AP
 const VISION_MODEL = process.env.CAT_VISION_MODEL || 'glm-5.3-flash';
 // CloudBase 当前函数上限是 60 秒，必须在平台中断前主动收敛，避免被截成无上下文的失败。
 const VISION_REQUEST_TIMEOUT = 50000;
+const SCORE_REPAIR_TIMEOUT = 30000;
 const MAX_PROVIDER_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_PROVIDER_PREVIEW_LENGTH = 600;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -127,7 +128,7 @@ const INSPECTION_PROMPT = [
   '第四步根据照片中可见的毛色、花纹、姿态或神态，给这只猫取一个有趣、好记的中文名字，并写一段轻松有画面感的描述。名字 2 到 5 个字符，描述不超过 50 个字符。',
   '同时生成 posterCopy，作为后期海报主文案：约 38 个中文字符，建议控制在 28 到 52 个字符内，必须是一句完整、克制、有画面感的短句；不要换行，不要加标题、引号、标签、emoji、话题或不可见事实。',
   '名字和描述只能使用图片里看得到的内容进行合理想象，不得编造年龄、性别、地点、主人、经历、职业、健康状况或真实性格；不要使用贬损、危险或隐私内容。',
-  '不要返回最终 scores；服务端会按照固定权重计算最终 scores。',
+  '必须返回完整的 scoreEvidence；不要省略任何维度或子项。不要返回最终 scores，服务端会按照固定权重计算最终 scores。',
   '只允许返回一个 JSON 对象，不要 Markdown，不要解释：',
   '{"isCat":true,"catCount":1,"breed":"狸花猫","confidence":0.86,"name":"M字侦探","description":"额头顶着一枚小小的M字印章，目光像在巡查街角。它先不急着走，把镜头和路过的风都看了一遍。","posterCopy":"在城市风里，遇见一双回头的眼睛","traits":["短毛","虎斑纹","圆脸"],"scoreEvidence":{"charm":{"expression":82,"posture":74,"appearance":68,"affinity":61},"cleverness":{"observation":78,"reaction":66,"agility":52,"adaptation":70},"aura":{"expression":76,"patternFace":64,"presence":72,"scene":69}}}',
   'isCat 必须是布尔值；catCount 是整数；confidence 是 0 到 1 的数字；traits 最多 3 个简短中文词。',
@@ -136,8 +137,16 @@ const INSPECTION_PROMPT = [
   'scoreEvidence.charm 依次是表情与眼神、姿态表现、外观呈现、亲和氛围，权重为 35%、25%、25%、15%。',
   'scoreEvidence.cleverness 依次是观察眼神、反应与姿态、动作灵活度、环境适应感，权重为 35%、30%、20%、15%。',
   'scoreEvidence.aura 依次是神态感染力、花纹与五官组合、姿态气场、场景氛围，权重为 35%、30%、20%、15%。',
-  '每个子项都是 0 到 100 的整数；95 分以上必须能指出清楚的图片证据。不要使用品种、价格、血统、真实智商或猫卡稀有度加分。',
+  '每个子项都是 0 到 100 的整数；无法从图片判断时使用 50 作为中性分，也必须填写，不能返回 null、空对象或省略字段。95 分以上必须能指出清楚的图片证据。不要使用品种、价格、血统、真实智商或猫卡稀有度加分。',
   `breed 只能从以下标签中选择：${BREED_LABELS.join('、')}。`,
+].join('\n');
+
+const SCORE_REPAIR_PROMPT = [
+  '你是猫咪相遇评分补全器。图片中已经确认有且只有一只猫，不需要重新判断是否为猫，也不要输出品种、名字或描述。',
+  '只根据图片中能看到的猫咪表情、姿态、外观、动作和场景，为三个维度填写评分证据。图片可能是透明背景猫咪主体、截图或远景；看不清的子项使用 50 作为中性分，但必须填写完整。',
+  '只允许返回一个 JSON 对象，不要 Markdown，不要解释，不要返回 scores：',
+  '{"scoreEvidence":{"charm":{"expression":50,"posture":50,"appearance":50,"affinity":50},"cleverness":{"observation":50,"reaction":50,"agility":50,"adaptation":50},"aura":{"expression":50,"patternFace":50,"presence":50,"scene":50}}}',
+  '所有子项必须是 0 到 100 的整数，三个维度和全部子项都不能省略。95 分以上必须能由图片中的清晰证据支持。',
 ].join('\n');
 
 function createError(code, message) {
@@ -275,7 +284,7 @@ function parseProviderPayload(raw, contentType) {
   }
 }
 
-function postJson(url, payload, headers = {}) {
+function postJson(url, payload, headers = {}, options = {}) {
   return new Promise((resolve, reject) => {
     const requestUrl = new URL(url);
     const body = JSON.stringify(payload);
@@ -366,7 +375,10 @@ function postJson(url, payload, headers = {}) {
       });
     });
 
-    request.setTimeout(VISION_REQUEST_TIMEOUT, () => {
+    const timeout = Number(options.timeoutMs) > 0
+      ? Number(options.timeoutMs)
+      : VISION_REQUEST_TIMEOUT;
+    request.setTimeout(timeout, () => {
       request.destroy(createError('VISION_TIMEOUT', '视觉识别请求超时'));
     });
     request.on('error', reject);
@@ -661,10 +673,29 @@ function normalizeScoreEvidence(value) {
   let hasAnyValue = false;
   const evidence = {};
   Object.keys(SCORE_EVIDENCE_CONFIG).forEach(dimension => {
-    const source = value[dimension] && typeof value[dimension] === 'object'
-      ? value[dimension]
-      : {};
+    const rawDimension = value[dimension];
+    const source = rawDimension && typeof rawDimension === 'object' ? rawDimension : {};
+    const hasChildScore = SCORE_EVIDENCE_CONFIG[dimension].some(item => (
+      normalizeScore(source[item.key]) !== null
+    ));
+    const directDimensionScore = !hasChildScore && rawDimension && typeof rawDimension === 'object'
+      ? (rawDimension.score !== undefined
+        ? rawDimension.score
+        : (rawDimension.value !== undefined ? rawDimension.value : rawDimension.total))
+      : rawDimension;
+    const normalizedDimensionScore = normalizeScore(directDimensionScore);
     evidence[dimension] = {};
+
+    // 兼容模型把每个维度压缩成一个总分的返回格式：保留该总分并映射到
+    // 子项，令评分链路继续可用；如果同时有子项，则优先使用子项加权计算。
+    if (normalizedDimensionScore !== null) {
+      SCORE_EVIDENCE_CONFIG[dimension].forEach(item => {
+        evidence[dimension][item.key] = normalizedDimensionScore;
+      });
+      hasAnyValue = true;
+      return;
+    }
+
     SCORE_EVIDENCE_CONFIG[dimension].forEach(item => {
       const score = normalizeScore(source[item.key]);
       evidence[dimension][item.key] = score;
@@ -711,8 +742,16 @@ function getPreferredScore(rawScores, primaryKey, legacyKey) {
 }
 
 function normalizeScoreResult(value) {
-  const rawScores = value.scores && typeof value.scores === 'object' ? value.scores : {};
-  const scoreEvidence = normalizeScoreEvidence(value.scoreEvidence);
+  const source = value && typeof value === 'object' ? value : {};
+  const nestedScore = source.score && typeof source.score === 'object' ? source.score : {};
+  const rawScores = source.scores && typeof source.scores === 'object'
+    ? source.scores
+    : (nestedScore.scores && typeof nestedScore.scores === 'object' ? nestedScore.scores : {});
+  const scoreEvidenceValue = source.scoreEvidence
+    || nestedScore.scoreEvidence
+    || source.evidence
+    || rawScores.scoreEvidence;
+  const scoreEvidence = normalizeScoreEvidence(scoreEvidenceValue);
   const scores = {};
   const scoreCoverage = {};
   let hasDirectScore = false;
@@ -720,9 +759,17 @@ function normalizeScoreResult(value) {
   Object.keys(SCORE_EVIDENCE_CONFIG).forEach(dimension => {
     const evidenceScore = calculateEvidenceScore(scoreEvidence, dimension);
     const legacyKey = dimension === 'cleverness' ? 'fate' : dimension === 'aura' ? 'rarity' : null;
-    const directScore = normalizeScore(
-      legacyKey ? getPreferredScore(rawScores, dimension, legacyKey) : rawScores[dimension]
-    );
+    const directValue = legacyKey
+      ? getPreferredScore(rawScores, dimension, legacyKey)
+      : rawScores[dimension];
+    const fallbackDirectValue = directValue === undefined || directValue === null
+      ? (legacyKey
+        ? getPreferredScore(source, dimension, legacyKey)
+        : source[dimension] !== undefined
+          ? source[dimension]
+          : nestedScore[dimension])
+      : directValue;
+    const directScore = normalizeScore(fallbackDirectValue);
 
     if (directScore !== null) hasDirectScore = true;
     scores[dimension] = evidenceScore !== null ? evidenceScore : directScore;
@@ -738,6 +785,158 @@ function normalizeScoreResult(value) {
     scoreSource: scoreEvidence ? 'evidence' : (hasDirectScore ? 'legacy-direct' : 'none'),
     scoreVersion: scoreEvidence ? SCORE_VERSION : (hasDirectScore ? 'legacy-v0.1' : null),
   };
+}
+
+function isCompleteScoreResult(scoreResult) {
+  if (!scoreResult || !scoreResult.scores || typeof scoreResult.scores !== 'object') return false;
+
+  const hasAllScores = Object.keys(SCORE_EVIDENCE_CONFIG).every(dimension => (
+    Number.isFinite(Number(scoreResult.scores[dimension]))
+  ));
+  if (!hasAllScores) return false;
+
+  // 兼容模型直接返回 scores 的旧格式：直接分数没有 evidence coverage，
+  // 但三项分数完整时仍然是可展示的正式结果。
+  if (scoreResult.scoreSource === 'legacy-direct') return true;
+
+  const coverage = scoreResult.scoreCoverage;
+  return Boolean(coverage && Object.keys(SCORE_EVIDENCE_CONFIG).every(dimension => (
+    Number(coverage[dimension]) >= 0.5
+  )));
+}
+
+function isScorePayload(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (value.scoreEvidence && typeof value.scoreEvidence === 'object') return true;
+  if (value.scores && typeof value.scores === 'object') return true;
+  return ['charm', 'cleverness', 'aura', 'charmScore', 'clevernessScore', 'auraScore']
+    .some(key => Object.prototype.hasOwnProperty.call(value, key));
+}
+
+function findScorePayload(value, depth = 0) {
+  if (depth > 5 || value === null || value === undefined) return null;
+  if (typeof value !== 'object') return null;
+  if (isScorePayload(value)) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findScorePayload(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  const keys = ['parsed', 'json', 'content', 'message', 'output', 'data', 'response', 'result', 'choices'];
+  for (const key of keys) {
+    if (value[key] === undefined || value[key] === null) continue;
+    const found = findScorePayload(value[key], depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+function parseScorePayload(payload) {
+  const structured = findScorePayload(payload);
+  if (structured) return structured;
+
+  let responseText;
+  try {
+    responseText = extractResponseText(payload);
+  } catch (error) {
+    return null;
+  }
+
+  try {
+    return extractJson(responseText);
+  } catch (error) {
+    return null;
+  }
+}
+
+function createVisionRequestPayload(systemPrompt, userPrompt, buffer, contentType, maxTokens) {
+  return {
+    model: VISION_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: userPrompt },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${contentType};base64,${buffer.toString('base64')}`,
+            },
+          },
+        ],
+      },
+    ],
+    max_tokens: maxTokens,
+    temperature: 0,
+    stream: false,
+  };
+}
+
+function requestVisionModel(systemPrompt, userPrompt, buffer, contentType, options = {}) {
+  const maxTokens = Number(options.maxTokens) > 0 ? Number(options.maxTokens) : 1024;
+  return postJson(
+    `${VISION_BASE_URL}/chat/completions`,
+    createVisionRequestPayload(systemPrompt, userPrompt, buffer, contentType, maxTokens),
+    { Authorization: `Bearer ${VISION_API_KEY}` },
+    { timeoutMs: options.timeoutMs },
+  );
+}
+
+async function repairScoreIfNeeded(result, buffer, contentType) {
+  if (!result || result.code !== 'CAT_FOUND') return result;
+
+  const current = normalizeScoreResult(result);
+  if (isCompleteScoreResult(current)) return result;
+
+  console.warn('[CatVision] 首轮识别缺少完整评分，启动补评分:', {
+    scoreSource: current.scoreSource,
+    scoreCoverage: current.scoreCoverage,
+  });
+
+  try {
+    const response = await requestVisionModel(
+      SCORE_REPAIR_PROMPT,
+      '请只返回完整的 scoreEvidence JSON。',
+      buffer,
+      contentType,
+      { maxTokens: 512, timeoutMs: SCORE_REPAIR_TIMEOUT },
+    );
+    const repaired = normalizeScoreResult(parseScorePayload(response));
+    if (!isCompleteScoreResult(repaired)) {
+      console.warn('[CatVision] 补评分仍不完整，保留待评分状态:', {
+        scoreSource: repaired.scoreSource,
+        scoreCoverage: repaired.scoreCoverage,
+      });
+      return result;
+    }
+
+    console.info('[CatVision] 补评分完成:', {
+      scoreSource: repaired.scoreSource,
+      scoreCoverage: repaired.scoreCoverage,
+    });
+    return {
+      ...result,
+      scores: repaired.scores,
+      scoreEvidence: repaired.scoreEvidence,
+      scoreCoverage: repaired.scoreCoverage,
+      scoreSource: repaired.scoreSource,
+      scoreVersion: repaired.scoreVersion,
+    };
+  } catch (error) {
+    // 补评分是增强步骤，失败时保留识别和主体图结果，不把整次相遇判为失败。
+    console.warn('[CatVision] 补评分失败，保留待评分状态:', {
+      code: error && error.code,
+      stage: error && error.stage,
+      reason: error && error.reason,
+      statusCode: error && error.statusCode,
+      message: error && error.message,
+    });
+    return result;
+  }
 }
 
 function normalizeInspection(payload) {
@@ -822,7 +1021,7 @@ function normalizeInspection(payload) {
   };
 }
 
-async function inspectCat(fileID, contentType) {
+async function loadVisionImage(fileID, contentType) {
   let downloaded;
   try {
     downloaded = await cloud.downloadFile({ fileID });
@@ -839,38 +1038,44 @@ async function inspectCat(fileID, contentType) {
     throw createError('VISION_IMAGE_FORMAT_UNSUPPORTED', '图片格式不可用');
   }
 
+  return { buffer, safeContentType };
+}
+
+function normalizeVisionFailure(error, fallbackCode = 'VISION_UNAVAILABLE') {
+  if (error && (
+    error.code === 'VISION_NOT_CONFIGURED'
+    || error.code === 'VISION_INVALID_RESPONSE'
+    || error.code === 'VISION_AUTH_FAILED'
+  )) {
+    return error;
+  }
+  const unavailableError = createError(fallbackCode, '视觉识别服务暂时不可用');
+  if (error && error.code) unavailableError.causeCode = error.code;
+  if (error && error.stage) unavailableError.stage = error.stage;
+  if (error && error.reason) unavailableError.reason = error.reason;
+  if (error && typeof error.statusCode === 'number') unavailableError.statusCode = error.statusCode;
+  if (error && error.providerContentType) {
+    unavailableError.providerContentType = error.providerContentType;
+  }
+  return unavailableError;
+}
+
+async function inspectCat(fileID, contentType) {
+  const { buffer, safeContentType } = await loadVisionImage(fileID, contentType);
+
   if (!VISION_API_KEY) throw createError('VISION_NOT_CONFIGURED', 'GLM 5.3 API Key 未配置');
 
   let result;
   try {
     // TokenHub 对 GLM 5.3 使用 OpenAI Chat Completions 兼容接口。
     // 之前调用 /responses 会被网关拒绝，最终在小程序端只显示“识别服务暂时不可用”。
-    result = await postJson(`${VISION_BASE_URL}/chat/completions`, {
-      model: VISION_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content: INSPECTION_PROMPT,
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: '请仔细检查完整图片。图片中只要出现猫咪主体、猫咪局部、截图里的猫、海报里的猫或透明背景猫，都算发现猫；只有完全没有猫时才返回 isCat=false。请按规则只返回 JSON。' },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${safeContentType};base64,${buffer.toString('base64')}`,
-              },
-            },
-          ],
-        },
-      ],
-      max_tokens: 1024,
-      temperature: 0,
-      stream: false,
-    }, {
-      Authorization: `Bearer ${VISION_API_KEY}`,
-    });
+    result = await requestVisionModel(
+      INSPECTION_PROMPT,
+      '请仔细检查完整图片。图片中只要出现猫咪主体、猫咪局部、截图里的猫、海报里的猫或透明背景猫，都算发现猫；只有完全没有猫时才返回 isCat=false。请按规则只返回完整 JSON，必须包含完整 scoreEvidence。',
+      buffer,
+      safeContentType,
+      { maxTokens: 1024, timeoutMs: VISION_REQUEST_TIMEOUT },
+    );
   } catch (error) {
     console.error('[CatVision] GLM 5.3 模型调用失败:', {
       code: error && error.code,
@@ -889,19 +1094,15 @@ async function inspectCat(fileID, contentType) {
     )) {
       throw error;
     }
-    const unavailableError = createError('VISION_UNAVAILABLE', '猫咪识别服务暂时不可用');
-    if (error && error.code) unavailableError.causeCode = error.code;
-    if (error && error.stage) unavailableError.stage = error.stage;
-    if (error && error.reason) unavailableError.reason = error.reason;
-    if (error && typeof error.statusCode === 'number') unavailableError.statusCode = error.statusCode;
-    if (error && error.providerContentType) {
-      unavailableError.providerContentType = error.providerContentType;
-    }
-    throw unavailableError;
+    throw normalizeVisionFailure(error);
   }
 
   const structured = extractStructuredInspection(result);
-  if (structured) return normalizeInspection(structured);
+  if (structured) return repairScoreIfNeeded(
+    normalizeInspection(structured),
+    buffer,
+    safeContentType,
+  );
 
   let responseText;
   try {
@@ -920,14 +1121,18 @@ async function inspectCat(fileID, contentType) {
   }
 
   try {
-    return normalizeInspection(extractJson(responseText));
+    return repairScoreIfNeeded(
+      normalizeInspection(extractJson(responseText)),
+      buffer,
+      safeContentType,
+    );
   } catch (error) {
     const fallback = createNonJsonInspectionFallback(responseText);
     if (fallback) {
       console.warn('[CatVision] 模型未返回 JSON，按低置信度猫咪结果继续:', {
         responseTextLength: responseText.length,
       });
-      return fallback;
+      return repairScoreIfNeeded(fallback, buffer, safeContentType);
     }
     console.error('[CatVision] 模型 JSON 解析失败:', {
       code: error && error.code,
@@ -939,16 +1144,64 @@ async function inspectCat(fileID, contentType) {
   }
 }
 
+async function scoreCat(fileID, contentType) {
+  const { buffer, safeContentType } = await loadVisionImage(fileID, contentType);
+  if (!VISION_API_KEY) throw createError('VISION_NOT_CONFIGURED', 'GLM 5.3 API Key 未配置');
+
+  let response;
+  try {
+    response = await requestVisionModel(
+      SCORE_REPAIR_PROMPT,
+      '请只返回完整的 scoreEvidence JSON，为这张已确认的猫咪图片补回评分证据。',
+      buffer,
+      safeContentType,
+      { maxTokens: 512, timeoutMs: SCORE_REPAIR_TIMEOUT },
+    );
+  } catch (error) {
+    console.error('[CatVision] 补评分模型调用失败:', {
+      code: error && error.code,
+      stage: error && error.stage,
+      reason: error && error.reason,
+      statusCode: error && error.statusCode,
+      providerContentType: error && error.providerContentType,
+      providerResponseBytes: error && error.providerResponseBytes,
+      message: error && error.message,
+    });
+    throw normalizeVisionFailure(error, 'SCORE_UNAVAILABLE');
+  }
+
+  const normalized = normalizeScoreResult(parseScorePayload(response) || {});
+  if (!isCompleteScoreResult(normalized)) {
+    throw createError('SCORE_INCOMPLETE', '评分结果不完整');
+  }
+
+  return {
+    ok: true,
+    code: 'SCORE_FOUND',
+    scorePending: false,
+    scores: normalized.scores,
+    scoreEvidence: normalized.scoreEvidence,
+    scoreCoverage: normalized.scoreCoverage,
+    scoreSource: normalized.scoreSource,
+    scoreVersion: normalized.scoreVersion,
+  };
+}
+
 exports.main = async (event = {}) => {
-  if (event.action !== 'inspect') return { ok: false, code: 'INVALID_ACTION' };
+  const action = String(event.action || '').trim();
+  if (action !== 'inspect' && action !== 'score') {
+    return { ok: false, code: 'INVALID_ACTION' };
+  }
 
   const fileID = String(event.fileID || '').trim();
   if (!fileID) return { ok: false, code: 'INVALID_IMAGE' };
 
   try {
-    return await inspectCat(fileID, event.contentType);
+    return action === 'score'
+      ? await scoreCat(fileID, event.contentType)
+      : await inspectCat(fileID, event.contentType);
   } catch (error) {
-    console.error('[CatVision] 识别失败:', error);
+    console.error(`[CatVision] ${action === 'score' ? '补评分' : '识别'}失败:`, error);
     const result = {
       ok: false,
       code: error && error.code ? error.code : 'VISION_UNAVAILABLE',

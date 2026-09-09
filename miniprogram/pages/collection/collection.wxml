@@ -1,6 +1,17 @@
 <!-- 猫卡：街角猫档案索引 -->
 <view class="collection-page">
-  <scroll-view class="collection-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+  <scroll-view
+    class="collection-scroll"
+    scroll-y
+    enhanced
+    show-scrollbar="{{false}}"
+    refresher-enabled="{{true}}"
+    refresher-triggered="{{isRefreshing}}"
+    refresher-background="#f8f1e5"
+    bindrefresherrefresh="onPullDownRefresh"
+    scroll-top="{{scrollTop}}"
+    bindscrolltolower="onScrollToLower"
+  >
     <view class="collection-content" style="padding-top: {{pageHeaderTop}}px;">
       <view class="album-page-header" style="padding-right: {{headerRightInset}}px;">
         <view class="album-brand-mark">
@@ -102,7 +113,10 @@
         <text class="empty-album-sub">去相遇，留下第一张档案</text>
       </view>
 
-      <view class="album-footnote">轻轻滑动，继续发现城市里的猫</view>
+      <view class="album-footnote">
+        <text wx:if="{{totalPages > 1}}">每页 12 张猫卡 · 点击上一页或下一页继续查看</text>
+        <text wx:else>轻轻滑动，继续发现城市里的猫</text>
+      </view>
       <view class="collection-bottom-safe"></view>
     </view>
   </scroll-view>

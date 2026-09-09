@@ -18,8 +18,8 @@
       <view class="profile-hero">
         <view class="profile-hero-top">
           <view class="profile-avatar-wrap">
-            <image wx:if="{{profileAvatar}}" class="profile-avatar" src="{{profileAvatar}}" mode="aspectFill" />
-            <image wx:else class="profile-avatar profile-avatar-fallback" src="/assets/cat-illustration.svg" mode="aspectFit" />
+            <image wx:if="{{profileAvatar}}" class="profile-avatar" src="{{profileAvatar}}" mode="aspectFill" binderror="onAvatarError" />
+            <image wx:else class="profile-avatar profile-avatar-fallback" src="/assets/maomi-kaka-logo-square-144.png" mode="aspectFit" />
           </view>
           <view class="profile-hero-copy">
             <text class="profile-hero-name">{{profileName}}</text>

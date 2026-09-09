@@ -3,6 +3,7 @@
 // ============================================================
 const storage = require('./utils/storage');
 const userData = require('./utils/userData');
+const posterData = require('./utils/posterData');
 
 // 固定使用已关联小程序的 CloudBase 环境，避免开发者工具或第三方托管
 // 的当前环境路由到其他环境，导致云函数/云存储调用落错位置。
@@ -15,20 +16,32 @@ App({
     this._initCloud();
     // 初始化存储（首次启动建表，幂等操作）
     storage.initStorage();
+    // 海报规则升级后只清理一次本机派生缓存；猫生图、猫卡档案和云端文件必须保留。
+    this.posterResetPromise = posterData.resetPosterArtifacts().then(result => {
+      if (result && result.reset) {
+        console.info('[App] 旧海报数据已清理，后续打开海报将重新生成:', result);
+      }
+    }).catch(error => {
+      console.warn('[App] 旧海报数据清理暂未完成，下次启动会继续重试:', error);
+    });
     // 将最新统计同步到 globalData
     this.globalData.userStats = storage.getUserStats();
     // 只校验当前微信账号是否变化，不自动导入本地记录；数据绑定仍需用户确认。
-    userData.checkAccount().catch(error => {
-      console.warn('[App] 当前账号校验暂未完成:', error);
-    });
+    userData.checkAccount()
+      .then(() => this._refreshBoundData('app-launch'))
+      .catch(error => {
+        console.warn('[App] 当前账号校验暂未完成:', error);
+      });
   },
 
   onShow() {
     // 每次前台显示时刷新统计（以防其他页面修改了数据）
     this.globalData.userStats = storage.getUserStats();
-    userData.checkAccount().catch(error => {
-      console.warn('[App] 当前账号校验暂未完成:', error);
-    });
+    userData.checkAccount()
+      .then(() => this._refreshBoundData('app-show'))
+      .catch(error => {
+        console.warn('[App] 当前账号校验暂未完成:', error);
+      });
   },
 
   // ── 全局数据 ─────────────────────────────────────────────
@@ -36,6 +49,7 @@ App({
     /** 用户统计：{ totalPhotos, unlockedCount, lastPhotoTime, pawGrowth, pointBalance } */
     userStats: null,
     cloudReady: false,
+    openCanRecharge: false,
   },
 
   _initCloud() {
@@ -59,5 +73,20 @@ App({
    */
   refreshStats() {
     this.globalData.userStats = storage.getUserStats();
+  },
+
+  _refreshBoundData(source) {
+    if (!userData.isUserBound()) return;
+    const summary = storage.getSyncSummary();
+    const task = summary.pendingRecords > 0
+      ? userData.syncLocalData({ source: source || 'background-retry' })
+      : userData.refreshRemoteData();
+    task.catch(error => {
+      console.warn('[App] 账号数据后台刷新暂未完成:', {
+        source: source || '',
+        code: error && (error.code || error.errCode) ? String(error.code || error.errCode) : '',
+        message: error && (error.message || error.errMsg) ? String(error.message || error.errMsg) : '',
+      });
+    });
   },
 });

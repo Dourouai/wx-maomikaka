@@ -27,7 +27,7 @@
           <text class="info-section-head-title">开发者处理的信息</text>
           <text class="info-section-head-code">WHAT WE COLLECT</text>
         </view>
-        <text class="privacy-body">本版本会在你主动拍摄猫咪照片后处理照片，用于内容安全检查、猫咪识别、主体图处理和生成相遇档案；在开发模式中，只有当你主动选择照片时，才会读取你选中的一张猫咪照片，用于提取猫咪主体并生成透明背景图片。当你主动点击保存海报时，还会使用相册（仅写入）权限将海报保存到设备。拍照后是否记录大概位置由你选择，开发者只处理实现这些功能所必要的信息。</text>
+        <text class="privacy-body">本版本会在你主动拍摄或选择猫咪照片后处理照片，用于内容安全检查、猫咪识别、主体图处理、评分和生成相遇档案；选择照片时只读取你主动选中的一张猫咪照片。当你主动点击保存海报时，还会使用相册（仅写入）权限将海报保存到设备。拍照后是否记录大概位置由你选择，开发者只处理实现这些功能所必要的信息。</text>
 
         <view class="privacy-permissions">
           <view class="privacy-permission">
@@ -63,7 +63,7 @@
             </view>
             <view class="privacy-permission-copy">
               <text class="privacy-permission-title">相遇档案与统计</text>
-              <text>未绑定账号时，猫咪档案、相遇记录和成长统计主要保存在当前设备；绑定当前微信账号并确认同步后，相关档案和记录会保存到云端，供你在其他设备继续查看。</text>
+              <text>未绑定账号时，猫咪档案、相遇记录和成长统计保存在当前设备；为支持处理过程恢复、海报保存和后续绑定，必要的图片文件、处理结果和记录也可能暂存到云端临时记录中，不带正式账号归属。绑定当前微信账号并确认同步后，临时记录才会认领到该账号；未绑定的临时记录默认保留约 30 天，过期后不再认领并按清理策略删除。</text>
             </view>
           </view>
           <view class="privacy-permission">
@@ -81,7 +81,7 @@
             </view>
             <view class="privacy-permission-copy">
               <text class="privacy-permission-title">其他信息</text>
-              <text>当前版本不主动读取微信昵称。只有你主动选择头像后，头像才会保存在当前设备并用于展示个人档案；完成登录后才会关联当前微信账号，不参与猫咪识别或建立用户画像。</text>
+              <text>登录时经你主动点击并完成微信头像昵称填写能力后，取得你选择的微信头像和昵称，用于展示个人档案和绑定当前微信账号；本地会保留展示所需资料，绑定后账号资料会保存到当前微信账号的云端。微信填写的昵称不走自定义文本审核；不参与猫咪识别或建立用户画像。</text>
             </view>
           </view>
         </view>
@@ -170,7 +170,7 @@
           <text class="info-section-head-title">信息的存储</text>
           <text class="info-section-head-code">STORAGE</text>
         </view>
-        <text class="privacy-body">未绑定账号时，档案、相遇记录、可选的模糊位置和统计主要保存在当前设备；绑定并确认同步后，相关记录会保存到当前微信账号的云端。原始照片和主体图保存在云存储，数据库保存文件编号、处理结果元数据和你选择记录的模糊位置。除法律法规另有规定外，开发者不设置超出处理目的所必要的固定保存期限。</text>
+        <text class="privacy-body">未绑定账号时，档案、相遇记录、可选的模糊位置和统计保存在当前设备；识别或保存海报期间，必要的原始照片、主体图、海报文件和处理结果可能暂存到云端的匿名临时记录中，不包含正式账号归属。临时记录默认保留约 30 天，绑定并确认同步后会认领到当前微信账号；未绑定且过期的记录不再认领，并按清理策略删除。绑定后，相关记录保存到当前微信账号的云端。数据库保存文件编号、处理结果元数据和你选择记录的模糊位置。除法律法规另有规定外，开发者不设置超出处理目的所必要的固定保存期限。</text>
       </view>
 
       <view class="privacy-section">
@@ -202,7 +202,7 @@
       </view>
 
       <view class="info-footnote">
-        <text>版本：V0.1 · 更新日期：2026.09.06；本页面为产品原型文案，正式上线前将完成主体信息、SDK 清单、实际数据流和法务审核的补充。</text>
+        <text>版本：{{privacyPolicyVersion}} · 更新日期：{{privacyPolicyUpdatedAt}}；微信公众平台隐私指引、主体信息、SDK 清单和实际数据流须与本版本同步后再发布。</text>
       </view>
       <view class="info-bottom-safe"></view>
     </view>

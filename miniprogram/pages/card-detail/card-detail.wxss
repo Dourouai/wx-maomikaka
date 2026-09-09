@@ -513,11 +513,12 @@ page {
   background: var(--coral);
 }
 
-.score-fill-C { background: #9d968b; }
-.score-fill-U { background: #c48c4a; }
-.score-fill-R { background: #6caabd; }
-.score-fill-SR { background: #a789bd; }
-.score-fill-UR { background: #ef745e; }
+/* 与 posterCanvas / 猫友图鉴使用同一套等级色。 */
+.score-fill-C { background: #8fa783; }
+.score-fill-U { background: #9a8aa9; }
+.score-fill-R { background: #b78445; }
+.score-fill-SR { background: #b96b65; }
+.score-fill-UR { background: #665378; }
 
 .score-value {
   flex: none;
@@ -532,6 +533,31 @@ page {
   margin-top: 18rpx;
   color: var(--muted);
   font-size: 18rpx;
+}
+
+.score-repair-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48rpx;
+  margin-top: 14rpx;
+  padding: 0 18rpx;
+  border: 2rpx solid rgba(155, 68, 42, 0.28);
+  border-radius: 999rpx;
+  color: var(--stamp);
+  background: rgba(255, 253, 248, 0.42);
+  font-size: 17rpx;
+}
+
+.score-repair-action:active {
+  opacity: 0.72;
+}
+
+.score-repair-error {
+  display: block;
+  margin-top: 10rpx;
+  color: var(--muted);
+  font-size: 16rpx;
 }
 
 .score-footer {
@@ -659,6 +685,51 @@ page {
 
 .file-primary-icon {
   font-size: 24rpx;
+}
+
+.file-visibility-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 86rpx;
+  margin-top: 18rpx;
+  padding: 0 18rpx 0 22rpx;
+  border: 2rpx solid var(--line);
+  border-radius: 18rpx;
+  background: rgba(248, 241, 231, 0.62);
+  box-sizing: border-box;
+}
+
+.file-visibility-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin-right: 16rpx;
+}
+
+.file-visibility-title {
+  color: var(--ink);
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.file-visibility-subtitle {
+  margin-top: 6rpx;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 16rpx;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-visibility-error {
+  display: block;
+  margin: 10rpx 4rpx 0;
+  color: var(--stamp);
+  font-size: 16rpx;
 }
 
 .file-action-note {

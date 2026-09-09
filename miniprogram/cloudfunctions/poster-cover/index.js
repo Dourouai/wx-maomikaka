@@ -9,6 +9,8 @@ cloud.init({
   timeout: 900000,
 });
 
+const db = cloud.database();
+const ENCOUNTERS_COLLECTION = 'encounters';
 const COVER_VERSION = 'cat-cover.v0.3';
 const PROMPT_VERSION = 'cat-cover-prompt.v0.3';
 const COVER_PROVIDER = 'hunyuan-image';
@@ -151,6 +153,207 @@ function isSupportedImage(buffer, contentType) {
   const safeType = getImageContentType(contentType);
   return ['image/png', 'image/jpeg'].includes(safeType)
     && detectImageContentType(buffer, safeType) === safeType;
+}
+
+function getCurrentOpenId() {
+  try {
+    const context = cloud.getWXContext();
+    return String(context && context.OPENID || '').trim().slice(0, 128);
+  } catch (error) {
+    return '';
+  }
+}
+
+function getCoverIdentity(event) {
+  const source = event && typeof event === 'object' ? event : {};
+  return {
+    ownerOpenId: getCurrentOpenId(),
+    deviceId: String(source.deviceId || '').trim().slice(0, 128),
+    sourceRecordId: String(source.sourceRecordId || source.recordId || '')
+      .trim().slice(0, 128),
+    catalogCatId: String(source.catalogCatId || source.sourceArchiveId || '')
+      .trim().slice(0, 64),
+  };
+}
+
+function getStoredCover(encounter) {
+  const source = encounter && typeof encounter === 'object' ? encounter : {};
+  const media = source.media && typeof source.media === 'object' ? source.media : {};
+  const posterResult = media.posterResult && typeof media.posterResult === 'object'
+    ? media.posterResult
+    : {};
+  const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : {};
+  const declaredStatus = String(
+    media.coverStatus
+      || source.coverStatus
+      || posterResult.coverStatus
+      || coverImage.status
+      || '',
+  ).trim().toLowerCase();
+  const fileID = String(
+    media.coverFileID
+      || source.coverFileID
+      || coverImage.fileID
+      || (posterResult.sourceImage
+        && posterResult.sourceImage.kind === 'cover'
+        ? posterResult.sourceImage.fileID
+        : '')
+      || '',
+  ).trim();
+
+  // 旧记录可能只有 coverFileID，没有 coverStatus；只要没有明确标记失败/处理中，
+  // 就按已经生成过的成品兼容读取。明确 rejected/pending 时不能误判为可复用。
+  const status = declaredStatus || (fileID ? 'ready' : '');
+  if (!fileID || status !== 'ready') return null;
+
+  return {
+    ok: true,
+    reused: true,
+    coverFileID: fileID,
+    coverContentType: String(
+      media.coverContentType || source.coverContentType || coverImage.contentType || 'image/jpeg',
+    ).trim(),
+    coverStatus: 'ready',
+    coverVersion: String(coverImage.version || COVER_VERSION).trim(),
+    targetRatio: String(media.coverTargetRatio || source.coverTargetRatio
+      || coverImage.targetRatio || TARGET_RATIO).trim(),
+    targetSize: TARGET_SIZE,
+    provider: String(media.coverProvider || source.coverProvider
+      || coverImage.provider || COVER_PROVIDER).trim(),
+    model: String(media.coverModel || source.coverModel
+      || coverImage.model || COVER_MODEL).trim(),
+    operation: String(media.coverOperation || source.coverOperation
+      || coverImage.operation || 'image-to-image-poster-cover').trim(),
+    promptVersion: String(media.coverPromptVersion || source.coverPromptVersion
+      || coverImage.promptVersion || PROMPT_VERSION).trim(),
+    sceneVariant: String(coverImage.sceneVariant || '').trim(),
+    requestId: String(media.coverRequestId || source.coverRequestId
+      || coverImage.requestId || '').trim(),
+    createdAt: String(media.coverCreatedAt || source.coverCreatedAt
+      || coverImage.createdAt || '').trim() || new Date().toISOString(),
+    coverRejectReason: '',
+  };
+}
+
+async function findStoredCover(event) {
+  const identity = getCoverIdentity(event);
+  if (!identity.ownerOpenId || !identity.sourceRecordId || !identity.catalogCatId) return null;
+
+  try {
+    let response = null;
+    if (identity.deviceId) {
+      response = await db.collection(ENCOUNTERS_COLLECTION)
+        .where({
+          ownerOpenId: identity.ownerOpenId,
+          clientRecordKey: `${identity.deviceId}:${identity.sourceRecordId}`,
+          status: 'active',
+        })
+        .limit(1)
+        .get();
+    }
+    if (!response || !Array.isArray(response.data) || !response.data.length) {
+      response = await db.collection(ENCOUNTERS_COLLECTION)
+        .where({
+          ownerOpenId: identity.ownerOpenId,
+          clientRecordId: identity.sourceRecordId,
+          catalogCatId: identity.catalogCatId,
+          status: 'active',
+        })
+        .limit(1)
+        .get();
+    }
+    const encounter = response && Array.isArray(response.data)
+      ? response.data[0]
+      : null;
+    if (encounter && String(encounter.catalogCatId || '').trim() !== identity.catalogCatId) {
+      return null;
+    }
+    return getStoredCover(encounter);
+  } catch (error) {
+    // 缓存查询失败不能阻断本次生成；生成结果仍会返回，客户端/同步链路继续兜底保存。
+    console.warn('[PosterCover] 查询已有封面失败，继续生成:', {
+      code: error && (error.errCode || error.code) || '',
+      message: error && (error.errMsg || error.message) || '',
+    });
+    return null;
+  }
+}
+
+async function persistGeneratedCover(event, cover) {
+  const identity = getCoverIdentity(event);
+  if (!identity.ownerOpenId || !identity.sourceRecordId || !identity.catalogCatId) {
+    return { saved: false, reason: 'COVER_SOURCE_NOT_SYNCED' };
+  }
+
+  try {
+    let response = null;
+    if (identity.deviceId) {
+      response = await db.collection(ENCOUNTERS_COLLECTION)
+        .where({
+          ownerOpenId: identity.ownerOpenId,
+          clientRecordKey: `${identity.deviceId}:${identity.sourceRecordId}`,
+          status: 'active',
+        })
+        .limit(1)
+        .get();
+    }
+    if (!response || !Array.isArray(response.data) || !response.data.length) {
+      response = await db.collection(ENCOUNTERS_COLLECTION)
+        .where({
+          ownerOpenId: identity.ownerOpenId,
+          clientRecordId: identity.sourceRecordId,
+          catalogCatId: identity.catalogCatId,
+          status: 'active',
+        })
+        .limit(1)
+        .get();
+    }
+    const encounter = response && Array.isArray(response.data)
+      ? response.data[0]
+      : null;
+    if (!encounter || !encounter._id
+      || String(encounter.catalogCatId || '').trim() !== identity.catalogCatId) {
+      return { saved: false, reason: 'COVER_SOURCE_NOT_SYNCED' };
+    }
+
+    const media = encounter.media && typeof encounter.media === 'object'
+      ? encounter.media
+      : {};
+    const nextMedia = {
+      ...media,
+      coverFileID: cover.coverFileID,
+      coverContentType: cover.coverContentType,
+      coverProvider: cover.provider,
+      coverModel: cover.model,
+      coverOperation: cover.operation,
+      coverPromptVersion: cover.promptVersion,
+      coverTargetRatio: cover.targetRatio,
+      coverStatus: 'ready',
+      coverRequestId: cover.requestId || '',
+      coverCreatedAt: cover.createdAt,
+      coverRejectReason: '',
+    };
+    const mediaUpdate = db.command && typeof db.command.set === 'function'
+      ? db.command.set(nextMedia)
+      : nextMedia;
+    await db.collection(ENCOUNTERS_COLLECTION).doc(encounter._id).update({
+      data: {
+        // 先保存封面再排版最终海报，避免 posterResult 同步失败导致下次重复生图。
+        media: mediaUpdate,
+        updatedAt: db.serverDate(),
+      },
+    });
+    return { saved: true, encounterId: encounter._id };
+  } catch (error) {
+    // 不能因为“立即落库”失败而丢掉已经生成的封面；后续 save-poster-result/import 仍会重试。
+    console.warn('[PosterCover] 立即保存封面失败，保留生成结果:', {
+      code: error && (error.errCode || error.code) || '',
+      message: error && (error.errMsg || error.message) || '',
+    });
+    return { saved: false, reason: 'COVER_PERSIST_FAILED' };
+  }
 }
 
 async function getSourceImage(fileID, contentType) {
@@ -351,7 +554,7 @@ async function generateCoverImage(sourceImage, sceneSeed) {
   };
 }
 
-async function generatePosterCover(fileID, contentType, sceneSeed) {
+async function generatePosterCover(fileID, contentType, sceneSeed, event) {
   const sourceImage = await getSourceImage(fileID, contentType);
   const generated = await generateCoverImage(sourceImage, sceneSeed);
   const extension = generated.contentType === 'image/jpeg' ? 'jpg' : 'png';
@@ -363,7 +566,7 @@ async function generatePosterCover(fileID, contentType, sceneSeed) {
     throw createError('COVER_UPLOAD_FAILED', '封面图片保存失败');
   }
 
-  return {
+  const result = {
     ok: true,
     coverFileID: uploadResult.fileID,
     coverContentType: generated.contentType,
@@ -380,6 +583,8 @@ async function generatePosterCover(fileID, contentType, sceneSeed) {
     createdAt: new Date().toISOString(),
     coverRejectReason: '',
   };
+  await persistGeneratedCover(event, result);
+  return result;
 }
 
 exports.main = async (event = {}) => {
@@ -397,7 +602,10 @@ exports.main = async (event = {}) => {
 
   const sceneSeed = event.sceneSeed || event.archiveCode || event.recordId || fileID;
   try {
-    return await generatePosterCover(fileID, event.contentType, sceneSeed);
+    // 同一猫卡记录命中已保存的封面时，直接返回原 fileID，绝不再次调用图生图模型。
+    const stored = await findStoredCover(event);
+    if (stored) return stored;
+    return await generatePosterCover(fileID, event.contentType, sceneSeed, event);
   } catch (error) {
     const code = error && error.code ? String(error.code).slice(0, 100) : 'COVER_PROVIDER_UNAVAILABLE';
     const message = error && error.message

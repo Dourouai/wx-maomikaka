@@ -4,7 +4,7 @@
 // 临时路径只用于本地预览，不写入 encounters。
 
 const POSTER_RESULT_SCHEMA_VERSION = 1;
-const DEFAULT_POSTER_CACHE_VERSION = 'cat-poster-cache.v0.7';
+const DEFAULT_POSTER_CACHE_VERSION = 'cat-poster-cache.v0.8';
 
 function text(value, maxLength) {
   return String(value || '')
@@ -112,6 +112,59 @@ function normalizePosterResult(value, options = {}) {
   return normalized;
 }
 
+function canonicalTime(value) {
+  if (value === undefined || value === null || value === '') return '';
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return String(Math.round(numeric));
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? String(parsed) : String(value);
+}
+
+function imageIdentity(value) {
+  const image = value && typeof value === 'object' ? value : {};
+  return [
+    text(image.kind, 20),
+    text(image.fileID || image.coverFileID, 512),
+    text(image.version, 120),
+  ].join('\u0000');
+}
+
+/**
+ * 判断两个结果是否来自同一份海报数据快照。
+ *
+ * posterImage.fileID 不参与比较：同一份快照在数据库写入失败后可能重新上传
+ * 一次 PNG，但不能因此把它误判成新的海报。generatedAt 用来区分用户重新排版
+ * 后的结果，保证评分、文案或封面发生变化时可以替换旧的成品。
+ */
+function isSamePosterSnapshot(left, right) {
+  const a = normalizePosterResult(left);
+  const b = normalizePosterResult(right);
+  if (!a || !b) return false;
+
+  const textFields = [
+    'sourceArchiveId',
+    'sourceRecordId',
+    'templateVersion',
+    'posterCacheVersion',
+    'archiveCode',
+    'levelCode',
+    'levelLabel',
+    'levelShortLabel',
+    'name',
+    'breed',
+    'copy',
+    'coverStatus',
+  ];
+  if (textFields.some(field => a[field] !== b[field])) return false;
+  if (canonicalTime(a.generatedAt) !== canonicalTime(b.generatedAt)) return false;
+
+  const scoreFields = ['mika', 'charm', 'cleverness', 'aura'];
+  if (scoreFields.some(field => a.scores[field] !== b.scores[field])) return false;
+  if (imageIdentity(a.sourceImage) !== imageIdentity(b.sourceImage)) return false;
+  if (imageIdentity(a.coverImage) !== imageIdentity(b.coverImage)) return false;
+  return true;
+}
+
 function toPersistencePayload(result, options = {}) {
   const normalized = normalizePosterResult(result, options);
   if (!normalized || normalized.status !== 'ready') return null;
@@ -122,5 +175,6 @@ module.exports = {
   POSTER_RESULT_SCHEMA_VERSION,
   DEFAULT_POSTER_CACHE_VERSION,
   normalizePosterResult,
+  isSamePosterSnapshot,
   toPersistencePayload,
 };

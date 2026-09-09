@@ -4,11 +4,12 @@ const posterShare = require('../../utils/posterShare');
 const posterCover = require('../../utils/posterCover');
 const storage = require('../../utils/storage');
 const userData = require('../../utils/userData');
+const cloudFiles = require('../../utils/cloudFiles');
 
 const STAGES = {
   snapshotting: {
-    title: '正在整理猫咪档案',
-    copy: '保留这次相遇的名字和分数',
+    title: '正在查找已生成海报',
+    copy: '已有海报会直接打开，不重复生成',
   },
   'preparing-image': {
     title: '正在生成猫咪封面',
@@ -44,10 +45,17 @@ Page({
   },
 
   onLoad(options = {}) {
+    const catId = decodeOption(options.catId);
+    const shareId = decodeOption(options.shareId);
+    const requestedRecordId = decodeOption(options.recordId || options.sourceRecordId);
+    const currentRecordId = !shareId && catId && typeof posterData.getCurrentRecordId === 'function'
+      ? posterData.getCurrentRecordId(catId)
+      : '';
     this.options = {
-      catId: decodeOption(options.catId),
-      recordId: decodeOption(options.recordId || options.sourceRecordId),
-      shareId: decodeOption(options.shareId),
+      catId,
+      // 兼容旧链接，但本地档案始终以最新记录为海报来源。
+      recordId: currentRecordId || requestedRecordId,
+      shareId,
     };
     this.posterJobId = decodeOption(options.jobId)
       || posterData.getStablePosterJobId(this.options.catId, this.options.recordId)
@@ -93,6 +101,19 @@ Page({
     if (!cached) return null;
     if (await this._isImageAvailable(cached.posterPath)) return cached;
 
+    // 本地临时 PNG 过期后，直接用已经上传的 posterImage fileID 换新地址；
+    // 不能因为本地临时路径失效就重新走猫生图。
+    if (cached.posterImage && cached.posterImage.fileID) {
+      try {
+        const posterPath = await cloudFiles.getTempFileURL(cached.posterImage.fileID);
+        if (posterPath && await this._isImageAvailable(posterPath)) {
+          return { ...cached, posterPath };
+        }
+      } catch (error) {
+        // 云端成品暂时不可读时继续尝试恢复封面引用，不触发生图。
+      }
+    }
+
     // 最终 PNG 是本地临时文件，过期后恢复已固定的封面元数据，后面只重绘 Canvas。
     if (cached.coverImage && cached.sourceRecordId) {
       storage.updateRecordCover(cached.sourceRecordId, cached.coverImage);
@@ -109,21 +130,41 @@ Page({
   _persistPosterResult(result) {
     const payload = posterData.buildPosterPersistencePayload(result);
     if (!payload) return;
-    return userData.savePosterResult({ ...payload, posterPath: result.posterPath }).then(response => {
-      if (response && response.posterResult) {
-        result.posterImage = response.posterResult.posterImage;
-        posterData.savePosterResult(this.posterJobId, result);
+    return (async () => {
+      let lastError = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const response = await userData.savePosterResult({
+            ...payload,
+            posterPath: result.posterPath,
+          });
+          if (response && response.posterResult) {
+            result.posterImage = response.posterResult.posterImage;
+            posterData.savePosterResult(this.posterJobId, result);
+          }
+          if (!response || response.saved !== true) {
+            console.info('[PosterLoading] 海报结果暂未写入云端:', response && response.reason);
+          }
+          return response;
+        } catch (error) {
+          lastError = error;
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)));
+          }
+        }
       }
-      if (!response || response.saved !== true) {
-        console.info('[PosterLoading] 海报结果暂未写入云端:', response && response.reason);
-      }
-    }).catch(error => {
-      // 本地缓存已可用于当前预览；云端写入失败时，后续再次打开海报会重试。
+
+      // 本地缓存已可用于当前预览；云端写入失败时保留待同步状态，后续打开/回到前台会重试。
       console.warn('[PosterLoading] 海报结果写入云端失败:', {
-        code: error && (error.code || error.errCode) ? String(error.code || error.errCode) : '',
-        message: error && (error.message || error.errMsg) ? String(error.message || error.errMsg) : '',
+        code: lastError && (lastError.code || lastError.errCode)
+          ? String(lastError.code || lastError.errCode)
+          : '',
+        message: lastError && (lastError.message || lastError.errMsg)
+          ? String(lastError.message || lastError.errMsg)
+          : '',
       });
-    });
+      return null;
+    })();
   },
 
   async _generate() {
@@ -132,7 +173,25 @@ Page({
     this._setStage('snapshotting');
 
     try {
-      // 云端成品优先；读取失败只提示重试，不能触发隐式重新生成。
+      // 等待规则升级触发的一次性清理完成，避免旧快照清理与新海报生成并发发生。
+      const app = typeof getApp === 'function' ? getApp() : null;
+      if (app && app.posterResetPromise) await app.posterResetPromise;
+
+      // 先复用本地固定成品；只有本地没有可用图片时，才查询云端成品。
+      // 命中任一成品都直接打开，不能触发隐式重新生成。
+      const cachedResult = await this._getCachedPosterResult();
+      if (this._cancelled) return;
+      if (cachedResult) {
+        console.info('[PosterLoading] 命中本地海报缓存，跳过生成接口');
+        this.posterData = cachedResult;
+        posterData.savePosterResult(this.posterJobId, cachedResult);
+        this._persistPosterResult(cachedResult);
+        this._setStage('validating');
+        this._redirectToPreview();
+        return;
+      }
+
+      // 本地没有成品时查询云端；读取失败只提示重试，不能触发隐式重新生成。
       let saved = null;
       try {
         saved = await posterData.getSavedPosterResult(this.options);
@@ -145,17 +204,8 @@ Page({
       }
       if (this._cancelled) return;
       if (saved) {
+        console.info('[PosterLoading] 命中云端海报结果，跳过生成接口');
         posterData.savePosterResult(this.posterJobId, saved);
-        this._redirectToPreview();
-        return;
-      }
-      const cachedResult = await this._getCachedPosterResult();
-      if (this._cancelled) return;
-      if (cachedResult) {
-        // 同一条记录已经有固定海报时，直接复用，不重新构建或调用 AI。
-        this.posterData = cachedResult;
-        posterData.savePosterResult(this.posterJobId, cachedResult);
-        this._persistPosterResult(cachedResult);
         this._setStage('validating');
         this._redirectToPreview();
         return;
@@ -176,9 +226,16 @@ Page({
       let renderData = data;
       // 已经验收的封面直接复用；分享档案只读取分享者已经生成的封面，
       // 不在接收者设备上悄悄消耗一次图生图额度。
-      if (!data.isShared && data.sourceImage.kind !== 'cover') {
+      if (!data.isShared
+        && data.sourceImage.kind !== 'cover'
+        && data.coverGenerationAllowed !== false) {
         try {
-          const cover = await posterCover.generatePosterCover(data.sourceImage);
+          const cover = await posterCover.generatePosterCover(data.sourceImage, {
+            sourceRecordId: data.sourceRecordId,
+            catalogCatId: data.sourceArchiveId,
+            sceneSeed: data.sourceImage.sceneSeed,
+            deviceId: storage.getDeviceId(),
+          });
           if (this._cancelled) return;
           renderData = posterData.applyPosterCover(data, cover);
           storage.updateRecordCover(data.sourceRecordId, cover);
@@ -201,6 +258,10 @@ Page({
             errMsg: error && error.errMsg ? String(error.errMsg) : '',
           });
         }
+      } else if (!data.isShared && data.sourceImage.kind !== 'cover') {
+        console.info('[PosterLoading] 已有猫生图封面引用但当前地址不可用，跳过再次生成:', {
+          sourceRecordId: data.sourceRecordId,
+        });
       }
       this.posterData = renderData;
       if (this._cancelled) return;

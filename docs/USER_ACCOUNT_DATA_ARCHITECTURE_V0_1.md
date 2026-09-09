@@ -8,7 +8,7 @@
 
 本项目使用微信小程序 CloudBase 的云函数身份链路，不在小程序端自建账号、密码、token，也不把 `openid` 传给客户端。
 
-云函数通过 `cloud.getWXContext().OPENID` 获取当前微信用户，客户端只拿到“是否已绑定”、同步结果和用户主动选择的头像档案。服务端另外为每个用户生成一个随机 `accountBindingKey`，客户端只用它检测同一设备是否切换了微信账号，不把它当作登录凭证。`traceUser: true` 只负责 CloudBase 用户追踪，不代表业务数据已经完成同步。
+云函数通过 `cloud.getWXContext().OPENID` 获取当前微信用户，客户端只拿到“是否已绑定”和同步结果。登录只建立账号身份，不读取微信头像和昵称；记录同步只同步本机记录；用户主动点击资料卡“设置”后，才选择并保存微信头像/昵称档案，保存前由服务端调用微信文本/图片内容安全接口审核。服务端另外为每个用户生成一个随机 `accountBindingKey`，客户端只用它检测同一设备是否切换了微信账号，不把它当作登录凭证。`traceUser: true` 只负责 CloudBase 用户追踪，不代表业务数据已经完成同步。
 
 产品上的“未登录”定义为：当前设备还没有把本地数据绑定到云端；不是把本地记录丢弃，也不是要求用户先完成账号注册。
 
@@ -46,7 +46,8 @@
     "pointBalance": 0
   },
   "profile": {
-    "avatarFileID": "cloud fileID，用户主动选择头像后保存"
+    "avatarFileID": "cloud fileID，用户同步资料时保存的微信头像",
+    "nickName": "用户同步资料时填写的微信昵称"
   },
   "createdAt": "server date",
   "updatedAt": "server date",
@@ -54,9 +55,9 @@
 }
 ```
 
-首版不保存手机号和精确位置。位置采用微信 `wx.getFuzzyLocation`，仅在拍照完成后用户明确选择“记录大概位置”时读取，并按约百米级精度写入对应拍照记录；头像只在用户主动选择后保存在当前设备，完成登录后再关联为用户档案的一部分；本版不保存微信昵称。
+首版不保存手机号和精确位置。位置采用微信 `wx.getFuzzyLocation`，仅在拍照完成后用户明确选择“记录大概位置”时读取，并按约百米级精度写入对应拍照记录；登录时只建立当前微信账号身份，不读取头像和昵称。用户主动点击资料卡“设置”时，使用微信官方头像/昵称填写控件，再随 `profile` 传给 `auth-bootstrap`；服务端完成 `msgSecCheck` / `imgSecCheck` 后，才关联为用户档案的一部分。记录同步不再触发资料采集。
 
-`users.profile` 仅保存用户主动选择的头像云文件编号，用于在“我的”页面展示；客户端不把微信头像用于猫咪识别，也不把它加入猫咪特征数据。
+`users.profile` 仅保存用户在资料卡设置中主动提供、并通过内容安全审核的微信头像云文件编号和微信昵称，用于在“我的”和公开个人主页展示；客户端不把微信头像用于猫咪识别，也不把它加入猫咪特征数据。登录和记录同步本身不会写入这两个字段。
 
 ### `cat_profiles`
 
@@ -125,8 +126,8 @@
       "schemaVersion": 1,
       "status": "ready",
       "posterJobId": "poster_fixed_xxx",
-      "templateVersion": "cat-archive-poster-v0.9",
-      "posterCacheVersion": "cat-poster-cache.v0.7",
+      "templateVersion": "cat-archive-poster-v0.10",
+      "posterCacheVersion": "cat-poster-cache.v0.8",
       "sourceArchiveId": "cat_021",
       "sourceRecordId": "rec_local_id",
       "archiveCode": "202609071234AB",
@@ -262,10 +263,18 @@
   → 用户选择“记录大概位置”后，才触发微信模糊位置授权；选择“暂不记录”或授权失败，仍继续识别和入档
   → `encounters.location` 保存本次记录；`cat_profiles.locationSummary` 保存该猫卡位置的首次、最近一次和采样次数
 
-我的 → 绑定当前微信账号
-  → 显示本机记录数量
+我的 → 点击登录并绑定当前微信账号
+  → auth-bootstrap（不带 profile）
+  → 登录完成，显示本机记录待同步
+
+我的 → 点击资料卡“设置”
+  → 选择微信头像、填写微信昵称
+  → auth-bootstrap（nicknameSource=settings）
+  → 服务端审核昵称和头像
+  → 审核通过后保存 users.profile
+
+我的 → 点击“继续同步”（仅有 pending 时展示）
   → 用户确认导入
-  → auth-bootstrap
   → sync-guest-data/import
   → sync-guest-data/pull
   → 本地记录标记 synced，云端记录回填本机
@@ -295,7 +304,7 @@
 - `sync-guest-data`
 - `cat-archive-share`
 
-先在 CloudBase 文档数据库中创建 `users`、`cat_profiles`、`encounters`、`cat_shares`、`user_reward_ledger` 五个集合；代码会把没有记录的集合查询当作空结果，但首次写入仍需要集合已存在。
+先在 CloudBase 文档数据库中创建 `users`、`cat_profiles`、`encounters`、`cat_shares`、`profile_shares`、`user_follows`、`user_reward_ledger`、`can_usage_ledger`、`virtual_payment_orders` 九个集合；代码会把没有记录的集合查询当作空结果，但首次写入仍需要集合已存在。`profile_shares` 和 `user_follows` 仅由 `profile-social` 云函数使用，权限设置为 `无权限[ADMINONLY]`。
 
 如果当前环境的云函数执行上限仍是 3 秒，请在 CloudBase 函数配置中把这三个数据函数的超时时间调到至少 30 秒；客户端已经按 20 条记录分批，避免一次导入过大。
 

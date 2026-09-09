@@ -9,13 +9,6 @@ Page({
     exceptionPrimaryText: '知道了',
   },
 
-  goTextImage() {
-    wx.navigateTo({
-      url: '/pages/text-image/text-image',
-      fail: () => this._showException('文字生图没打开', '测试页面暂时没有准备好，请稍后再试'),
-    });
-  },
-
   goImageImage() {
     wx.navigateTo({
       url: '/pages/image-image/image-image',

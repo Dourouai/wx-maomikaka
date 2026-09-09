@@ -23,16 +23,8 @@ function assertCloudAvailable() {
 
 function getFileInfo(filePath) {
   return new Promise((resolve, reject) => {
-    if (typeof wx.getFileInfo === 'function') {
-      wx.getFileInfo({
-        filePath,
-        success: resolve,
-        fail: reject,
-      });
-      return;
-    }
-
-    const fileSystemManager = wx.getFileSystemManager && wx.getFileSystemManager();
+    const fileSystemManager =
+      typeof wx.getFileSystemManager === 'function' ? wx.getFileSystemManager() : null;
     if (!fileSystemManager || typeof fileSystemManager.getFileInfo !== 'function') {
       reject(createError('IMAGE_INFO_UNAVAILABLE', '无法读取图片信息'));
       return;

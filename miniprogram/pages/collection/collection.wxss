@@ -233,11 +233,12 @@ page {
   font-size: 17rpx;
 }
 
-.level-mark-C { color: #6f6b62; }
-.level-mark-U { color: #9c6d35; }
-.level-mark-R { color: #3f7189; }
-.level-mark-SR { color: #74558b; }
-.level-mark-UR { color: #873e30; }
+/* 与 posterCanvas 的等级色保持一致，避免图鉴和海报出现两套 R/SR 语义。 */
+.level-mark-C { color: #8fa783; }
+.level-mark-U { color: #9a8aa9; }
+.level-mark-R { color: #b78445; }
+.level-mark-SR { color: #b96b65; }
+.level-mark-UR { color: #665378; }
 
 .new-mark {
   position: absolute;
@@ -296,9 +297,13 @@ page {
 .pagination-action {
   min-width: 108rpx;
   padding: 12rpx 14rpx;
+  border: 2rpx solid var(--line);
+  border-radius: 999rpx;
   color: var(--stamp);
+  background: var(--surface);
   font-size: 20rpx;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .pagination-action:active {
@@ -306,7 +311,9 @@ page {
 }
 
 .pagination-action-disabled {
+  border-color: var(--line);
   color: var(--line);
+  background: var(--paper);
 }
 
 .pagination-status {

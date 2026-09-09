@@ -1,10 +1,13 @@
 // pages/privacy/privacy.js
 const deviceLayout = require('../../utils/deviceLayout');
+const privacyPolicy = require('../../utils/privacy');
 
 Page({
   data: {
     pageHeaderTop: 48,
     headerRightInset: 0,
+    privacyPolicyVersion: privacyPolicy.PRIVACY_POLICY_VERSION,
+    privacyPolicyUpdatedAt: privacyPolicy.PRIVACY_POLICY_UPDATED_AT,
   },
 
   onLoad() {

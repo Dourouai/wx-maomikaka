@@ -1,11 +1,12 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/cat-friends/cat-friends",
     "pages/my/my",
+    "pages/can-history/can-history",
     "pages/privacy/privacy",
     "pages/about/about",
     "pages/dev-mode/dev-mode",
-    "pages/text-image/text-image",
     "pages/image-image/image-image",
     "pages/camera/camera",
     "pages/reveal/reveal",
@@ -44,9 +45,6 @@
   "permission": {
     "scope.userFuzzyLocation": {
       "desc": "用于记录本次猫咪相遇的大概位置"
-    },
-    "scope.writePhotosAlbum": {
-      "desc": "用于保存用户主动生成的猫咪海报"
     }
   },
   "requiredPrivateInfos": [

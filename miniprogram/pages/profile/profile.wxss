@@ -434,11 +434,12 @@ page {
   font-weight: 800;
 }
 
-.profile-cat-level-C { color: #6f786d; }
-.profile-cat-level-U { color: #9b712f; }
-.profile-cat-level-R { color: #3f7189; }
-.profile-cat-level-SR { color: #74558b; }
-.profile-cat-level-UR { color: #873e30; }
+/* 与 posterCanvas 的等级色保持一致，主页不再使用旧的蓝色 R / 紫色 SR。 */
+.profile-cat-level-C { color: #8fa783; }
+.profile-cat-level-U { color: #9a8aa9; }
+.profile-cat-level-R { color: #b78445; }
+.profile-cat-level-SR { color: #b96b65; }
+.profile-cat-level-UR { color: #665378; }
 
 .profile-cat-code {
   position: absolute;

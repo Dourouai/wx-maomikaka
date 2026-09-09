@@ -45,12 +45,12 @@ function uploadForVision(filePath, contentType) {
   });
 }
 
-function callVision(fileID, contentType) {
+function callVision(fileID, contentType, action = 'inspect') {
   return new Promise((resolve, reject) => {
     wx.cloud.callFunction({
       name: CLOUD_FUNCTION_NAME,
       data: {
-        action: 'inspect',
+        action,
         fileID,
         contentType,
       },
@@ -81,7 +81,7 @@ async function inspectCat(photoPath, options = {}) {
     }
     if (!fileID) throw createError('VISION_UPLOAD_FAILED', '识别图片上传失败');
 
-    const response = await callVision(fileID, contentType);
+    const response = await callVision(fileID, contentType, 'inspect');
     const result = response && response.result ? response.result : response;
     if (!result || result.ok !== true) {
       console.error('[CatVision] 云函数返回失败:', {
@@ -115,4 +115,41 @@ async function inspectCat(photoPath, options = {}) {
   }
 }
 
-module.exports = { inspectCat };
+async function scoreCat(photoPath, options = {}) {
+  assertCloudAvailable();
+  const sharedFileID = String(options.fileID || options.sourceFileID || '').trim();
+  const contentType = options.contentType || getContentType(photoPath);
+  let uploaded;
+  let fileID = sharedFileID;
+
+  try {
+    if (!fileID) {
+      if (!photoPath) throw createError('SCORE_SOURCE_UNAVAILABLE', '没有可补评分的原始图片');
+      uploaded = await uploadForVision(photoPath, contentType);
+      fileID = uploaded && uploaded.fileID;
+    }
+    if (!fileID) throw createError('VISION_UPLOAD_FAILED', '评分图片上传失败');
+
+    const response = await callVision(fileID, contentType, 'score');
+    const result = response && response.result ? response.result : response;
+    if (!result || result.ok !== true) {
+      const error = createError(
+        (result && result.code) || 'SCORE_UNAVAILABLE',
+        '评分服务暂时不可用',
+      );
+      if (result && result.stage) error.stage = result.stage;
+      if (result && result.reason) error.reason = result.reason;
+      if (result && result.causeCode) error.causeCode = result.causeCode;
+      if (result && typeof result.statusCode === 'number') error.statusCode = result.statusCode;
+      throw error;
+    }
+    return result;
+  } catch (error) {
+    if (error && error.code) throw error;
+    throw createError('SCORE_UNAVAILABLE', '评分服务暂时不可用');
+  } finally {
+    await deleteInput(uploaded && uploaded.fileID);
+  }
+}
+
+module.exports = { inspectCat, scoreCat };

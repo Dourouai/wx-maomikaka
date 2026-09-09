@@ -4,6 +4,9 @@
 // cloud.getWXContext().OPENID 读取当前微信用户身份。
 const storage = require('./storage');
 const posterResultSchema = require('./posterResult');
+const catVision = require('./catVision');
+const catScoring = require('./catScoring');
+const privacyPolicy = require('./privacy');
 
 const AUTH_FUNCTION_NAME = 'auth-bootstrap';
 const SYNC_FUNCTION_NAME = 'sync-guest-data';
@@ -11,6 +14,8 @@ const SYNC_FUNCTION_NAME = 'sync-guest-data';
 const MAX_SYNC_BATCH_SIZE = 20;
 let activeSyncPromise = null;
 let activeAccountCheckPromise = null;
+let activeStagePromise = null;
+let activeRemoteRefreshPromise = null;
 
 function createError(code, message) {
   const error = new Error(message || code);
@@ -54,6 +59,10 @@ function callFunction(name, data) {
 
 function trimString(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
+}
+
+function normalizeSourceType(value) {
+  return trimString(value, 20).toLowerCase() === 'live' ? 'live' : 'photo';
 }
 
 function toNumber(value) {
@@ -101,9 +110,16 @@ function toRecordPayload(record, deviceId, source) {
   return {
     clientRecordId,
     captureId: trimString(item.captureId, 128),
+    sourceType: normalizeSourceType(
+      item.sourceType || item.captureSource || item.inputSource,
+    ),
     source: source || 'guest-import',
     catalogCatId: trimString(item.catId, 64),
+    visibility: storage.getCatVisibility(item.catId),
     archiveCode: trimString(item.archiveCode, 32).toUpperCase(),
+    canUsageSource: ['daily-gift', 'purchased'].includes(item.canUsageSource)
+      ? item.canUsageSource
+      : '',
     display: {
       name: trimString(item.catName, 40),
       description: trimString(item.catDescription, 240),
@@ -173,12 +189,14 @@ function toRecordPayload(record, deviceId, source) {
 
 async function bootstrap(options = {}) {
   const previousState = storage.getSyncState();
-  const localProfile = options.profile
-    || (previousState.userBound === true ? storage.getUserProfile() : null);
+  const localProfile = options.skipProfile === true
+    ? null
+    : (options.profile || (previousState.userBound === true ? storage.getUserProfile() : null));
   const authPayload = { action: 'bootstrap' };
   if (localProfile && (localProfile.avatarUrl || localProfile.avatarFileID || localProfile.nickName)) {
     authPayload.profile = localProfile;
   }
+  if (options.nicknameSource) authPayload.nicknameSource = options.nicknameSource;
   const result = await callFunction(AUTH_FUNCTION_NAME, authPayload);
   const bindingKey = result
     && result.user
@@ -263,8 +281,137 @@ function checkAccount() {
   return activeAccountCheckPromise;
 }
 
+async function updateProfile(profile) {
+  if (storage.getSyncState().accountCheckPending === true) {
+    await checkAccount();
+  }
+  if (!isUserBound()) {
+    throw createError('USER_NOT_BOUND', '请先绑定当前微信账号');
+  }
+
+  const result = await bootstrap({ profile, nicknameSource: 'custom' });
+  if (result.accountChanged) {
+    throw createError(
+      'ACCOUNT_CHANGED_REQUIRES_CONFIRMATION',
+      '检测到当前微信账号已变化，请重新确认本机记录的绑定关系'
+    );
+  }
+  return result;
+}
+
+// 资料卡设置后的微信资料同步；审核在 auth-bootstrap 云函数中完成。
+async function syncWechatProfile(profile) {
+  if (storage.getSyncState().accountCheckPending === true) {
+    await checkAccount();
+  }
+  if (!isUserBound()) {
+    throw createError('USER_NOT_BOUND', '请先绑定当前微信账号');
+  }
+
+  const result = await bootstrap({ profile, nicknameSource: 'settings' });
+  if (result.accountChanged) {
+    throw createError(
+      'ACCOUNT_CHANGED_REQUIRES_CONFIRMATION',
+      '检测到当前微信账号已变化，请重新确认本机记录的绑定关系'
+    );
+  }
+  return result;
+}
+
 async function pullMine() {
   return callFunction(SYNC_FUNCTION_NAME, { action: 'pull' });
+}
+
+async function performRemoteRefresh() {
+  if (!isUserBound()) {
+    return { ok: true, skipped: true, reason: 'USER_NOT_BOUND', mergedCount: 0 };
+  }
+  const snapshot = await pullMine();
+  const mergedCount = storage.mergeRemoteRecords(snapshot.encounters || []);
+  storage.mergeRemoteProfiles(snapshot.profiles || []);
+  storage.mergeRemoteStats(snapshot.stats);
+  return { ok: true, mergedCount, snapshot };
+}
+
+function refreshRemoteData() {
+  if (activeRemoteRefreshPromise) return activeRemoteRefreshPromise;
+  const promise = performRemoteRefresh();
+  activeRemoteRefreshPromise = promise.then(
+    result => {
+      activeRemoteRefreshPromise = null;
+      return result;
+    },
+    error => {
+      activeRemoteRefreshPromise = null;
+      throw error;
+    },
+  );
+  return activeRemoteRefreshPromise;
+}
+
+async function performStageLocalData(options = {}) {
+  if (isUserBound()) {
+    return { ok: true, skipped: true, reason: 'USER_BOUND', stagedCount: 0, rejected: [] };
+  }
+
+  const source = options.source || 'guest-stage';
+  const inputRecords = Array.isArray(options.records)
+    ? options.records
+    : storage.getPendingRecords();
+  const records = inputRecords.filter(record => record && record.syncState !== 'synced');
+  if (!records.length) {
+    return { ok: true, skipped: true, reason: 'NO_PENDING_RECORDS', stagedCount: 0, rejected: [] };
+  }
+
+  const deviceId = storage.getDeviceId();
+  const guestToken = storage.getGuestToken();
+  const rejected = [];
+  let stagedCount = 0;
+
+  for (let index = 0; index < records.length; index += MAX_SYNC_BATCH_SIZE) {
+    const batch = records
+      .slice(index, index + MAX_SYNC_BATCH_SIZE)
+      .map(record => toRecordPayload(record, deviceId, source))
+      .filter(Boolean);
+    if (!batch.length) continue;
+
+    const result = await callFunction(SYNC_FUNCTION_NAME, {
+      action: 'stage-guest-records',
+      deviceId,
+      guestToken,
+      source,
+      privacyPolicyVersion: privacyPolicy.PRIVACY_POLICY_VERSION,
+      records: batch,
+    });
+    stagedCount += Number(result.stagedCount) || 0;
+    if (Array.isArray(result.rejected)) rejected.push(...result.rejected);
+  }
+
+  return { ok: true, stagedCount, rejected };
+}
+
+function stageLocalData(options = {}) {
+  if (activeStagePromise) return activeStagePromise;
+  const promise = performStageLocalData(options);
+  activeStagePromise = promise.then(
+    result => {
+      activeStagePromise = null;
+      return result;
+    },
+    error => {
+      activeStagePromise = null;
+      throw error;
+    },
+  );
+  return activeStagePromise;
+}
+
+async function claimGuestRecords() {
+  return callFunction(SYNC_FUNCTION_NAME, {
+    action: 'claim-guest-records',
+    deviceId: storage.getDeviceId(),
+    guestToken: storage.getGuestToken(),
+  });
 }
 
 /**
@@ -277,26 +424,63 @@ async function savePosterResult(posterResult) {
     return { ok: true, skipped: true, reason: 'POSTER_RESULT_INVALID' };
   }
 
+  const bound = isUserBound();
+  const localRecord = typeof storage.getRecordById === 'function'
+    ? storage.getRecordById(result.sourceRecordId)
+    : null;
+  const localPoster = localRecord && localRecord.posterResult && typeof localRecord.posterResult === 'object'
+    ? localRecord.posterResult
+    : null;
+  const localPosterFileID = localPoster
+    && localPoster.posterImage
+    && localPoster.posterImage.fileID;
+  // 只有同一份海报快照才可以复用本地成品。评分、文案或封面变更后，
+  // 不能把旧 PNG 的 fileID 带到新结果里，否则云端看似保存成功，实际仍是旧海报。
+  if (
+    !result.posterImage.fileID
+    && localPosterFileID
+    && posterResultSchema.isSamePosterSnapshot(localPoster, result)
+  ) {
+    result.posterImage.fileID = String(localPosterFileID).trim();
+  }
+
   // 即使当前未绑定账号，也把轻量元数据挂到本地记录，待用户绑定后随首次导入提交。
   if (typeof storage.updateRecordPosterResult === 'function') {
     storage.updateRecordPosterResult(result.sourceRecordId, result);
   }
-  if (!isUserBound()) {
-    return { ok: true, skipped: true, reason: 'USER_NOT_BOUND' };
-  }
 
   if (!result.posterImage.fileID && posterResult.posterPath) {
-    const existing = await getPosterResult(result.sourceArchiveId, result.sourceRecordId);
-    if (existing && existing.posterImage && existing.posterImage.fileID) {
-      storage.updateRecordPosterResult(result.sourceRecordId, existing);
-      return { ok: true, saved: true, reused: true, posterResult: existing };
+    if (bound) {
+      const existing = await getPosterResult(result.sourceArchiveId, result.sourceRecordId);
+      if (
+        existing
+        && existing.posterImage
+        && existing.posterImage.fileID
+        && posterResultSchema.isSamePosterSnapshot(existing, result)
+      ) {
+        storage.updateRecordPosterResult(result.sourceRecordId, existing);
+        return { ok: true, saved: true, reused: true, posterResult: existing };
+      }
     }
+
+    // 海报 PNG 不依赖账号关系，未绑定时也先上传云存储；数据库临时记录只保存 fileID。
     const upload = await wx.cloud.uploadFile({
       cloudPath: `posters/${storage.getDeviceId()}/${Date.now()}-${Math.random().toString(36).slice(2)}.png`,
       filePath: posterResult.posterPath,
     });
     result.posterImage.fileID = upload.fileID;
     storage.updateRecordPosterResult(result.sourceRecordId, result);
+  }
+
+  if (!bound) {
+    const staged = await stageLocalData({ source: 'poster' });
+    return {
+      ok: true,
+      skipped: true,
+      reason: 'USER_NOT_BOUND',
+      stagedCount: Number(staged && staged.stagedCount) || 0,
+      posterFileID: result.posterImage.fileID || '',
+    };
   }
 
   const request = {
@@ -322,6 +506,56 @@ async function getPosterResult(catalogCatId, sourceRecordId) {
   return response.posterResult || null;
 }
 
+/**
+ * 为已有相遇记录补回评分。
+ * 只读取该记录已经上传的原图，不重新创建相遇记录，也不重复结算奖励。
+ */
+async function repairRecordScore(recordId) {
+  const normalizedRecordId = trimString(recordId, 128);
+  const record = typeof storage.getRecordById === 'function'
+    ? storage.getRecordById(normalizedRecordId)
+    : null;
+  if (!record) throw createError('SCORE_RECORD_NOT_FOUND', '找不到需要补评分的记录');
+
+  const storedScore = catScoring.getStoredEncounter(record);
+  if (storedScore && storedScore.scorePending !== true) {
+    return { ok: true, skipped: true, reason: 'SCORE_ALREADY_COMPLETE', record };
+  }
+
+  const fileID = trimString(record.originalFileID, 512);
+  if (!fileID) {
+    return {
+      ok: true,
+      skipped: true,
+      reason: 'SCORE_SOURCE_UNAVAILABLE',
+      record,
+    };
+  }
+
+  const result = await catVision.scoreCat('', {
+    fileID,
+    contentType: record.originalContentType || 'image/jpeg',
+  });
+  const encounterScore = catScoring.scoreEncounter(result);
+  if (encounterScore.scorePending === true) {
+    throw createError('SCORE_INCOMPLETE', '评分结果不完整');
+  }
+
+  const updatedRecord = storage.updateRecordScore(
+    normalizedRecordId,
+    encounterScore,
+  );
+  if (!updatedRecord) throw createError('SCORE_SAVE_FAILED', '评分结果保存失败');
+
+  if (isUserBound()) {
+    const sync = await syncLocalData({ source: 'score-repair' });
+    return { ok: true, repaired: true, record: updatedRecord, sync };
+  }
+
+  const staged = await stageLocalData({ source: 'score-repair' });
+  return { ok: true, repaired: true, record: updatedRecord, staged };
+}
+
 async function performSyncLocalData(options = {}) {
   const state = storage.getSyncState();
   if (!options.force && state.userBound !== true) {
@@ -336,7 +570,11 @@ async function performSyncLocalData(options = {}) {
   });
 
   try {
-    const bootstrapResult = await bootstrap({ bindData: true, profile: options.profile });
+    const bootstrapResult = await bootstrap({
+      bindData: true,
+      profile: options.profile,
+      nicknameSource: options.nicknameSource,
+    });
     if (bootstrapResult.accountChanged) {
       throw createError(
         'ACCOUNT_CHANGED_REQUIRES_CONFIRMATION',
@@ -349,6 +587,21 @@ async function performSyncLocalData(options = {}) {
     const mappings = [];
     const rejected = [];
     let importedCount = 0;
+
+    // 先认领未绑定期间写入的匿名临时记录；随后仍会导入本机记录，利用同一
+    // clientRecordId 做幂等合并，兼容临时入库请求与本机同步同时完成的竞态。
+    try {
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const claimed = await claimGuestRecords();
+        if (Array.isArray(claimed.mappings)) mappings.push(...claimed.mappings);
+        if (Array.isArray(claimed.rejected)) rejected.push(...claimed.rejected);
+        importedCount += Number(claimed.importedCount) || 0;
+        if (!(Number(claimed.claimedCount) > 0)) break;
+      }
+    } catch (error) {
+      // 临时集合或新动作尚未部署时，不阻断原有本机导入；本机记录仍可在本次同步完成。
+      console.warn('[UserData] 匿名记录认领暂未完成，继续导入本机记录:', error);
+    }
 
     for (let index = 0; index < pendingRecords.length; index += MAX_SYNC_BATCH_SIZE) {
       const batch = pendingRecords
@@ -371,6 +624,7 @@ async function performSyncLocalData(options = {}) {
     storage.markRecordsSynced(mappings);
     const snapshot = await pullMine();
     const mergedCount = storage.mergeRemoteRecords(snapshot.encounters || []);
+    storage.mergeRemoteProfiles(snapshot.profiles || []);
     storage.mergeRemoteStats(snapshot.stats);
     const remoteRecordCount = Array.isArray(snapshot.encounters)
       ? snapshot.encounters.length
@@ -433,6 +687,40 @@ async function deleteCatalogArchive(catalogCatId) {
   });
 }
 
+async function setCatVisibility(catalogCatId, value) {
+  const catId = trimString(catalogCatId, 64);
+  if (!catId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少猫卡角色编号');
+
+  const visibility = storage.normalizeVisibility(value);
+  if (!isUserBound()) {
+    storage.setCatVisibility(catId, visibility);
+    return { ok: true, localOnly: true, visibility };
+  }
+
+  try {
+    const result = await callFunction(SYNC_FUNCTION_NAME, {
+      action: 'set-cat-visibility',
+      catalogCatId: catId,
+      visibility,
+    });
+    storage.setCatVisibility(catId, visibility);
+    return result;
+  } catch (error) {
+    // 绑定后尚未完成首次导入时，先补齐猫卡档案再重试一次。
+    if (error && error.code === 'CAT_PROFILE_NOT_FOUND') {
+      await syncLocalData({ source: 'visibility' });
+      const result = await callFunction(SYNC_FUNCTION_NAME, {
+        action: 'set-cat-visibility',
+        catalogCatId: catId,
+        visibility,
+      });
+      storage.setCatVisibility(catId, visibility);
+      return result;
+    }
+    throw error;
+  }
+}
+
 function isUserBound() {
   const state = storage.getSyncState();
   return state.userBound === true
@@ -443,11 +731,17 @@ function isUserBound() {
 module.exports = {
   bootstrap,
   checkAccount,
+  updateProfile,
+  syncWechatProfile,
   pullMine,
+  stageLocalData,
   getPosterResult,
   savePosterResult,
+  repairRecordScore,
   syncLocalData,
+  refreshRemoteData,
   deleteCatalogArchive,
+  setCatVisibility,
   isUserBound,
   getLocalSyncSummary: storage.getSyncSummary,
 };

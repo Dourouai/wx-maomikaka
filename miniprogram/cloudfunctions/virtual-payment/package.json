@@ -1,0 +1,8 @@
+{
+  "name": "maomi-kaka-virtual-payment",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "wx-server-sdk": "4.0.2"
+  }
+}

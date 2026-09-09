@@ -44,13 +44,13 @@
         <text>使用 1 个罐罐</text>
       </view>
 
-      <view class="home-upload-entry" bindtap="goImageProcess" aria-role="button" aria-label="选择图片处理">
+      <view class="home-upload-entry" bindtap="goImageUpload" aria-role="button" aria-label="选择图片上传">
         <view class="home-upload-entry-icon">
           <image src="/assets/icon-album-white.svg" mode="aspectFit" />
         </view>
         <view class="home-upload-entry-copy">
-          <text class="home-upload-entry-title">选择图片处理</text>
-          <text class="home-upload-entry-subtitle">从相册上传猫咪照片，提取透明主体</text>
+          <text class="home-upload-entry-title">选择图片上传</text>
+          <text class="home-upload-entry-subtitle">从相册选择，进入和拍摄相同的识别流程</text>
         </view>
         <image class="home-upload-entry-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
       </view>
@@ -65,6 +65,9 @@
     title="{{exceptionTitle}}"
     message="{{exceptionMessage}}"
     primary-text="{{exceptionPrimaryText}}"
+    secondary-text="{{exceptionSecondaryText}}"
+    show-secondary="{{showExceptionSecondary}}"
     bind:primary="onExceptionPrimary"
+    bind:secondary="onExceptionSecondary"
   />
 </view>

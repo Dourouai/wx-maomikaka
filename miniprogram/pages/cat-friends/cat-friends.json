@@ -1,6 +1,6 @@
 {
+  "enablePullDownRefresh": true,
   "usingComponents": {
-    "navigation-bar": "/components/navigation-bar/navigation-bar",
     "exception-modal": "/components/exception-modal/exception-modal"
   },
   "navigationStyle": "custom"

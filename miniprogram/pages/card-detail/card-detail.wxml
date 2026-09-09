@@ -4,7 +4,7 @@
   <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
     <view class="detail-content" style="padding-top: {{pageHeaderTop}}px;">
       <view class="file-header" style="padding-right: {{headerRightInset}}px;">
-        <view class="file-back" bindtap="goBack" aria-role="button" aria-label="返回猫卡">
+        <view class="file-back" bindtap="goBack" aria-role="button" aria-label="{{returnAriaLabel}}">
           <image class="file-back-icon" src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
         </view>
         <view class="file-heading">
@@ -22,9 +22,9 @@
       <view wx:elif="{{shareError}}" class="shared-state shared-state-error">
         <text class="shared-state-kicker">CAT ARCHIVE · UNAVAILABLE</text>
         <text class="shared-state-title">{{shareError}}</text>
-        <text class="shared-state-copy">这份分享链接可能已经失效，或云端暂时没有响应。</text>
-        <view class="shared-state-action" bindtap="goCollection" aria-role="button" aria-label="返回猫卡">
-          <text>返回猫卡</text>
+        <text class="shared-state-copy">这份公开档案可能已经失效或设为私密，云端暂时没有响应时也会显示在这里。</text>
+        <view class="shared-state-action" bindtap="goCollection" aria-role="button" aria-label="{{returnAriaLabel}}">
+          <text>{{returnLabel}}</text>
         </view>
       </view>
 
@@ -36,7 +36,7 @@
             <image wx:if="{{featuredPhoto}}" class="file-photo-image" src="{{featuredPhoto}}" mode="aspectFit" />
             <image wx:else class="file-photo-placeholder" src="/assets/cat-placeholder.svg" mode="aspectFit" />
             <view
-              wx:if="{{catData && !shareLoading}}"
+              wx:if="{{catData && !shareLoading && !isPublicGalleryArchive}}"
               class="file-photo-poster-action file-photo-poster-action-{{posterEligible ? 'ready' : 'disabled'}}"
               bindtap="openPoster"
               aria-role="button"
@@ -50,7 +50,7 @@
             <text class="file-photo-code">ARCHIVE #{{archiveCode}}</text>
             <view class="file-name-row">
               <text class="file-name">{{catData.name}}</text>
-              <text class="file-name-code">{{currentLevelCode}} FILE</text>
+              <text class="file-name-code">{{currentSourceType}}</text>
             </view>
             <text class="file-breed">CITY CAT · {{catData.breed}}</text>
           </view>
@@ -98,6 +98,16 @@
               </view>
             </view>
             <text wx:else class="score-empty">这次相遇暂未完成评分</text>
+            <view
+              wx:if="{{currentScorePending && currentOriginalFileID && !isSharedArchive}}"
+              class="score-repair-action"
+              bindtap="repairCurrentScore"
+              aria-role="button"
+              aria-label="补回这次评分"
+            >
+              <text>{{scoreRepairBusy ? '正在补评分…' : '补回这次评分'}}</text>
+            </view>
+            <text wx:if="{{scoreRepairError}}" class="score-repair-error">{{scoreRepairError}}</text>
 
             <view class="score-footer">
               <text>当前猫咪 · 满分 100</text>
@@ -126,10 +136,24 @@
         </view>
 
         <view class="file-actions">
-          <view class="file-primary" bindtap="goCollection" aria-role="button" aria-label="返回猫卡">
+          <view class="file-primary" bindtap="goCollection" aria-role="button" aria-label="{{returnAriaLabel}}">
             <text class="file-primary-icon">▣</text>
-            <text>返回猫卡</text>
+            <text>{{returnLabel}}</text>
           </view>
+          <view wx:if="{{!isSharedArchive}}" class="file-visibility-setting">
+            <view class="file-visibility-copy">
+              <text class="file-visibility-title">猫友串门</text>
+              <text class="file-visibility-subtitle">{{visibilityPublic ? '带着猫生图去和大家见面' : '先在自己的档案里安静待着'}}</text>
+            </view>
+            <switch
+              checked="{{visibilityPublic}}"
+              disabled="{{visibilityBusy}}"
+              color="#9b442a"
+              bindchange="onVisibilityChange"
+              aria-label="允许这只猫去猫友图鉴串门"
+            />
+          </view>
+          <text wx:if="{{visibilityError}}" class="file-visibility-error">{{visibilityError}}</text>
           <view wx:if="{{!isSharedArchive}}" class="file-release" bindtap="openDeleteConfirm" aria-role="button" aria-label="放归这只猫">
             <image class="file-release-icon" src="/assets/icon-trash-coral.svg" mode="aspectFit" />
             <view class="file-release-copy">
@@ -160,7 +184,7 @@
           <text>保留档案</text>
         </view>
         <view class="delete-button delete-button-confirm" bindtap="confirmDelete">
-          <text>{{deleteBusy ? '正在放归…' : '放归并删除'}}</text>
+          <text>{{deleteBusy ? '正在放归…' : '放归'}}</text>
         </view>
       </view>
     </view>

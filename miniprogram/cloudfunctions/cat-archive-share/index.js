@@ -104,6 +104,11 @@ function trimString(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength);
 }
 
+function normalizeSourceType(value) {
+  const sourceType = trimString(value, 20).toLowerCase();
+  return sourceType === 'live' ? 'live' : 'photo';
+}
+
 function normalizeArchiveCode(value) {
   const code = trimString(value, 32).toUpperCase();
   return ARCHIVE_CODE_PATTERN.test(code) ? code : '';
@@ -207,6 +212,18 @@ function collectArchivePosterCoverFileIDs(archive, fileIDs) {
       ? record.media
       : {};
     addPosterCoverFileID(fileIDs, media.coverFileID);
+    const posterResult = media.posterResult && typeof media.posterResult === 'object'
+      ? media.posterResult
+      : {};
+    const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+      ? posterResult.coverImage
+      : {};
+    addPosterCoverFileID(fileIDs, coverImage.fileID);
+    const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
+      ? posterResult.sourceImage
+      : {};
+    if (sourceImage.kind === 'cover') addPosterCoverFileID(fileIDs, sourceImage.fileID);
+    addPosterCoverFileID(fileIDs, posterResult.posterImage && posterResult.posterImage.fileID);
   });
 }
 
@@ -375,6 +392,9 @@ function normalizeRecord(input, fallbackCatId) {
     localRecordId,
     catalogCatId,
     archiveCode: normalizeArchiveCode(source.archiveCode),
+    sourceType: normalizeSourceType(
+      source.sourceType || source.captureSource || source.inputSource,
+    ),
     display: {
       name: trimString(display.name || source.catName, 40),
       description: trimString(display.description || source.catDescription, 240),
@@ -456,6 +476,7 @@ function toArchiveRecord(encounter) {
     localRecordId: encounter.clientRecordId || encounter._id,
     catalogCatId: encounter.catalogCatId,
     archiveCode: normalizeArchiveCode(encounter.archiveCode),
+    sourceType: normalizeSourceType(encounter.sourceType),
     display: encounter.display || {},
     media: encounter.media || {},
     observation: encounter.observation || {},
@@ -479,6 +500,9 @@ async function loadOwnerArchive(userId, catalogCatId) {
   const profile = profileResult && Array.isArray(profileResult.data)
     ? profileResult.data[0] || null
     : null;
+  if (profile && profile.visibility === 'private') {
+    throw createError('CAT_ARCHIVE_PRIVATE', '这只猫咪已设为私密');
+  }
   const encounters = encounterResult && Array.isArray(encounterResult.data)
     ? encounterResult.data
     : [];
@@ -511,6 +535,17 @@ async function createShare(event) {
       : event && event.archive && (event.archive.catalogCatId || event.archive.catId)
   );
   if (!requestedCatId) throw createError('CATALOG_CAT_ID_REQUIRED', '缺少猫卡角色编号');
+
+  // 客户端可以带历史 archive 快照，不能让快照绕过当前猫卡的私密状态。
+  const profileResult = await safeGet(db.collection(PROFILES_COLLECTION)
+    .where({ ownerOpenId, catalogCatId: requestedCatId, status: 'active' })
+    .limit(1));
+  const currentProfile = profileResult && Array.isArray(profileResult.data)
+    ? profileResult.data[0] || null
+    : null;
+  if (currentProfile && currentProfile.visibility === 'private') {
+    throw createError('CAT_ARCHIVE_PRIVATE', '这只猫咪已设为私密');
+  }
 
   let archive = null;
   if (event && event.archive) {
@@ -554,6 +589,20 @@ async function readShare(event) {
     throw createError('SHARE_NOT_FOUND', '这份猫咪档案已失效');
   }
 
+  const profileResult = await safeGet(db.collection(PROFILES_COLLECTION)
+    .where({
+      ownerOpenId: share.ownerOpenId,
+      catalogCatId: share.catalogCatId,
+      status: 'active',
+    })
+    .limit(1));
+  const currentProfile = profileResult && Array.isArray(profileResult.data)
+    ? profileResult.data[0] || null
+    : null;
+  if (currentProfile && currentProfile.visibility === 'private') {
+    throw createError('CAT_ARCHIVE_PRIVATE', '这只猫咪已设为私密');
+  }
+
   // 分享只授权这份档案；每次读取从所属相遇查询最新海报，避免旧分享快照失效。
   const owned = await safeGet(db.collection(ENCOUNTERS_COLLECTION).where({
     ownerOpenId: share.ownerOpenId, catalogCatId: share.catalogCatId, status: 'active',
@@ -581,46 +630,15 @@ async function readShare(event) {
 }
 
 async function clearPosterArtifacts() {
-  const ownerOpenId = getOpenId();
-  const [shares, encounters] = await Promise.all([
-    getAllOwnedDocuments(SHARES_COLLECTION, ownerOpenId),
-    getAllOwnedDocuments(ENCOUNTERS_COLLECTION, ownerOpenId),
-  ]);
-  const coverFileIDs = new Set();
-
-  shares.forEach(share => {
-    collectArchivePosterCoverFileIDs(share && share.archive, coverFileIDs);
-  });
-  encounters.forEach(encounter => {
-    collectEncounterPosterCoverFileIDs(encounter, coverFileIDs);
-  });
-
-  let clearedEncounterCount = 0;
-  for (const encounter of encounters) {
-    if (!encounter || !encounter._id) continue;
-    const cleanupData = getPosterCleanupData(encounter);
-    if (!cleanupData) continue;
-    await db.collection(ENCOUNTERS_COLLECTION).doc(encounter._id).update({
-      data: {
-        ...cleanupData,
-        updatedAt: db.serverDate(),
-      },
-    });
-    clearedEncounterCount += 1;
-  }
-
-  let clearedShareCount = 0;
-  for (const share of shares) {
-    if (!share || !share._id) continue;
-    await db.collection(SHARES_COLLECTION).doc(share._id).remove();
-    clearedShareCount += 1;
-  }
-
+  // 兼容旧客户端的防护：猫生图封面和 encounters.media 是正式档案资产，
+  // 不能再通过“海报规则升级”接口批量清除。真正需要清理的本机派生缓存
+  // 由客户端自行处理，云函数不删除任何分享快照、档案字段或云文件。
   return {
     ok: true,
-    clearedShareCount,
-    clearedEncounterCount,
-    coverFileIDs: Array.from(coverFileIDs),
+    skipped: 'PRESERVE_CLOUD_ARCHIVE_ASSETS',
+    clearedShareCount: 0,
+    clearedEncounterCount: 0,
+    coverFileIDs: [],
   };
 }
 

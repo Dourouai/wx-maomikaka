@@ -1,6 +1,7 @@
 const posterData = require('../../utils/posterData');
 const posterShare = require('../../utils/posterShare');
 const userData = require('../../utils/userData');
+const permissions = require('../../utils/permissions');
 
 function decodeOption(value) {
   if (!value) return '';
@@ -49,12 +50,54 @@ Page({
     if (!result.shareReady) this.prepareShare();
   },
 
+  onShow() {
+    // 从微信设置返回后只复核状态，不自动再次保存海报。
+    if (!this._albumSettingsPending) return;
+    this._albumSettingsPending = false;
+    this._refreshAlbumPermissionAfterSettings();
+  },
+
+  async _refreshAlbumPermissionAfterSettings() {
+    if (this._albumPermissionRefreshing) return;
+    this._albumPermissionRefreshing = true;
+    try {
+      const status = await posterShare.getPhotosAlbumAuthorizationStatus();
+      this.setData({
+        saveMessage: status === 'authorized'
+          ? '相册权限已开启，点击“保存海报”即可'
+          : '相册权限还没有开启，请允许后再试',
+      });
+    } catch (error) {
+      console.warn('[PosterPreview] 设置返回后复核相册权限失败:', error);
+    } finally {
+      this._albumPermissionRefreshing = false;
+    }
+  },
+
+  _openAlbumSettings() {
+    if (this._albumSettingsPending || this._albumPermissionRefreshing) return;
+    this._albumSettingsPending = true;
+    permissions.openSetting()
+      .then(() => {
+        // 某些开发者工具版本不会稳定触发 onShow，用回调做复核兜底。
+        if (!this._albumSettingsPending) return;
+        this._albumSettingsPending = false;
+        return this._refreshAlbumPermissionAfterSettings();
+      })
+      .catch(error => {
+        this._albumSettingsPending = false;
+        console.warn('[PosterPreview] 打开相册权限设置失败:', error);
+        this.setData({ saveMessage: '权限设置暂时无法打开，请稍后重试' });
+      });
+  },
+
   async prepareShare() {
     if (!this.poster || this.data.shareBusy || this.data.shareReady) return;
     this.setData({ shareBusy: true, shareError: '' });
     try {
       const share = await posterShare.prepareShare(this.poster);
       this.poster.shareId = share.shareId;
+      this.poster.shareArchive = share.archive || this.poster.shareArchive;
       this.poster.shareReady = true;
       this.poster.shareError = '';
       posterData.savePosterResult(this.jobId, this.poster);
@@ -95,9 +138,7 @@ Page({
           confirmText: '去设置',
           cancelText: '暂不',
           success: result => {
-            if (result && result.confirm && typeof wx.openSetting === 'function') {
-              wx.openSetting({});
-            }
+            if (result && result.confirm) this._openAlbumSettings();
           },
         });
       } else {

@@ -1,6 +1,7 @@
 // 图片处理页：支持从相册选择照片生成透明主体，不识别、不评分、不写入猫卡。
 const storage = require('../../utils/storage');
 const catTransform = require('../../utils/catTransform');
+const photoPicker = require('../../utils/photoPicker');
 
 Page({
   data: {
@@ -99,6 +100,14 @@ Page({
         if (error && error.code === 'USER_CANCELLED') return;
         console.error('[ImageImage] 选择猫咪图片失败:', error);
         const privacyError = `${error && error.message ? error.message : ''} ${error && error.errMsg ? error.errMsg : ''}`;
+        if (error && error.code === 'PHOTO_PRIVACY_DENIED') {
+          this._showException('先同意照片使用说明', '选择图片前，需要先同意照片使用说明');
+          return;
+        }
+        if (error && error.code === 'PHOTO_PRIVACY_UNAVAILABLE') {
+          this._showException('暂时无法确认照片权限', '照片隐私状态暂时无法确认，请稍后重试');
+          return;
+        }
         if (/api scope is not declared|privacy agreement|errno.?112/i.test(privacyError)) {
           this._showException('照片选择还差一条说明', '请先在小程序后台声明“选中的照片或视频”，再使用照片选择');
           return;
@@ -108,49 +117,7 @@ Page({
   },
 
   _chooseMedia() {
-    return new Promise((resolve, reject) => {
-      const success = response => {
-        const file = response && response.tempFiles && response.tempFiles[0];
-        const filePath = (file && (file.tempFilePath || file.path))
-          || (response && response.tempFilePaths && response.tempFilePaths[0]);
-        if (!filePath) {
-          reject(this._createError('IMAGE_EMPTY', '没有拿到图片'));
-          return;
-        }
-        resolve(filePath);
-      };
-      const fail = error => {
-        const message = error && (error.errMsg || error.message) ? String(error.errMsg || error.message) : '';
-        if (/cancel/i.test(message)) {
-          reject(this._createError('USER_CANCELLED', '用户取消选择'));
-          return;
-        }
-        reject(error || this._createError('IMAGE_PICKER_UNAVAILABLE', '图片选择器暂时不可用'));
-      };
-
-      if (typeof wx.chooseMedia === 'function') {
-        wx.chooseMedia({
-          count: 1,
-          mediaType: ['image'],
-          sourceType: ['album', 'camera'],
-          success,
-          fail,
-        });
-        return;
-      }
-
-      if (typeof wx.chooseImage === 'function') {
-        wx.chooseImage({
-          count: 1,
-          sourceType: ['album', 'camera'],
-          success,
-          fail,
-        });
-        return;
-      }
-
-      reject(this._createError('IMAGE_PICKER_UNAVAILABLE', '图片选择器暂时不可用'));
-    });
+    return photoPicker.chooseMedia({ sourceType: ['album', 'camera'] });
   },
 
   async transformImage() {

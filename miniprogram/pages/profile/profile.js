@@ -6,6 +6,7 @@ const catScoring = require('../../utils/catScoring');
 const memberLevel = require('../../utils/memberLevel');
 const deviceLayout = require('../../utils/deviceLayout');
 const { ALL_CATS } = require('../../utils/catData');
+const APP_SHARE_IMAGE = '/assets/maomi-kaka-logo-square-144.png';
 
 function toScore(value) {
   const score = Number(value);
@@ -15,6 +16,75 @@ function toScore(value) {
 function trimText(value, fallback, maxLength = 80) {
   const text = String(value || '').trim().slice(0, maxLength);
   return text || fallback;
+}
+
+function getLocalAvatarPath(value) {
+  const path = String(value || '').trim();
+  // 微信资料头像外链需要先换成云存储临时地址，不能直接交给 image 组件。
+  return path && !/^https?:\/\//i.test(path) ? path : '';
+}
+
+function getTimestamp(value) {
+  if (value && typeof value === 'object') {
+    if (value.$date !== undefined) return getTimestamp(value.$date);
+    if (value.value !== undefined) return getTimestamp(value.value);
+    if (value.seconds !== undefined) return Number(value.seconds) * 1000;
+  }
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getProfileMedia(record) {
+  const value = record && typeof record === 'object' ? record : {};
+  const posterResult = value.posterResult && typeof value.posterResult === 'object'
+    ? value.posterResult
+    : {};
+  const coverImage = posterResult.coverImage && typeof posterResult.coverImage === 'object'
+    ? posterResult.coverImage
+    : {};
+  const sourceImage = posterResult.sourceImage && typeof posterResult.sourceImage === 'object'
+    ? posterResult.sourceImage
+    : {};
+  const coverPath = storage.getRecordPosterSourcePath(value);
+  const coverFileID = storage.getRecordPosterSourceFileID(value);
+  const coverStatus = String(
+    value.coverStatus || posterResult.coverStatus || coverImage.status
+      || (coverFileID ? 'ready' : ''),
+  ).trim().toLowerCase();
+  const subjectPath = storage.getRecordSubjectPath(value);
+  const subjectFileID = storage.getRecordSubjectFileID(value);
+  const originalPath = storage.getRecordOriginalPath(value);
+  const originalFileID = String(
+    value.originalFileID || sourceImage.originalFileID || '',
+  ).trim();
+
+  if (coverStatus === 'ready' && (coverPath || coverFileID)) {
+    return {
+      role: 'cover',
+      path: coverPath,
+      fileID: coverFileID,
+      fallbackFileIDs: [subjectFileID, originalFileID].filter(Boolean),
+      fallbackPaths: [subjectPath, originalPath].filter(Boolean),
+    };
+  }
+  if (subjectPath || subjectFileID) {
+    return {
+      role: 'cutout',
+      path: subjectPath,
+      fileID: subjectFileID,
+      fallbackFileIDs: [originalFileID].filter(Boolean),
+      fallbackPaths: [originalPath].filter(Boolean),
+    };
+  }
+  return {
+    role: 'original',
+    path: originalPath,
+    fileID: originalFileID,
+    fallbackFileIDs: [],
+    fallbackPaths: [],
+  };
 }
 
 Page({
@@ -86,13 +156,18 @@ Page({
     });
   },
 
+  onAvatarError() {
+    // 头像不存在或临时地址失效时，回退到猫咪咔咔 Logo。
+    if (this.data.profileAvatar) this.setData({ profileAvatar: '' });
+  },
+
   _refreshSelf() {
     const state = storage.getSyncState();
     const profile = storage.getUserProfile();
     const stats = storage.getUserStats();
     const membership = memberLevel.getMemberLevel(stats.pawGrowth);
-    // 我的主页展示猫生图封面原图；猫卡列表和档案详情不复用这套优先级。
-    const catList = this._buildLocalCats({ preferCover: true });
+    // 个人主页的列表规则是 cover → cutout → original；完整海报永远不进入列表。
+    const catList = this._buildLocalCats();
     const isLoggedIn = state.userBound === true;
     const activeShareId = isLoggedIn ? String(this.profileShareId || '').trim() : '';
     this.profileShareId = activeShareId;
@@ -101,7 +176,7 @@ Page({
       isSelf: true,
       isLoggedIn,
       profileName: trimText(profile.nickName, '猫咪观察员', 40),
-      profileAvatar: profile.avatarUrl || '',
+      profileAvatar: profile.avatarFileID ? '' : getLocalAvatarPath(profile.avatarUrl),
       profileRole: '街角漫游者 · 记录生活里的猫',
       profileBio: membership.name ? `Lv.${membership.level} · ${membership.name}` : '记录生活里的猫',
       profileShareId: activeShareId,
@@ -123,8 +198,7 @@ Page({
     this._refreshPhotoURLs(catList);
   },
 
-  _buildLocalCats(options = {}) {
-    const preferCover = options && options.preferCover === true;
+  _buildLocalCats() {
     const collection = storage.getCollection();
     const records = storage.getAllRecords();
     const recordsByCat = records.reduce((map, record) => {
@@ -138,66 +212,47 @@ Page({
       const entry = collection[cat.id] || {};
       const catRecords = (recordsByCat[cat.id] || [])
         .slice()
-        .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0));
+        .sort((left, right) => getTimestamp(right.createdAt) - getTimestamp(left.createdAt));
       if (!catRecords.length) return null;
 
-      const featured = entry.featuredRecordId
-        ? catRecords.find(record => record.recordId === entry.featuredRecordId)
-        : null;
-      const best = catScoring.getBestEncounter(catRecords);
-      const bestRecord = best && best.record ? best.record : (featured || catRecords[0]);
-      const level = catScoring.getLevelMeta(best && best.levelCode ? best.levelCode : 'C');
-      const posterSourcePhotoPath = storage.getRecordPosterSourcePath(bestRecord);
-      const posterSourceFileID = storage.getRecordPosterSourceFileID(bestRecord);
-      const subjectPhotoPath = storage.getRecordSubjectPath(bestRecord);
-      const subjectFileID = storage.getRecordSubjectFileID(bestRecord);
-      const originalPhotoPath = storage.getRecordOriginalPath(bestRecord);
-      const originalFileID = bestRecord && bestRecord.originalFileID
-        ? bestRecord.originalFileID
-        : '';
+      // 图片、评分、猫名和等级必须来自同一条当前记录，当前记录取最新一次相遇。
+      const currentRecord = catRecords[0];
+      const currentEncounter = catScoring.getStoredEncounter(currentRecord);
+      const level = catScoring.getLevelMeta(
+        currentEncounter && currentEncounter.levelCode ? currentEncounter.levelCode : 'C',
+      );
+      const media = getProfileMedia(currentRecord);
       const description = trimText(
-        entry.displayDescription || (bestRecord && bestRecord.catDescription) || cat.story,
+        entry.displayDescription || (currentRecord && currentRecord.catDescription) || cat.story,
         cat.story,
         120,
       );
 
       return {
         id: cat.id,
-        displayName: trimText(entry.displayName || (catRecords[0] && catRecords[0].catName) || cat.name, cat.name, 40),
+        displayName: trimText(entry.displayName || (currentRecord && currentRecord.catName) || cat.name, cat.name, 40),
         levelCode: level.code,
         levelLabel: level.label,
-        overallScore: toScore(best && best.overallScore),
+        overallScore: toScore(currentEncounter && currentEncounter.overallScore),
         recordCount: catRecords.length,
         posterCopy: trimText(
-          (bestRecord && bestRecord.posterCopy) || entry.posterCopy || description,
+          (currentRecord && currentRecord.posterCopy) || entry.posterCopy || description,
           description,
           52,
         ),
         description,
-        archiveCode: trimText(bestRecord && bestRecord.archiveCode, '', 32),
-        // 我的主页优先展示猫生图封面原图；不使用最终排版海报。
-        photoPath: preferCover
-          ? (posterSourcePhotoPath
-            || (posterSourceFileID ? '' : (subjectPhotoPath || (subjectFileID ? '' : originalPhotoPath))))
-          : (subjectPhotoPath
-            || (subjectFileID ? '' : (originalPhotoPath || (posterSourceFileID ? '' : posterSourcePhotoPath)))),
-        photoFileID: preferCover
-          ? (posterSourceFileID || subjectFileID || originalFileID || '')
-          : (subjectFileID || originalFileID || posterSourceFileID || ''),
-        fallbackPhotoFileIDs: preferCover
-          ? [subjectFileID, originalFileID].filter(Boolean)
-          : [originalFileID, posterSourceFileID].filter(Boolean),
-        preferCover,
-        posterSourceFileID,
-        posterSourcePhotoPath,
-        subjectPhotoPath,
-        originalPhotoPath,
+        archiveCode: trimText(currentRecord && currentRecord.archiveCode, '', 32),
+        photoPath: media.path,
+        photoFileID: media.fileID,
+        photoRole: media.role,
+        fallbackPhotoFileIDs: media.fallbackFileIDs,
+        fallbackPhotoPaths: media.fallbackPaths,
       };
     }).filter(Boolean);
   },
 
   _refreshPreviewOther() {
-    const catList = this._buildLocalCats({ preferCover: true });
+    const catList = this._buildLocalCats();
     this.setData({
       isSelf: false,
       isPreview: true,
@@ -300,7 +355,14 @@ Page({
   },
 
   async _refreshAvatarURL(fileID, currentPath) {
-    if (currentPath || !fileID) return;
+    const localPath = getLocalAvatarPath(currentPath);
+    if (!fileID) {
+      if (localPath) {
+        this.setData({ profileAvatar: localPath });
+      }
+      return;
+    }
+
     try {
       const avatarUrl = await cloudFiles.getTempFileURL(fileID);
       if (avatarUrl) this.setData({ profileAvatar: avatarUrl });
@@ -311,7 +373,7 @@ Page({
 
   async _refreshPhotoURLs(catList) {
     await Promise.all((catList || []).map(async cat => {
-      if (!cat || !cat.photoFileID || (cat.photoPath && !cat.posterSourceFileID)) return;
+      if (!cat || !cat.photoFileID) return;
       try {
         let photoPath = '';
         const fallbackFileIDs = Array.isArray(cat.fallbackPhotoFileIDs)
@@ -322,15 +384,15 @@ Page({
             photoPath = await cloudFiles.getTempFileURL(fileID);
             if (photoPath) break;
           } catch (error) {
-            // 主体图地址失效时再尝试拍摄原图，最后兼容封面图，不回退到最终海报。
+            // 当前角色的地址失效时，按同一条记录的角色顺序回退，不回退到完整海报。
           }
         }
         if (!photoPath) {
-          const fallbackPath = cat.subjectPhotoPath
-            || cat.originalPhotoPath
-            || cat.posterSourcePhotoPath
-            || '';
-          if (fallbackPath) {
+          const fallbackPaths = Array.isArray(cat.fallbackPhotoPaths)
+            ? cat.fallbackPhotoPaths
+            : [];
+          const fallbackPath = fallbackPaths.find(Boolean) || cat.photoPath || '';
+          if (fallbackPath && fallbackPath !== cat.photoPath) {
             const index = this.data.catList.findIndex(item => item.id === cat.id);
             if (index >= 0) this.setData({ [`catList[${index}].photoPath`]: fallbackPath });
           }
@@ -340,11 +402,13 @@ Page({
         if (index >= 0) this.setData({ [`catList[${index}].photoPath`]: photoPath });
       } catch (error) {
         const index = this.data.catList.findIndex(item => item.id === cat.id);
-        if (index >= 0 && (cat.subjectPhotoPath || cat.originalPhotoPath || cat.posterSourcePhotoPath)) {
+        const fallbackPaths = Array.isArray(cat.fallbackPhotoPaths)
+          ? cat.fallbackPhotoPaths
+          : [];
+        const fallbackPath = fallbackPaths.find(Boolean) || cat.photoPath || '';
+        if (index >= 0 && fallbackPath) {
           this.setData({
-            [`catList[${index}].photoPath`]: cat.subjectPhotoPath
-              || cat.originalPhotoPath
-              || cat.posterSourcePhotoPath,
+            [`catList[${index}].photoPath`]: fallbackPath,
           });
         }
       }
@@ -439,6 +503,7 @@ Page({
       || (detail.includes('function') && (detail.includes('not found') || detail.includes('不存在')))) {
       return '主页分享服务还在准备中';
     }
+    if (code === 'PROFILE_SOCIAL_NOT_CONFIGURED') return '主页分享服务还在准备中';
     if (code === 'PROFILE_NOT_FOUND' || code === 'PROFILE_SHARE_ID_REQUIRED') return '这份个人主页已失效';
     if (code === 'CANNOT_FOLLOW_SELF') return '不能关注自己';
     if (code === 'IDENTITY_UNAVAILABLE') return '请先登录后再操作';
@@ -459,6 +524,7 @@ Page({
       path: shareId
         ? `/pages/profile/profile?shareId=${encodeURIComponent(shareId)}`
         : '/pages/profile/profile',
+      imageUrl: APP_SHARE_IMAGE,
     };
   },
 
@@ -468,6 +534,7 @@ Page({
     return {
       title: `${this.data.profileName || '街角朋友'}的猫咪主页`,
       query: shareId ? `shareId=${encodeURIComponent(shareId)}` : '',
+      imageUrl: APP_SHARE_IMAGE,
     };
   },
 });

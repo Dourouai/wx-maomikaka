@@ -33,4 +33,11 @@ Page({
       fail: () => wx.switchTab({ url: '/pages/my/my' }),
     });
   },
+
+  goPrivacy() {
+    wx.navigateTo({
+      url: '/pages/privacy/privacy',
+      fail: () => wx.showToast({ title: '隐私条款暂时打不开', icon: 'none' }),
+    });
+  },
 });

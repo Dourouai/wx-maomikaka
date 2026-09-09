@@ -1,0 +1,369 @@
+.can-ledger-page {
+  min-height: 100vh;
+  background: var(--color-paper);
+}
+
+.can-ledger-scroll {
+  height: 100vh;
+}
+
+.can-ledger-content {
+  min-height: 100vh;
+  padding-right: 34rpx;
+  padding-bottom: 40rpx;
+  padding-left: 34rpx;
+  box-sizing: border-box;
+  background-color: var(--color-paper);
+  background-image: radial-gradient(rgba(155, 68, 42, 0.1) 1rpx, transparent 1rpx);
+  background-size: 20rpx 20rpx;
+}
+
+.can-ledger-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 72rpx;
+}
+
+.can-ledger-back,
+.can-ledger-header-mark {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  border: 2rpx solid var(--color-line);
+  border-radius: 18rpx;
+  background: rgba(255, 253, 248, 0.86);
+  box-sizing: border-box;
+}
+
+.can-ledger-back:active {
+  opacity: 0.68;
+}
+
+.can-ledger-back image {
+  width: 26rpx;
+  height: 26rpx;
+}
+
+.can-ledger-heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: 18rpx;
+}
+
+.can-ledger-eyebrow {
+  color: var(--color-stamp);
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 14rpx;
+  font-weight: 700;
+  letter-spacing: 2.4rpx;
+  line-height: 1;
+}
+
+.can-ledger-title {
+  margin-top: 10rpx;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 32rpx;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.can-ledger-header-mark image {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+.can-ledger-intro {
+  display: flex;
+  flex-direction: column;
+  margin-top: 34rpx;
+}
+
+.can-ledger-intro-title {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.can-ledger-intro-subtitle {
+  margin-top: 10rpx;
+  color: var(--color-muted);
+  font-size: 18rpx;
+  line-height: 1.45;
+}
+
+.can-ledger-summary {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  margin-top: 26rpx;
+  padding: 20rpx;
+  border: 2rpx solid var(--color-line);
+  background: rgba(255, 253, 248, 0.88);
+  box-sizing: border-box;
+}
+
+.can-ledger-summary-item {
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+
+.can-ledger-summary-item image {
+  flex: none;
+  width: 34rpx;
+  height: 34rpx;
+  margin-right: 12rpx;
+  padding: 9rpx;
+  border-radius: 14rpx;
+  background: #f2dfd3;
+  box-sizing: content-box;
+}
+
+.can-ledger-summary-item view {
+  display: flex;
+  flex-direction: column;
+}
+
+.can-ledger-summary-value {
+  color: var(--color-stamp);
+  font-size: 27rpx;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.can-ledger-summary-label {
+  margin-top: 6rpx;
+  color: var(--color-muted);
+  font-size: 15rpx;
+  line-height: 1.1;
+}
+
+.can-ledger-summary-divider {
+  width: 2rpx;
+  margin: 0 18rpx;
+  background: var(--color-line);
+}
+
+.can-ledger-filters {
+  display: flex;
+  flex-direction: row;
+  gap: 10rpx;
+  margin-top: 28rpx;
+}
+
+.can-ledger-filter {
+  padding: 9rpx 18rpx;
+  border: 2rpx solid var(--color-line);
+  border-radius: 999rpx;
+  color: var(--color-muted);
+  background: rgba(255, 253, 248, 0.72);
+  font-size: 17rpx;
+  line-height: 1;
+}
+
+.can-ledger-filter-active {
+  border-color: var(--color-stamp);
+  color: var(--color-surface);
+  background: var(--color-stamp);
+}
+
+.can-ledger-list {
+  margin-top: 18rpx;
+  padding: 0 20rpx;
+  border: 2rpx solid var(--color-line);
+  background: rgba(255, 253, 248, 0.9);
+}
+
+.can-ledger-record {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 88rpx;
+  padding: 16rpx 0;
+  border-bottom: 2rpx solid rgba(215, 197, 179, 0.58);
+}
+
+.can-ledger-record:last-child {
+  border-bottom: 0;
+}
+
+.can-ledger-record-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 16rpx;
+  background: #f2dfd3;
+}
+
+.can-ledger-record-icon-recharge {
+  background: rgba(241, 207, 132, 0.48);
+}
+
+.can-ledger-record-icon image {
+  width: 30rpx;
+  height: 30rpx;
+}
+
+.can-ledger-record-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin-left: 14rpx;
+}
+
+.can-ledger-record-title {
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: 19rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.can-ledger-record-subtitle {
+  margin-top: 6rpx;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 15rpx;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.can-ledger-record-right {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: 10rpx;
+}
+
+.can-ledger-record-amount {
+  font-size: 21rpx;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.can-ledger-amount-negative {
+  color: var(--color-stamp);
+}
+
+.can-ledger-amount-positive {
+  color: var(--color-moss);
+}
+
+.can-ledger-record-status {
+  margin-top: 6rpx;
+  font-size: 14rpx;
+  line-height: 1;
+}
+
+.can-ledger-status-success {
+  color: var(--color-moss);
+}
+
+.can-ledger-status-pending {
+  color: var(--color-gold);
+}
+
+.can-ledger-status-failed {
+  color: var(--color-stamp);
+}
+
+.can-ledger-status-gift {
+  color: var(--color-moss);
+}
+
+.can-ledger-status-purchased {
+  color: var(--color-gold);
+}
+
+.can-ledger-state,
+.can-ledger-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 18rpx;
+  padding: 54rpx 22rpx;
+  border: 2rpx solid var(--color-line);
+  background: rgba(255, 253, 248, 0.86);
+  text-align: center;
+}
+
+.can-ledger-loading {
+  color: var(--color-muted);
+  font-size: 17rpx;
+}
+
+.can-ledger-loading-dot {
+  width: 22rpx;
+  height: 22rpx;
+  margin-bottom: 14rpx;
+  border: 4rpx solid rgba(155, 68, 42, 0.22);
+  border-top-color: var(--color-stamp);
+  border-radius: 50%;
+  animation: can-ledger-spin 0.9s linear infinite;
+}
+
+@keyframes can-ledger-spin {
+  to { transform: rotate(360deg); }
+}
+
+.can-ledger-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 24rpx;
+  background: #f2dfd3;
+}
+
+.can-ledger-empty-icon image {
+  width: 42rpx;
+  height: 42rpx;
+}
+
+.can-ledger-empty-title {
+  margin-top: 16rpx;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.can-ledger-empty-subtitle,
+.can-ledger-note {
+  margin-top: 8rpx;
+  color: var(--color-muted);
+  font-size: 16rpx;
+  line-height: 1.45;
+}
+
+.can-ledger-note {
+  display: block;
+  margin-top: 18rpx;
+  padding: 0 10rpx;
+  text-align: center;
+}
+
+.can-ledger-bottom-safe {
+  height: calc(80rpx + env(safe-area-inset-bottom));
+}

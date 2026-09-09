@@ -11,15 +11,20 @@ const KEY_RECORDS = 'maomikaka_records';
 const KEY_STATS = 'maomikaka_stats';
 const KEY_SYNC_STATE = 'maomikaka_sync_state';
 const KEY_DEVICE_ID = 'maomikaka_device_id';
+const KEY_GUEST_TOKEN = 'maomikaka_guest_token';
 const KEY_SHARE_IDS = 'maomikaka_share_ids';
 const KEY_USER_PROFILE = 'maomikaka_user_profile';
 const KEY_PENDING_CAPTURE = 'maomikaka_pending_capture';
 const KEY_LOCATION_CONSENT = 'maomikaka_location_consent';
 const SYNC_SCHEMA_VERSION = 1;
+const DAILY_CAN_LIMIT = 3;
 const LOCATION_STATUSES = ['captured', 'skipped', 'denied', 'unavailable'];
 const LOCATION_CONSENTS = ['skipped'];
+const SOURCE_TYPES = ['live', 'photo'];
 const COVER_STATUSES = ['ready', 'rejected', 'pending'];
+const VISIBILITIES = ['public', 'private'];
 const COVER_TARGET_RATIO = '359:537';
+const PLACEHOLDER_NICKNAMES = new Set(['微信用户']);
 
 function _get(key) {
   try {
@@ -42,8 +47,14 @@ function _normalizeUserProfile(value) {
   const source = value && typeof value === 'object' ? value : {};
   const avatarUrl = String(source.avatarUrl || '').trim().slice(0, 1024);
   const avatarFileID = String(source.avatarFileID || '').trim().slice(0, 512);
-  const nickName = String(source.nickName || '').trim().slice(0, 40);
-  return { avatarUrl, avatarFileID, nickName };
+  const nickName = String(source.nickName || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  const normalizedNickName = PLACEHOLDER_NICKNAMES.has(nickName.toLowerCase())
+    ? ''
+    : Array.from(nickName).slice(0, 40).join('');
+  return { avatarUrl, avatarFileID, nickName: normalizedNickName };
 }
 
 function _normalizePosterCopy(value) {
@@ -117,6 +128,17 @@ function _normalizeLocationStatus(value, location) {
   return location ? 'captured' : 'unavailable';
 }
 
+function _normalizeSourceType(value, fallback = 'photo') {
+  const sourceType = String(value || '').trim().toLowerCase();
+  if (SOURCE_TYPES.includes(sourceType)) return sourceType;
+  return SOURCE_TYPES.includes(fallback) ? fallback : 'photo';
+}
+
+function _normalizeVisibility(value) {
+  const visibility = String(value || '').trim().toLowerCase();
+  return VISIBILITIES.includes(visibility) ? visibility : 'public';
+}
+
 function _normalizeCoverStatus(value, fileID) {
   const status = String(value || '').trim();
   if (status === 'ready' && fileID) return 'ready';
@@ -138,6 +160,18 @@ function getDeviceId() {
   return deviceId;
 }
 
+// 未绑定账号时用于认领匿名云端临时记录的本机凭证。
+// 只保存在本机，服务端只保存它的哈希值；不要把它当成用户身份凭证。
+function getGuestToken() {
+  const current = _get(KEY_GUEST_TOKEN);
+  if (typeof current === 'string' && current.trim().length >= 32) return current.trim();
+
+  const parts = Array.from({ length: 8 }, () => Math.random().toString(36).slice(2));
+  const token = `guest_${Date.now().toString(36)}_${parts.join('')}`.slice(0, 192);
+  _set(KEY_GUEST_TOKEN, token);
+  return token;
+}
+
 function createPendingCaptureId() {
   return _createLocalId('capture');
 }
@@ -150,6 +184,9 @@ function savePendingCapture(context = {}) {
   const pending = {
     captureId,
     photoPath: String(source.photoPath || '').trim().slice(0, 2048),
+    sourceType: _normalizeSourceType(
+      source.sourceType || source.captureSource || source.inputSource,
+    ),
     capturedAt,
     location,
     locationStatus: _normalizeLocationStatus(source.locationStatus, location),
@@ -254,6 +291,8 @@ function _createSyncState() {
     accountBindingKey: null,
     accountChanged: false,
     accountCheckPending: false,
+    privacyPolicyVersion: null,
+    photoConsentAt: null,
     importConsentAt: null,
     lastSyncedAt: null,
     lastSyncError: null,
@@ -270,6 +309,8 @@ function _createStats() {
     pawGrowth: 0,
     // 咔咔分是可独立核对的余额，变动明细由云端奖励流水保存。
     pointBalance: 0,
+    // 已购买且尚未使用的罐罐；每日赠送额度由页面按自然日单独计算。
+    purchasedCanBalance: 0,
     memberLevelVersion: MEMBER_LEVEL_VERSION,
   };
 }
@@ -310,6 +351,7 @@ function _createCollection() {
       displayDescription: null,
       posterCopy: null,
       copyVersion: null,
+      visibility: 'public',
       records: [],
     };
     return collection;
@@ -332,6 +374,7 @@ function _ensureCollectionShape(collection) {
         displayDescription: null,
         posterCopy: null,
         copyVersion: null,
+        visibility: 'public',
         records: [],
       };
       changed = true;
@@ -361,6 +404,10 @@ function _ensureCollectionShape(collection) {
     }
     if (entry.copyVersion === undefined) {
       entry.copyVersion = null;
+      changed = true;
+    }
+    if (!VISIBILITIES.includes(entry.visibility)) {
+      entry.visibility = 'public';
       changed = true;
     }
   });
@@ -411,6 +458,23 @@ function setFeaturedRecord(catId, recordId) {
 
   entry.featuredRecordId = recordId;
   _set(KEY_COLLECTION, collection);
+}
+
+function getCatVisibility(catId) {
+  const collection = getCollection();
+  const entry = collection[catId];
+  return _normalizeVisibility(entry && entry.visibility);
+}
+
+function setCatVisibility(catId, value) {
+  const collection = getCollection();
+  const entry = collection[catId];
+  if (!entry) return null;
+
+  const visibility = _normalizeVisibility(value);
+  entry.visibility = visibility;
+  _set(KEY_COLLECTION, collection);
+  return visibility;
 }
 
 /**
@@ -508,6 +572,39 @@ function getRecordDisplayPath(record) {
     || getRecordPosterSourcePath(record);
 }
 
+function _getLocalDateKey(value) {
+  const timestamp = _getTimestamp(value) || Date.now();
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * 罐罐额度统一口径：每日赠送和购买余额分开计算，页面只读取这里的结果。
+ * 每日赠送按本地自然日重置，购买余额不随日期变化。
+ */
+function getCanQuota(referenceTime = Date.now()) {
+  const records = getAllRecords();
+  const todayKey = _getLocalDateKey(referenceTime);
+  const todayCount = records.filter(record => _getLocalDateKey(record.createdAt) === todayKey).length;
+  const stats = getUserStats();
+  const purchasedCanBalance = Math.max(0, Math.floor(Number(stats.purchasedCanBalance) || 0));
+  const dailyRemainingCans = Math.max(0, DAILY_CAN_LIMIT - todayCount);
+
+  return {
+    dailyCanLimit: DAILY_CAN_LIMIT,
+    todayCount,
+    dailyRemainingCans,
+    purchasedCanBalance,
+    remainingCans: dailyRemainingCans + purchasedCanBalance,
+  };
+}
+
+function _createCanQuotaError() {
+  const error = new Error('罐罐额度已用完');
+  error.code = 'CAN_QUOTA_EXHAUSTED';
+  return error;
+}
+
 /**
  * 保存一条拍摄记录。
  * 兼容 identifyCat 返回的 { catId, catData }，也兼容直接传入 catId/photoPath。
@@ -550,6 +647,21 @@ function saveRecord(recordData) {
     throw new Error('[Storage] invalid catId');
   }
 
+  // 先用当天赠送额度；当天赠送已经用完时，才从购买余额扣除 1 个。
+  // 扣减发生在记录写入前的同一同步流程里，避免保存成功但库存没有变化。
+  const recordDateKey = _getLocalDateKey(data.createdAt || now);
+  const todayCountBeforeSave = records.filter(record => (
+    _getLocalDateKey(record.createdAt) === recordDateKey
+  )).length;
+  const dailyRemainingBeforeSave = Math.max(0, DAILY_CAN_LIMIT - todayCountBeforeSave);
+  let canUsageSource = 'daily-gift';
+  if (dailyRemainingBeforeSave <= 0) {
+    const purchasedCanBalance = Math.max(0, Math.floor(Number(stats.purchasedCanBalance) || 0));
+    if (purchasedCanBalance <= 0) throw _createCanQuotaError();
+    stats.purchasedCanBalance = purchasedCanBalance - 1;
+    canUsageSource = 'purchased';
+  }
+
   const existingRecord = records.find(record => (
     record
     && (record.recordId === localRecordId || record.clientRecordId === localRecordId)
@@ -569,6 +681,9 @@ function saveRecord(recordData) {
     syncError: null,
     serverEncounterId: null,
     captureId: data.captureId || null,
+    sourceType: _normalizeSourceType(
+      data.sourceType || data.captureSource || data.inputSource,
+    ),
     catProfileId: data.catProfileId || null,
     catId,
     archiveCode,
@@ -616,6 +731,7 @@ function saveRecord(recordData) {
     overallScore: typeof data.overallScore === 'number' ? data.overallScore : null,
     pawReward,
     pointReward: pointReward || null,
+    canUsageSource,
     scorePending: data.scorePending === true,
     scoreSource: data.scoreSource || null,
     scoreVersion: data.scoreVersion || null,
@@ -665,6 +781,7 @@ function saveRecord(recordData) {
     record,
     recordId: record.recordId,
     isNew,
+    canUsageSource,
   };
 }
 
@@ -731,6 +848,78 @@ function updateRecordCover(recordId, cover = {}) {
         .replace(/\s+/g, ' ').trim().slice(0, 240)
       : null,
   };
+  const coverFields = [
+    'coverFileID',
+    'coverPhotoPath',
+    'coverContentType',
+    'coverProvider',
+    'coverModel',
+    'coverOperation',
+    'coverPromptVersion',
+    'coverTargetRatio',
+    'coverStatus',
+    'coverRequestId',
+    'coverCreatedAt',
+    'coverRejectReason',
+  ];
+  const changed = coverFields.some(field => next[field] !== existing[field]);
+  if (changed && existing.syncState === 'synced') {
+    next.syncState = 'pending';
+    next.syncedAt = null;
+    next.syncError = null;
+  }
+  records[index] = next;
+  _set(KEY_RECORDS, records);
+  return next;
+}
+
+/**
+ * 写入一条记录补回的正式评分。
+ * 补评分只更新评分字段，并保留原有奖励，避免重复增加猫爪或咔咔分。
+ * 同时把记录标记为待同步，让已有云端 encounter 走幂等更新而不是重复创建。
+ */
+function updateRecordScore(recordId, score = {}) {
+  const normalizedRecordId = String(recordId || '').trim();
+  if (!normalizedRecordId || !score || typeof score !== 'object') return null;
+
+  const scoreValues = ['charmScore', 'clevernessScore', 'auraScore', 'overallScore'];
+  if (score.scorePending === true || scoreValues.some(key => (
+    !Number.isFinite(Number(score[key]))
+  ))) return null;
+
+  const records = getAllRecords();
+  const index = records.findIndex(record => (
+    record
+    && (record.recordId === normalizedRecordId || record.clientRecordId === normalizedRecordId)
+  ));
+  if (index < 0) return null;
+
+  const existing = records[index];
+  const next = {
+    ...existing,
+    levelCode: score.levelCode || existing.levelCode || null,
+    levelLabel: score.levelLabel || existing.levelLabel || null,
+    levelShortLabel: score.levelShortLabel || existing.levelShortLabel || null,
+    charmScore: Number(score.charmScore),
+    clevernessScore: Number(score.clevernessScore),
+    auraScore: Number(score.auraScore),
+    overallScore: Number(score.overallScore),
+    scorePending: false,
+    scoreSource: score.scoreSource || 'evidence',
+    scoreVersion: score.scoreVersion || null,
+    scoreEvidence: score.scoreEvidence && typeof score.scoreEvidence === 'object'
+      ? score.scoreEvidence
+      : existing.scoreEvidence || null,
+    scoreCoverage: score.scoreCoverage && typeof score.scoreCoverage === 'object'
+      ? score.scoreCoverage
+      : existing.scoreCoverage || null,
+    // 补评分不是一次新的相遇，不重新计算或累加既有奖励。
+    pawReward: existing.pawReward,
+    pointReward: existing.pointReward,
+    syncState: 'pending',
+    syncedAt: null,
+    syncError: null,
+  };
   records[index] = next;
   _set(KEY_RECORDS, records);
   return next;
@@ -752,10 +941,22 @@ function updateRecordPosterResult(recordId, result) {
   ));
   if (index < 0) return null;
 
+  const existing = records[index];
+  const unchanged = JSON.stringify(existing.posterResult || null)
+    === JSON.stringify(normalizedResult);
+  if (unchanged) return existing;
+
   const next = {
-    ...records[index],
+    ...existing,
     posterResult: normalizedResult,
   };
+  // 海报是 encounters.media 的派生字段；账号记录已同步后再产生/更新海报，
+  // 必须重新进入待同步队列，避免只保存在本机而数据库仍为空或是旧快照。
+  if (existing.syncState === 'synced') {
+    next.syncState = 'pending';
+    next.syncedAt = null;
+    next.syncError = null;
+  }
   records[index] = next;
   _set(KEY_RECORDS, records);
   return next;
@@ -793,6 +994,16 @@ function clearAllRecordCovers() {
     if (posterCoverFileID && !seen.has(posterCoverFileID)) {
       seen.add(posterCoverFileID);
       fileIDs.push(posterCoverFileID);
+    }
+    const posterSourceFileID = record.posterResult
+      && record.posterResult.sourceImage
+      && record.posterResult.sourceImage.kind === 'cover'
+      && record.posterResult.sourceImage.fileID
+      ? String(record.posterResult.sourceImage.fileID).trim()
+      : '';
+    if (posterSourceFileID && !seen.has(posterSourceFileID)) {
+      seen.add(posterSourceFileID);
+      fileIDs.push(posterSourceFileID);
     }
     const posterFileID = record.posterResult && record.posterResult.posterImage
       && record.posterResult.posterImage.fileID;
@@ -865,6 +1076,14 @@ function getSyncState() {
   }
   if (typeof state.accountCheckPending !== 'boolean') {
     state.accountCheckPending = false;
+    changed = true;
+  }
+  if (state.privacyPolicyVersion === undefined) {
+    state.privacyPolicyVersion = null;
+    changed = true;
+  }
+  if (state.photoConsentAt === undefined) {
+    state.photoConsentAt = null;
     changed = true;
   }
   if (state.importConsentAt === undefined) {
@@ -1007,9 +1226,13 @@ function _normalizeRemoteRecord(remote) {
     syncError: null,
     serverEncounterId: source.encounterId || null,
     captureId: source.captureId || null,
+    sourceType: _normalizeSourceType(
+      source.sourceType || source.captureSource || source.inputSource,
+    ),
     catProfileId: source.catProfileId || null,
     catId,
     archiveCode,
+    canUsageSource: source.canUsageSource === 'purchased' ? 'purchased' : 'daily-gift',
     catName: display.name || source.catName || null,
     catDescription: display.description || source.catDescription || null,
     posterCopy: _normalizePosterCopy(display.posterCopy || source.posterCopy),
@@ -1156,6 +1379,24 @@ function mergeRemoteRecords(remoteRecords) {
   return changedCount;
 }
 
+function mergeRemoteProfiles(remoteProfiles) {
+  if (!Array.isArray(remoteProfiles) || !remoteProfiles.length) return 0;
+
+  const collection = getCollection();
+  let changedCount = 0;
+  remoteProfiles.forEach(profile => {
+    const catId = String(profile && (profile.catalogCatId || profile.catId) || '').trim();
+    if (!catId || !collection[catId]) return;
+    const visibility = _normalizeVisibility(profile.visibility);
+    if (collection[catId].visibility === visibility) return;
+    collection[catId].visibility = visibility;
+    changedCount += 1;
+  });
+
+  if (changedCount) _set(KEY_COLLECTION, collection);
+  return changedCount;
+}
+
 function _rebuildDerivedState(records) {
   const collection = getCollection();
   const safeRecords = Array.isArray(records) ? records : [];
@@ -1293,6 +1534,16 @@ function getUserStats() {
       changed = true;
     }
   }
+  if (!Number.isFinite(Number(stats.purchasedCanBalance))) {
+    stats.purchasedCanBalance = 0;
+    changed = true;
+  } else {
+    const normalizedPurchasedCans = Math.max(0, Math.floor(Number(stats.purchasedCanBalance)));
+    if (normalizedPurchasedCans !== stats.purchasedCanBalance) {
+      stats.purchasedCanBalance = normalizedPurchasedCans;
+      changed = true;
+    }
+  }
 
   if (changed) _set(KEY_STATS, stats);
   return stats;
@@ -1316,6 +1567,11 @@ function mergeRemoteStats(remoteStats) {
   }
   if (Number.isFinite(pointBalance)) {
     stats.pointBalance = Math.max(stats.pointBalance || 0, Math.floor(pointBalance));
+  }
+  const purchasedCanBalance = Number(source.purchasedCanBalance);
+  if (Number.isFinite(purchasedCanBalance)) {
+    // 购买余额是可消耗库存，远端数值可以比本地更小，不能使用奖励余额的 max 合并规则。
+    stats.purchasedCanBalance = Math.max(0, Math.floor(purchasedCanBalance));
   }
   _set(KEY_STATS, stats);
   return stats;
@@ -1355,6 +1611,7 @@ function getUnlockedMap() {
 module.exports = {
   initStorage,
   getDeviceId,
+  getGuestToken,
   getUserProfile,
   setUserProfile,
   clearUserProfile,
@@ -1362,16 +1619,21 @@ module.exports = {
   savePendingCapture,
   getPendingCapture,
   clearPendingCapture,
+  normalizeSourceType: _normalizeSourceType,
   getLocationConsent,
   setLocationConsent,
   clearLocationConsent,
+  normalizeVisibility: _normalizeVisibility,
   getShareId,
   setShareId,
   getOrCreateShareId,
   clearShareIds,
   getCollection,
+  getCatVisibility,
+  setCatVisibility,
   saveRecord,
   updateRecordCover,
+  updateRecordScore,
   updateRecordPosterResult,
   clearAllRecordCovers,
   getAllRecords,
@@ -1383,6 +1645,7 @@ module.exports = {
   getRecordPosterSourcePath,
   getRecordPosterSourceFileID,
   getRecordDisplayPath,
+  getCanQuota,
   getUserStats,
   setFeaturedRecord,
   removeCatArchive,
@@ -1395,5 +1658,6 @@ module.exports = {
   markPendingSyncError,
   prepareRecordsForAccountRebind,
   mergeRemoteRecords,
+  mergeRemoteProfiles,
   mergeRemoteStats,
 };

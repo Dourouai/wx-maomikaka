@@ -74,6 +74,9 @@ function hasExplicitScores(input) {
 
   // 评分证据不足时，即使模型返回了部分分数，也只能作为待评估结果。
   const coverage = input && input.scoreCoverage;
+  // cat-vision 仍兼容旧模型直接返回三项 scores 的格式；这种结果没有
+  // scoreEvidence coverage，但三项分数完整时应正常展示，而不是被误判为待评分。
+  if (input && input.scoreSource === 'legacy-direct') return true;
   if (coverage && typeof coverage === 'object') {
     return SCORE_CONFIG.every(item => Number(coverage[item.key]) >= 0.5);
   }

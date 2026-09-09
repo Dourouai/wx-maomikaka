@@ -1,6 +1,8 @@
 // 猫咪咔咔｜海报保存和公开分享
 const storage = require('./storage');
 const catShare = require('./catShare');
+const posterData = require('./posterData');
+const permissions = require('./permissions');
 
 function createError(code, message) {
   const error = new Error(message || code);
@@ -9,23 +11,40 @@ function createError(code, message) {
 }
 
 async function prepareShare(poster) {
-  if (!poster || !poster.sourceArchiveId || !poster.shareArchive) {
+  if (!poster || !poster.sourceArchiveId) {
+    throw createError('POSTER_SHARE_DATA_EMPTY', '没有可分享的猫咪档案快照');
+  }
+
+  // 兼容从云端读取的旧海报：posterResult 不持久化完整 shareArchive，
+  // 这里按海报绑定的 sourceRecordId 重建公开快照，不让分享依赖临时本地字段。
+  const existingArchive = poster.shareArchive
+    && Array.isArray(poster.shareArchive.records)
+    && poster.shareArchive.records.length
+    ? poster.shareArchive
+    : null;
+  const shareArchive = existingArchive || posterData.buildLocalShareArchive(
+    poster.sourceArchiveId,
+    storage.getRecordsForCat(poster.sourceArchiveId),
+    {},
+    poster.sourceRecordId,
+  );
+  if (!shareArchive) {
     throw createError('POSTER_SHARE_DATA_EMPTY', '没有可分享的猫咪档案快照');
   }
 
   if (poster.isShared && poster.shareId) {
-    return { shareId: poster.shareId, archive: poster.shareArchive };
+    return { shareId: poster.shareId, archive: shareArchive };
   }
 
   const shareId = poster.shareId
     || storage.getShareId(poster.sourceArchiveId)
     || storage.getOrCreateShareId(poster.sourceArchiveId);
-  const result = await catShare.create(shareId, poster.shareArchive);
+  const result = await catShare.create(shareId, shareArchive);
   const returnedShareId = result && result.shareId ? result.shareId : shareId;
   storage.setShareId(poster.sourceArchiveId, returnedShareId);
   return {
     shareId: returnedShareId,
-    archive: result && result.archive ? result.archive : poster.shareArchive,
+    archive: result && result.archive ? result.archive : shareArchive,
   };
 }
 
@@ -45,35 +64,14 @@ function buildShareConfig(poster, posterPath, shareId) {
   return config;
 }
 
+function getPhotosAlbumAuthorizationStatus() {
+  return permissions.getWritePhotosAlbumStatus();
+}
+
 function saveToAlbum(filePath) {
   if (!filePath || typeof wx.saveImageToPhotosAlbum !== 'function') {
     return Promise.reject(createError('POSTER_SAVE_UNSUPPORTED', '当前设备不支持保存海报'));
   }
-
-  const getAlbumAuthorization = () => new Promise(resolve => {
-    if (typeof wx.getSetting !== 'function') {
-      resolve('unknown');
-      return;
-    }
-    wx.getSetting({
-      success: result => {
-        const authSetting = result && result.authSetting ? result.authSetting : {};
-        if (authSetting['scope.writePhotosAlbum'] === true) {
-          resolve('authorized');
-          return;
-        }
-        if (authSetting['scope.writePhotosAlbum'] === false) {
-          resolve('denied');
-          return;
-        }
-        resolve('undetermined');
-      },
-      fail: error => {
-        console.warn('[PosterShare] 读取相册授权状态失败:', error);
-        resolve('unknown');
-      },
-    });
-  });
 
   const save = () => new Promise((resolve, reject) => {
     wx.saveImageToPhotosAlbum({
@@ -88,7 +86,7 @@ function saveToAlbum(filePath) {
     '请前往微信设置开启保存到相册权限后再试',
   );
 
-  return getAlbumAuthorization().then(status => {
+  return getPhotosAlbumAuthorizationStatus().then(status => {
     if (status === 'denied') throw deniedError();
     return save();
   }).catch(error => {
@@ -112,5 +110,6 @@ module.exports = {
   prepareShare,
   buildSharePath,
   buildShareConfig,
+  getPhotosAlbumAuthorizationStatus,
   saveToAlbum,
 };

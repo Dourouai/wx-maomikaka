@@ -52,6 +52,17 @@
         <text class="info-ai-label">AI GENERATED</text>
       </view>
 
+      <view class="about-privacy-entry" bindtap="goPrivacy" aria-role="button" aria-label="打开隐私条款">
+        <view class="about-privacy-entry-icon">
+          <image src="/assets/paw.svg" mode="aspectFit" />
+        </view>
+        <view class="about-privacy-entry-copy">
+          <text class="about-privacy-entry-title">隐私条款</text>
+          <text class="about-privacy-entry-subtitle">了解图片、档案与权限如何处理</text>
+        </view>
+        <text class="about-privacy-entry-arrow">›</text>
+      </view>
+
       <view class="about-meta">
         <text>MAOMI KAKA · CITY CAT ARCHIVE</text>
         <text class="about-meta-version">2026.09</text>

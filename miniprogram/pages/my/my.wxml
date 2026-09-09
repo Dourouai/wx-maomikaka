@@ -23,14 +23,20 @@
       <view class="profile-card">
         <view class="profile-top">
           <view class="profile-avatar-wrap">
-            <image wx:if="{{profileAvatar}}" class="profile-avatar" src="{{profileAvatar}}" mode="aspectFill" />
-            <image wx:else class="profile-avatar profile-avatar-fallback" src="/assets/cat-illustration.svg" mode="aspectFit" />
+            <image wx:if="{{profileAvatar}}" class="profile-avatar" src="{{profileAvatar}}" mode="aspectFill" binderror="onAvatarError" />
+            <image wx:else class="profile-avatar profile-avatar-fallback" src="/assets/maomi-kaka-logo-square-144.png" mode="aspectFit" />
           </view>
           <view class="profile-copy">
             <text class="profile-name">{{profileName}}</text>
             <text class="profile-role">街角漫游者 · 记录生活里的猫</text>
           </view>
-          <text class="profile-level-badge">LV.{{memberLevel}}</text>
+          <view class="profile-side">
+            <text class="profile-level-badge">LV.{{memberLevel}}</text>
+            <view class="profile-settings-button" bindtap="onProfileSettingsTap" aria-role="button" aria-label="设置头像和昵称">
+              <text class="profile-settings-glyph">⚙</text>
+              <text>设置</text>
+            </view>
+          </view>
         </view>
 
         <view class="growth-module">
@@ -59,17 +65,6 @@
         </view>
       </view>
 
-      <view class="stat-grid">
-        <view class="stat-item">
-          <text class="stat-value">{{unlockedCount}}</text>
-          <text class="stat-label">已发现</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-value">{{streakDays}}</text>
-          <text class="stat-label">连续记录天数</text>
-        </view>
-      </view>
-
       <view class="profile-home-entry" bindtap="goProfile" aria-role="button" aria-label="我的主页">
         <view class="profile-home-icon">
           <image src="/assets/icon-poster-share-coral.svg" mode="aspectFit" />
@@ -82,12 +77,53 @@
         <text class="profile-home-arrow">→</text>
       </view>
 
+      <view class="resource-card" aria-label="罐罐和咔咔分">
+        <view class="resource-card-head">
+          <text class="resource-card-kicker">MY RESOURCES</text>
+          <text class="resource-card-hint">相遇资产</text>
+        </view>
+        <view class="resource-card-body">
+          <view class="resource-item resource-item-can">
+            <view class="resource-mark resource-mark-can"><text>罐</text></view>
+            <view class="resource-item-copy">
+              <text class="resource-item-label">罐罐</text>
+              <view class="resource-item-value-row">
+                <text class="resource-item-value">{{remainingCans}}</text>
+                <text class="resource-item-unit">可用</text>
+              </view>
+              <view class="resource-item-breakdown">
+                <view class="resource-breakdown-item" aria-label="今日赠送剩余 {{dailyRemainingCans}} 个">
+                  <image src="/assets/icon-calendar-coral.svg" mode="aspectFit" />
+                  <text>{{dailyRemainingCans}}</text>
+                </view>
+                <view class="resource-breakdown-item" aria-label="已购买剩余 {{purchasedCanBalance}} 个">
+                  <image src="/assets/icon-can-coral.svg" mode="aspectFit" />
+                  <text>{{purchasedCanBalance}}</text>
+                </view>
+              </view>
+            </view>
+            <view class="resource-can-recharge" bindtap="openCanRecharge" aria-role="button" aria-label="充值罐罐">
+              <image src="/assets/icon-recharge-coral.svg" mode="aspectFit" />
+            </view>
+          </view>
+          <view class="resource-divider"></view>
+          <view class="resource-item">
+            <view class="resource-mark resource-mark-point"><text>咔</text></view>
+            <view class="resource-item-copy">
+              <text class="resource-item-label">咔咔分</text>
+              <text class="resource-item-value">{{pointBalance}}</text>
+              <text class="resource-item-note">累计余额</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
       <view
-        wx:if="{{!isLoggedIn}}"
+        wx:if="{{showSyncEntry}}"
         class="sync-card {{syncBusy ? 'sync-card-busy' : ''}}"
-        bindtap="onBindAccount"
+        bindtap="onSyncTap"
         aria-role="button"
-        aria-label="绑定当前微信账号并同步相遇记录"
+        aria-label="同步相遇记录"
       >
         <view class="sync-card-icon">
           <image src="/assets/doodle-spark.svg" mode="aspectFit" />
@@ -103,27 +139,29 @@
         </view>
       </view>
 
-      <view class="ai-source-note" aria-label="Ai创作声明">
-        <view class="ai-source-icon">
-          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
-        </view>
-        <view class="ai-source-copy">
-          <text class="ai-source-title">Ai创作声明</text>
-          <text class="ai-source-subtitle">应用中所有图片与文案均有Ai参与二次创作</text>
-        </view>
-        <text class="ai-source-label">AI GENERATED</text>
-      </view>
-
       <view class="settings">
-        <view class="setting-row setting-row-link" bindtap="goPrivacy" aria-role="button" aria-label="打开隐私条款">
+        <view class="setting-row setting-row-link" bindtap="goCatFriends" aria-role="button" aria-label="打开猫友图鉴">
           <view class="setting-icon">
-            <image src="/assets/paw.svg" mode="aspectFit" />
+            <image src="/assets/icon-heart.svg" mode="aspectFit" />
           </view>
           <view class="setting-copy">
-            <text class="setting-title">隐私条款</text>
-            <text class="setting-subtitle">了解图片、档案与权限如何处理</text>
+            <text class="setting-title">猫友图鉴</text>
+            <text class="setting-subtitle">看看大家带着猫生图来串门</text>
           </view>
           <text class="setting-arrow">›</text>
+        </view>
+        <view class="setting-row setting-row-link resource-history-row" bindtap="openCanHistoryPage" aria-role="button" aria-label="查看罐罐使用记录">
+          <view class="setting-icon">
+            <image src="/assets/icon-history-coral.svg" mode="aspectFit" />
+          </view>
+          <view class="setting-copy">
+            <text class="setting-title">使用记录</text>
+            <text class="setting-subtitle">查看最近的相遇使用</text>
+          </view>
+          <view class="resource-history-action">
+            <text class="resource-history-count">{{canUsageTotal}} 次</text>
+            <text class="resource-history-arrow">›</text>
+          </view>
         </view>
         <view class="setting-row setting-row-link" bindtap="goAbout" aria-role="button" aria-label="打开关于猫咪咔咔">
           <view class="setting-icon">
@@ -147,12 +185,15 @@
         </view>
       </view>
 
-      <view class="my-link" bindtap="goCamera" aria-role="button" aria-label="去遇见一只猫">
-        <view class="my-link-copy">
-          <text class="my-link-title">去遇见一只猫</text>
-          <text class="my-link-sub">继续收集你的城市猫咪</text>
+      <view class="ai-source-note" aria-label="Ai创作声明">
+        <view class="ai-source-icon">
+          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
         </view>
-        <image class="my-link-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
+        <view class="ai-source-copy">
+          <text class="ai-source-title">Ai创作声明</text>
+          <text class="ai-source-subtitle">应用中所有图片与文案均有Ai参与二次创作</text>
+        </view>
+        <text class="ai-source-label">AI GENERATED</text>
       </view>
 
       <view class="my-bottom-safe"></view>
@@ -190,18 +231,17 @@
             <image src="/assets/maomi-kaka-logo-square-144.png" mode="aspectFit" />
           </view>
           <text class="my-login-guest-title">登录，开启你的<text class="my-login-title-em">猫档案</text></text>
-          <text class="my-login-guest-subtitle">记录每一次遇见的猫，积累属于你的猫爪经验。</text>
+          <text class="my-login-guest-subtitle">先登录建立账号；头像和昵称可在资料卡的设置中选择保存。</text>
           <button
             class="my-login-primary {{syncBusy ? 'my-login-primary-busy' : ''}}"
             disabled="{{syncBusy}}"
-            open-type="chooseAvatar"
-            bindchooseavatar="onChooseAvatar"
+            bindtap="onLoginTap"
             hover-class="my-login-button-hover"
             aria-role="button"
-            aria-label="微信授权登录"
+            aria-label="登录并绑定微信账号"
           >
             <image src="/assets/icon-user-white.svg" mode="aspectFit" />
-            <text>{{syncBusy ? '正在登录' : '微信授权登录'}}</text>
+            <text>{{syncBusy ? '正在登录' : '登录并绑定微信账号'}}</text>
           </button>
         </view>
       </view>
@@ -236,10 +276,119 @@
         <text class="my-login-explore-action">去相遇 →</text>
       </view>
 
+      <!-- 公开信息入口不依赖账号，未登录时也应可以查看。 -->
+      <view class="settings my-login-public-settings">
+        <view class="setting-row setting-row-link" bindtap="goCatFriends" aria-role="button" aria-label="打开猫友图鉴">
+          <view class="setting-icon">
+            <image src="/assets/icon-heart.svg" mode="aspectFit" />
+          </view>
+          <view class="setting-copy">
+            <text class="setting-title">猫友图鉴</text>
+            <text class="setting-subtitle">看看大家带着猫生图来串门</text>
+          </view>
+          <text class="setting-arrow">›</text>
+        </view>
+        <view class="setting-row setting-row-link" bindtap="goAbout" aria-role="button" aria-label="打开关于猫咪咔咔">
+          <view class="setting-icon">
+            <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+          </view>
+          <view class="setting-copy">
+            <text class="setting-title">关于猫咪咔咔</text>
+            <text class="setting-subtitle">认识我们的街角猫咪档案</text>
+          </view>
+          <text class="setting-arrow">›</text>
+        </view>
+        <view class="setting-row setting-row-link" bindtap="showFeedbackContact" aria-role="button" aria-label="功能建议及问题反馈">
+          <view class="setting-icon">
+            <image src="/assets/doodle-spark.svg" mode="aspectFit" />
+          </view>
+          <view class="setting-copy">
+            <text class="setting-title">功能建议及问题反馈</text>
+            <text class="setting-subtitle">欢迎告诉我们你的想法和使用问题</text>
+          </view>
+          <text class="setting-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="ai-source-note my-login-public-ai-note" aria-label="Ai创作声明">
+        <view class="ai-source-icon">
+          <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="ai-source-copy">
+          <text class="ai-source-title">Ai创作声明</text>
+          <text class="ai-source-subtitle">应用中所有图片与文案均有Ai参与二次创作</text>
+        </view>
+        <text class="ai-source-label">AI GENERATED</text>
+      </view>
+
       <view class="my-login-bottom-safe"></view>
     </view>
   </scroll-view>
   </block>
+
+  <!-- 仅在用户主动设置资料时展示；登录和记录同步都不读取微信头像和昵称。 -->
+  <view
+    wx:if="{{showProfileAuth}}"
+    class="profile-auth-layer"
+    catchtap="onProfileAuthCancel"
+    aria-role="dialog"
+    aria-label="设置头像和昵称"
+  >
+    <view class="profile-auth-backdrop"></view>
+    <view class="profile-auth-card" catchtap="stopProfileAuthPropagation">
+      <view class="profile-auth-head">
+        <view>
+          <text class="profile-auth-eyebrow">WECHAT PROFILE · SETTINGS</text>
+          <text class="profile-auth-title">{{profileAuthTitle}}</text>
+          <text class="profile-auth-subtitle">{{profileAuthSubtitle}}</text>
+        </view>
+        <view class="profile-auth-close" bindtap="onProfileAuthCancel" aria-role="button" aria-label="关闭资料填写">
+          <image src="/assets/icon-close.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view class="profile-auth-form">
+        <view class="profile-auth-avatar-field">
+          <button
+            class="profile-auth-avatar-button"
+            open-type="chooseAvatar"
+            bindchooseavatar="onChooseAvatar"
+            disabled="{{profileAuthBusy}}"
+            aria-label="选择头像"
+          >
+            <image wx:if="{{profileAuthAvatarUrl}}" class="profile-auth-avatar" src="{{profileAuthAvatarUrl}}" mode="aspectFill" />
+            <image wx:else class="profile-auth-avatar profile-auth-avatar-fallback" src="/assets/maomi-kaka-logo-square-144.png" mode="aspectFit" />
+          </button>
+          <text class="profile-auth-field-label">点击选择头像</text>
+        </view>
+
+        <view class="profile-auth-nickname-field">
+          <text class="profile-auth-field-label">昵称</text>
+          <input
+            class="profile-auth-nickname-input"
+            type="nickname"
+            value="{{profileAuthNickname}}"
+            maxlength="40"
+            placeholder="点击输入框，从建议中选择"
+            bindinput="onNicknameInput"
+            confirm-type="done"
+            disabled="{{profileAuthBusy}}"
+          />
+        </view>
+      </view>
+
+      <text class="profile-auth-note">登录和记录同步不读取资料；只有你点击设置并确认后，才会审核并保存头像和昵称。</text>
+
+      <view class="profile-auth-actions">
+        <view class="profile-auth-action profile-auth-cancel" bindtap="onProfileAuthCancel" aria-role="button">
+          <text>取消</text>
+        </view>
+        <view class="profile-auth-action profile-auth-confirm {{profileAuthBusy ? 'profile-auth-confirm-busy' : ''}}" bindtap="onProfileAuthConfirm" aria-role="button">
+          <text>{{profileAuthBusy ? '正在保存' : profileAuthConfirmText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
 
   <exception-modal
     visible="{{showException}}"
@@ -274,6 +423,62 @@
           <text>复制</text>
         </view>
       </view>
+    </view>
+  </view>
+
+  <view
+    wx:if="{{showCanRecharge}}"
+    class="recharge-layer"
+    catchtap="stopRechargePropagation"
+    aria-role="dialog"
+    aria-label="充值罐罐"
+  >
+    <view class="recharge-backdrop"></view>
+    <view class="recharge-card" catchtap="stopRechargePropagation">
+      <view class="recharge-head">
+        <view>
+          <text class="recharge-eyebrow">CAN ARCHIVE · TOP UP</text>
+          <text class="recharge-title">给罐罐加一点</text>
+          <text class="recharge-subtitle">购买的罐罐会叠加到每日额度之外</text>
+        </view>
+        <view class="recharge-close" bindtap="closeCanRecharge" aria-role="button" aria-label="关闭充值">
+          <image src="/assets/icon-close.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view class="recharge-plan-list">
+        <view
+          wx:for="{{rechargePlans}}"
+          wx:key="id"
+          class="recharge-plan {{selectedRechargePlanId === item.id ? 'recharge-plan-selected' : ''}}"
+          data-plan-id="{{item.id}}"
+          bindtap="selectRechargePlan"
+          aria-role="radio"
+          aria-label="{{item.priceText}}，{{item.note}}"
+        >
+          <view class="recharge-plan-icon">
+            <image src="/assets/icon-can-coral.svg" mode="aspectFit" />
+            <text>×{{item.canAmount}}</text>
+          </view>
+          <view class="recharge-plan-copy">
+            <text class="recharge-plan-name">{{item.note}}</text>
+            <text class="recharge-plan-unit">微信虚拟支付</text>
+          </view>
+          <view class="recharge-plan-price">
+            <text>{{item.priceText}}</text>
+            <text wx:if="{{item.tag}}" class="recharge-plan-tag">{{item.tag}}</text>
+          </view>
+          <view class="recharge-plan-check">
+            <view wx:if="{{selectedRechargePlanId === item.id}}" class="recharge-plan-check-dot"></view>
+          </view>
+        </view>
+      </view>
+
+      <view class="recharge-submit {{rechargeBusy ? 'recharge-submit-busy' : ''}}" bindtap="confirmRecharge" aria-role="button" aria-label="确认充值">
+        <image src="/assets/icon-recharge-coral.svg" mode="aspectFit" />
+        <text>{{rechargeBusy ? '正在准备支付' : '确认充值 ¥' + selectedRechargePrice}}</text>
+      </view>
+      <text class="recharge-note">支付完成后，罐罐以微信发货通知确认到账</text>
     </view>
   </view>
 </view>

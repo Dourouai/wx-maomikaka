@@ -34,6 +34,8 @@
 - 我的猫卡列表，可以进入本地猫档案详情；
 - 空状态引导继续去相遇。
 
+猫卡的 `visibility=private` 只对主人自己的页面保留；个人主页的公开猫卡列表必须过滤私密猫卡。
+
 ### 查看他人
 
 页面标题使用“TA 的主页”，只展示公开信息：
@@ -118,6 +120,14 @@
 ```
 
 取消关注采用软删除 `status: removed`，不暴露关系双方的 openid。
+
+### 上线初始化要求
+
+CloudBase 不会因为云函数第一次写入而自动创建集合。上线前必须在当前环境创建
+`profile_shares` 和 `user_follows`，并将权限设置为 `无权限[ADMINONLY]`；这两个集合只由
+`profile-social` 云函数使用，客户端不应直接读写。若集合未创建，服务端会返回
+`PROFILE_SOCIAL_NOT_CONFIGURED`，页面只提示“主页分享服务还在准备中”，不展示 CloudBase
+底层错误。
 
 ## 5. `profile-social` 接口
 

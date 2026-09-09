@@ -135,8 +135,8 @@ failed → retry / use-original-image / back
 
 ```text
 猫档案详情的标准化展示数据
-  ├─ currentEncounter：当前主展示相遇记录的评分和等级
-  ├─ featuredRecord：用户选定的主图记录
+  ├─ currentRecord：当前最新相遇记录的图片和评分
+  ├─ featuredRecord：用户选定的档案主图记录（不用于海报）
   ├─ profile：猫档案名称、品种、特征和文案
   └─ share snapshot：需要公开的最小字段
 ```
@@ -146,7 +146,7 @@ failed → retry / use-original-image / back
 | 海报字段 | 来源 | 规则 |
 | --- | --- | --- |
 | `sourceArchiveId` | `catId` / `catalogCatId` | 只做内部关联，不绘制到海报 |
-| `sourceRecordId` | `featuredRecordId` | 主图和评分的相遇记录；无主图时使用当前最新有效记录 |
+| `sourceRecordId` | 当前最新记录的 `recordId` | 海报主图、封面和评分必须来自同一条最新相遇记录；精选记录只用于档案主图展示，不参与海报生成 |
 | `archiveCode` | 生成图片/相遇记录的展示编号 | 固定为 `YYYYMMDD` + 6 位大写数字/字母，例如 `20240512XX11EE`；海报显示 `No. 20240512XX11EE` |
 | `name` | `profile.name` → 最近记录名字 → `未命名` | 最多 8 个中文字符；超长先按规则缩短，不改变档案原值 |
 | `breed` | `profile.breed` → 当前记录识别品种 | 只作为次要信息，可为空 |

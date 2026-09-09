@@ -2,11 +2,15 @@
 const deviceLayout = require('../../utils/deviceLayout');
 const storage = require('../../utils/storage');
 const location = require('../../utils/location');
+const permissions = require('../../utils/permissions');
 
 Page({
   data: {
     todayCount: 0,
+    dailyRemainingCans: 3,
+    purchasedCanBalance: 0,
     remainingCans: 3,
+    availableCans: 3,
     dailyCanLimit: 3,
     isTakingPhoto: false,
     showLocationPrompt: false,
@@ -31,14 +35,25 @@ Page({
     this._refreshDailyQuota();
   },
 
+  onShow() {
+    // 从微信设置返回后只复核当前状态，不自动拍照，也不再次申请权限。
+    if (!this._cameraSettingsPending) return;
+    this._cameraSettingsPending = false;
+    this._refreshCameraAfterSettings();
+  },
+
   _refreshDailyQuota() {
-    const today = this._getDateKey(Date.now());
-    const todayCount = storage.getAllRecords().filter(record => (
-      this._getDateKey(record.createdAt) === today
-    )).length;
-    const remainingCans = Math.max(0, 3 - todayCount);
-    this.setData({ todayCount, remainingCans });
-    if (remainingCans <= 0) {
+    const quota = storage.getCanQuota();
+    const remainingCans = quota.dailyRemainingCans;
+    this.setData({
+      todayCount: quota.todayCount,
+      dailyRemainingCans: quota.dailyRemainingCans,
+      purchasedCanBalance: quota.purchasedCanBalance,
+      // 取景器上的数字继续展示每日赠送额度，购买余额只参与可用性判断。
+      remainingCans,
+      availableCans: quota.remainingCans,
+    });
+    if (quota.remainingCans <= 0) {
       this.setData({
         cameraError: true,
         cameraIssueKind: 'quota',
@@ -48,12 +63,7 @@ Page({
         cameraIssueAction: '返回首页',
       });
     }
-    return remainingCans;
-  },
-
-  _getDateKey(timestamp) {
-    const date = new Date(timestamp || Date.now());
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return quota.remainingCans;
   },
 
   onResize() {
@@ -88,6 +98,40 @@ Page({
       cameraIssueSubtitle: '请在小程序后台补充相机隐私指引，完成后重新进入拍摄页。',
       cameraIssueAction: '重新检查',
     });
+  },
+
+  _showCameraPermissionIssue() {
+    this.setData({
+      cameraError: true,
+      cameraIssueKind: 'permission',
+      cameraIssueEyebrow: '相机权限',
+      cameraIssueTitle: '需要使用相机',
+      cameraIssueSubtitle: '请在权限设置中允许相机访问',
+      cameraIssueAction: '打开设置',
+    });
+  },
+
+  async _refreshCameraAfterSettings() {
+    if (this._cameraPermissionRefreshing) return;
+    this._cameraPermissionRefreshing = true;
+    try {
+      const status = await permissions.getCameraStatus();
+      if (status === 'authorized') {
+        this.setData({ cameraError: false }, () => {
+          // 设置页返回后重新取得上下文，避免沿用权限变化前的原生组件状态。
+          this.cameraContext = wx.createCameraContext();
+        });
+        return;
+      }
+
+      // 用户没有批准或状态无法确认时，保留错误卡片，不假设设置已经生效。
+      this._showCameraPermissionIssue();
+    } catch (error) {
+      console.warn('[Camera] 设置返回后复核相机权限失败:', error);
+      this._showCameraPermissionIssue();
+    } finally {
+      this._cameraPermissionRefreshing = false;
+    }
   },
 
   // 拍摄页面内的当前画面，不再跳转到微信原生相机页。
@@ -140,6 +184,7 @@ Page({
     const pending = {
       captureId: storage.createPendingCaptureId(),
       photoPath: tempImagePath,
+      sourceType: 'live',
       capturedAt: Date.now(),
     };
     this._pendingCapture = pending;
@@ -253,11 +298,19 @@ Page({
   },
 
   openCameraSettings() {
-    wx.openSetting({
-      success: () => {
-        this.setData({ cameraError: false });
-      },
-    });
+    if (this._cameraSettingsPending || this._cameraPermissionRefreshing) return;
+    this._cameraSettingsPending = true;
+    permissions.openSetting()
+      .then(() => {
+        // 某些开发者工具版本不会稳定触发 onShow，用回调做同样的复核兜底。
+        if (!this._cameraSettingsPending) return;
+        this._cameraSettingsPending = false;
+        return this._refreshCameraAfterSettings();
+      })
+      .catch(error => {
+        this._cameraSettingsPending = false;
+        console.warn('[Camera] 打开权限设置失败:', error);
+      });
   },
 
   _showPhotoError() {

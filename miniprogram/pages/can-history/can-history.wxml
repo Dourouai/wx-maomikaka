@@ -1,0 +1,87 @@
+<view class="can-ledger-page">
+  <scroll-view class="can-ledger-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="can-ledger-content" style="padding-top: {{pageHeaderTop}}px;">
+      <view class="can-ledger-header" style="padding-right: {{headerRightInset}}px;">
+        <view class="can-ledger-back" bindtap="goBack" aria-role="button" aria-label="返回我的">
+          <image src="/assets/icon-chevron-left-coral.svg" mode="aspectFit" />
+        </view>
+        <view class="can-ledger-heading">
+          <text class="can-ledger-eyebrow">CAN ARCHIVE · LEDGER</text>
+          <text class="can-ledger-title">罐罐记录</text>
+        </view>
+        <view class="can-ledger-header-mark">
+          <image src="/assets/icon-can-coral.svg" mode="aspectFit" />
+        </view>
+      </view>
+
+      <view class="can-ledger-intro">
+        <text class="can-ledger-intro-title">每一只罐罐，都有来处</text>
+        <text class="can-ledger-intro-subtitle">相遇使用和购买到账会按时间放在这里。</text>
+      </view>
+
+      <view class="can-ledger-summary">
+        <view class="can-ledger-summary-item">
+          <image src="/assets/icon-can-coral.svg" mode="aspectFit" />
+          <view>
+            <text class="can-ledger-summary-value">{{usageCount}}</text>
+            <text class="can-ledger-summary-label">已使用</text>
+          </view>
+        </view>
+        <view class="can-ledger-summary-divider"></view>
+        <view class="can-ledger-summary-item">
+          <image src="/assets/icon-recharge-coral.svg" mode="aspectFit" />
+          <view>
+            <text class="can-ledger-summary-value">{{rechargeCount}}</text>
+            <text class="can-ledger-summary-label">购买记录</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="can-ledger-filters" aria-label="记录筛选">
+        <view
+          wx:for="{{filters}}"
+          wx:key="id"
+          class="can-ledger-filter {{activeFilter === item.id ? 'can-ledger-filter-active' : ''}}"
+          data-filter="{{item.id}}"
+          bindtap="selectFilter"
+          aria-role="tab"
+          aria-label="{{item.label}}"
+        >
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{loading}}" class="can-ledger-state can-ledger-loading">
+        <view class="can-ledger-loading-dot"></view>
+        <text>正在整理罐罐记录</text>
+      </view>
+
+      <view wx:elif="{{records.length}}" class="can-ledger-list">
+        <view wx:for="{{records}}" wx:key="id" class="can-ledger-record">
+          <view class="can-ledger-record-icon {{item.type === 'recharge' ? 'can-ledger-record-icon-recharge' : ''}}">
+            <image src="{{item.icon}}" mode="aspectFit" />
+          </view>
+          <view class="can-ledger-record-copy">
+            <text class="can-ledger-record-title">{{item.title}}</text>
+            <text class="can-ledger-record-subtitle">{{item.subtitle}}</text>
+          </view>
+          <view class="can-ledger-record-right">
+            <text class="can-ledger-record-amount {{item.amountClass}}">{{item.amount}}</text>
+            <text class="can-ledger-record-status {{item.statusClass}}">{{item.status}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:elif="{{!loading}}" class="can-ledger-empty">
+        <view class="can-ledger-empty-icon">
+          <image src="/assets/icon-history-coral.svg" mode="aspectFit" />
+        </view>
+        <text class="can-ledger-empty-title">这里还没有记录</text>
+        <text class="can-ledger-empty-subtitle">去遇见一只猫，或购买一份罐罐吧。</text>
+      </view>
+
+      <text wx:if="{{rechargeUnavailable}}" class="can-ledger-note">充值记录将在支付服务部署后自动显示；本地相遇记录不受影响。</text>
+      <view class="can-ledger-bottom-safe"></view>
+    </view>
+  </scroll-view>
+</view>

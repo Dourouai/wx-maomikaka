@@ -15,21 +15,6 @@
       </view>
 
       <view class="dev-tool-list">
-        <view class="dev-tool-card dev-tool-card-text" bindtap="goTextImage" aria-role="button" aria-label="打开文字生图测试">
-          <view class="dev-tool-icon dev-tool-icon-text">
-            <image src="/assets/doodle-spark.svg" mode="aspectFit" />
-          </view>
-          <view class="dev-tool-copy">
-            <view class="dev-tool-label-row">
-              <text class="dev-tool-kicker">TEXT → IMAGE</text>
-              <text class="dev-tool-badge">免费模型</text>
-            </view>
-            <text class="dev-tool-title">文字生图</text>
-            <text class="dev-tool-subtitle">输入一句话，测试混元文生图模型。</text>
-          </view>
-          <image class="dev-tool-arrow" src="/assets/icon-arrow-right-coral.svg" mode="aspectFit" />
-        </view>
-
         <view class="dev-tool-card dev-tool-card-image" bindtap="goImageImage" aria-role="button" aria-label="打开猫咪图生图测试">
           <view class="dev-tool-icon dev-tool-icon-image">
             <image src="/assets/icon-camera-coral.svg" mode="aspectFit" />

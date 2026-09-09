@@ -10,6 +10,21 @@ function createError(code, message) {
   return error;
 }
 
+function normalizeFailure(error) {
+  const detail = String(error && (error.errMsg || error.message) || '');
+  const normalized = detail.toLowerCase();
+  const missingCollection = normalized.includes('profile_shares')
+    || normalized.includes('user_follows')
+    || (normalized.includes('collection')
+      && (normalized.includes('not exist')
+        || normalized.includes('not found')
+        || normalized.includes('不存在')));
+  if (!missingCollection) return error;
+  const result = createError('PROFILE_SOCIAL_NOT_CONFIGURED', '主页分享服务还在准备中');
+  result.cause = detail;
+  return result;
+}
+
 function callFunction(action, data = {}) {
   if (!wx.cloud || typeof wx.cloud.callFunction !== 'function') {
     return Promise.reject(createError('CLOUD_NOT_READY', '主页服务暂时不可用'));
@@ -32,7 +47,7 @@ function callFunction(action, data = {}) {
         }
         resolve(result);
       },
-      fail: reject,
+      fail: error => reject(normalizeFailure(error)),
     });
   });
 }
